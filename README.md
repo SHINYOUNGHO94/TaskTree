@@ -35,7 +35,14 @@
   - `packages/task-app`: Next.js ベースのフロントエンドアプリケーション
   - `packages/task-api`: AWS Lambda を利用したビジネスロジック (API)
   - `packages/task-infra`: AWS CDK によるインフラ構成管理 (IaC)
+
 - **Task 1: DynamoDB 階層構造の設計と共通機能の実装**
   - 組織階層（会社 ➔ 事業部 ➔ 部署 ➔ チーム ➔ 社員）に合わせたデータ構造を設計.
   - `createHierarchyRecord`（共通関数）を作成し、データの変換を自動化.
   - 重複するコードを減らし、安全に新しい階層を追加できるロジックを構築.
+
+- **Task 2: CI/CD 環境構築 (ESLint, Prettier, GitHub Actions)**
+  - ESLint V9導入によるコード品質管理の自動化
+  - Prettier によるコードフォーマットの自動化
+  - GitHub Actions を活用した自動Lint & TypeCheck & Buildパイプラインの構築
+  - 実務レベルの `--immutable` および `--max-warnings 0` 戦略の適用
