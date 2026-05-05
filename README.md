@@ -2,7 +2,7 @@
 
 # プロジェクトの目的
 
-実務で学んだ技術を基に、タスク管理用のWebアプリケーションを開発する
+実務で学んだ技術を基に, タスク管理用のWebアプリケーションを開発する
 
 ## 🛠️ 技術スタック
 
@@ -29,10 +29,13 @@
 ---
 
 ## 📆 開発ログ (ヒストリー)
-
 - **Monorepo 環境構築 (Yarn Workspaces)**
   - `packages/task-core`: 共通型定義および共有ロジック
   - `packages/task-ui`: 共通 UI コンポーネントライブラリ (TailwindCSS)
   - `packages/task-app`: Next.js ベースのフロントエンドアプリケーション
   - `packages/task-api`: AWS Lambda を利用したビジネスロジック (API)
   - `packages/task-infra`: AWS CDK によるインフラ構成管理 (IaC)
+- **Task 1: DynamoDB 階層構造の設計と共通機能の実装**
+  - 組織階層（会社 ➔ 事業部 ➔ 部署 ➔ チーム ➔ 社員）に合わせたデータ構造を設計.
+  - `createHierarchyRecord`（共通関数）を作成し、データの変換を自動化.
+  - 重複するコードを減らし、安全に新しい階層を追加できるロジックを構築.
