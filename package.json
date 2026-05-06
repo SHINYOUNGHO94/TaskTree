@@ -6,6 +6,8 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "yarn workspace @task/app dev",
+    "build": "yarn workspaces foreach -A -v run build",
     "lint": "yarn workspaces foreach -A -v run lint",
     "lint:fix": "yarn workspaces foreach -A -v run lint --fix",
     "format": "yarn prettier --write .",

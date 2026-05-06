@@ -57,6 +57,16 @@ export class TaskInfraStack extends cdk.Stack {
       },
     });
 
+    // Lambda: Create User
+    const createUserFn = new NodejsFunction(this, "CreateUserFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/user/createUser.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+
     // API Gateway
     const api = new cdk.aws_apigateway.RestApi(this, "TaskApi", {
       restApiName: "Task Tree API",
