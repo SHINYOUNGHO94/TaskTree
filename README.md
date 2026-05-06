@@ -36,20 +36,25 @@
   - `packages/task-api`: AWS Lambda を利用したビジネスロジック (API)
   - `packages/task-infra`: AWS CDK によるインフラ構成管理 (IaC)
 
-- **Task 1: DynamoDB 階層構造の設計と共通機能の実装**
-  - 組織階層（会社 ➔ 事業部 ➔ 部署 ➔ チーム ➔ 社員）に合わせたデータ構造を設計.
-  - `createHierarchyRecord`（共通関数）を作成し、データの変換を自動化.
-  - 重複するコードを減らし、安全に新しい階層を追加できるロジックを構築.
+- **Task 1: DynamoDB の階層構造と共通機能の実装**
+  - 組織階層（会社 ➔ 事業部 ➔ 部署 ➔ チーム ➔ 社員）に合わせたデータ構造を設計
+  - データを自動変換する共通関数 `createHierarchyRecord` を作成
+  - 重複コードを減らして、安全に新しい階層を追加できるロジックを構築
 
-- **Task 2: CI/CD 環境構築 (ESLint, Prettier, GitHub Actions)**
-  - ESLint V9導入によるコード品質管理の自動化
-  - Prettier によるコードフォーマットの自動化
-  - GitHub Actions を活用した自動Lint & TypeCheck & Buildパイプラインの構築
-  - 実務レベルの `--immutable` および `--max-warnings 0` 戦略の適用
+- **Task 2: CI/CD 環境の構築 (ESLint, Prettier, GitHub Actions)**
+  - ESLint と Prettier を導入してコード品質を自動管理
+  - GitHub Actions で、自動ビルドと Lint チェックのパイプラインを作成
+  - 実務で使われる `--immutable` などの設定を適用
 
-- **Task 3: AWSインフラ構築と全階層のAPI実装 (DynamoDB / API Gateway)**
-  - AWS CDKを活用し、DynamoDBやAPI GatewayのインフラをIaC化
-  - CompanyからUserまで、全5階層のAPIハンドラーとリポジトリの実装を完遂
-  - `BaseRepository<T>`を導入することで、共通ロジックを共通化し、型安全性を確保
-  - `@task/core`パッケージを通じて、プロジェクト全体のEnumや定数を一元管理
-  - 全パッケージに絶対パスを導入し、コードの可読性とメンテナンス性を向上
+- **Task 3: AWS インフラ構築と API 実装 (DynamoDB / API Gateway)**
+  - AWS CDK を使って、DynamoDB や API Gateway を IaC 化
+  - 会社からユーザーまで、全5階層の API とリポジトリを実装
+  - `BaseRepository<T>` を導入して共通ロジックを整理し、型安全性を確保
+  - 絶対パスを導入して、コードの可読性を向上
+
+- **Task 4: AWS Cognito 連携とログイン画面の実装**
+  - AWS Cognito を使ったユーザー認証機能の構築
+  - ログイン画面の作成
+  - 認証ロジックを `@task/core` にまとめて、フロント側との役割を分離
+  - `zod` と `react-hook-form` を使って、入力チェックとエラー表示を実装
+  - ログイン状態に合わせて、画面のリダイレクトやログアウト機能を実装

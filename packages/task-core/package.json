@@ -10,5 +10,8 @@
   },
   "devDependencies": {
     "typescript": "~5.7.3"
+  },
+  "dependencies": {
+    "aws-amplify": "^6.17.0"
   }
 }

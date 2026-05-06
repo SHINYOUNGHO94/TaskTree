@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  /* プレミアムダークテーマのカラー定義 */
+  --color-charcoal: #0a0a0a;
+  --color-slate-glass: rgba(255, 255, 255, 0.05);
+  --color-neon-cyan: #00e5ff;
+  --color-neon-purple: #7000ff;
+
+  /* タイポグラフィ設定 */
+  --font-heading: "Outfit", sans-serif;
+  --font-body: "Inter", sans-serif;
+
+  /* カスタムエフェクト（光彩と影） */
+  --shadow-neon: 0 0 15px rgba(0, 229, 255, 0.5);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+@layer base {
+  body {
+    @apply bg-charcoal text-white font-body;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
