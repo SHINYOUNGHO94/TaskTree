@@ -1,0 +1,6 @@
+.github/workflows/
+.next/
+.yarn/
+build/
+dist/
+coverage/
