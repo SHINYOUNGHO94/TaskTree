@@ -1,61 +1,74 @@
 import { DynamoDBRecord } from "./DynamoDBRecord";
+import { UserRole } from "@task/core";
 
-export interface TeamEntity {
+export interface UserEntity {
   pk: string;
   sk: string;
   companyId: string;
   divisionId: string;
   departmentId: string;
   teamId: string;
+  userId: string;
+  email: string;
   name: string;
+  role: UserRole;
   createdAt: string;
   updatedAt?: string;
 }
 
-export function teamEntity(params: TeamEntity): TeamEntity {
+export function userEntity(params: UserEntity): UserEntity {
   return { ...params };
 }
 
-export interface TeamRecordProps {
+export interface UserRecordProps {
   companyId: string;
   divisionId: string;
   departmentId: string;
   teamId: string;
+  userId: string;
+  email: string;
   name: string;
+  role: UserRole;
   createdAt: string;
   updatedAt?: string;
 }
 
-export type TeamRecordType = DynamoDBRecord & TeamRecordProps;
+export type UserRecordType = DynamoDBRecord & UserRecordProps;
 
-export const TeamRecord = {
-  prefix: "Team",
+export const UserRecord = {
+  prefix: "User",
 
-  makePk: () => TeamRecord.prefix,
-  makeSk: (departmentId: string, teamId: string) =>
-    `Department#${departmentId}#${TeamRecord.prefix}#${teamId}`,
+  makePk: () => UserRecord.prefix,
+  makeSk: (teamId: string, userId: string) =>
+    `Team#${teamId}#${UserRecord.prefix}#${userId}`,
 
-  fromEntity: (entity: TeamEntity): TeamRecordType => ({
+  fromEntity: (entity: UserEntity): UserRecordType => ({
     pk: entity.pk,
     sk: entity.sk,
     companyId: entity.companyId,
     divisionId: entity.divisionId,
     departmentId: entity.departmentId,
     teamId: entity.teamId,
+    userId: entity.userId,
+    email: entity.email,
     name: entity.name,
+    role: entity.role,
     createdAt: entity.createdAt,
     updatedAt: entity.updatedAt,
   }),
 
-  intoEntity: (record: TeamRecordType): TeamEntity =>
-    teamEntity({
+  intoEntity: (record: UserRecordType): UserEntity =>
+    userEntity({
       pk: record.pk,
       sk: record.sk,
       companyId: record.companyId,
       divisionId: record.divisionId,
       departmentId: record.departmentId,
       teamId: record.teamId,
+      userId: record.userId,
+      email: record.email,
       name: record.name,
+      role: record.role,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     }),

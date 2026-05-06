@@ -46,3 +46,10 @@
   - Prettier によるコードフォーマットの自動化
   - GitHub Actions を活用した自動Lint & TypeCheck & Buildパイプラインの構築
   - 実務レベルの `--immutable` および `--max-warnings 0` 戦略の適用
+
+- **Task 3: AWSインフラ構築と全階層のAPI実装 (DynamoDB / API Gateway)**
+  - AWS CDKを活用し、DynamoDBやAPI GatewayのインフラをIaC化
+  - CompanyからUserまで、全5階層のAPIハンドラーとリポジトリの実装を完遂
+  - `BaseRepository<T>`を導入することで、共通ロジックを共通化し、型安全性を確保
+  - `@task/core`パッケージを通じて、プロジェクト全体のEnumや定数を一元管理
+  - 全パッケージに絶対パスを導入し、コードの可読性とメンテナンス性を向上

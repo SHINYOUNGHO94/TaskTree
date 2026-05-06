@@ -1,16 +1,49 @@
-import { createHierarchyRecord, HierarchyEntityBase, HierarchyRecordProps, HierarchyRecordType } from "./baseRecord";
+import { DynamoDBRecord } from "./DynamoDBRecord";
 
-type CompanyAdditional = {
-    timezone: string;
-};
+export interface CompanyEntity {
+  pk: string;
+  sk: string;
+  companyId: string;
+  name: string;
+  createdAt: string;
+  updatedAt?: string;
+}
 
-export type CompanyEntity = HierarchyEntityBase<"companyId", {}, CompanyAdditional>;
-export type CompanyRecordProps = HierarchyRecordProps<"companyId", {}, CompanyAdditional>;
-export type CompanyRecordType = HierarchyRecordType<"companyId", {}, CompanyAdditional>;
+export function companyEntity(params: CompanyEntity): CompanyEntity {
+  return { ...params };
+}
 
-export const CompanyRecord = createHierarchyRecord<"companyId", {}, CompanyAdditional>({
-    prefix: "Company",
-    nameKey: "companyId",
-    makeSkFn: (companyId: string) => `Company#${companyId}`,
-    additionalKeys: ["timezone"],
-});
+export interface CompanyRecordProps {
+  companyId: string;
+  name: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type CompanyRecordType = DynamoDBRecord & CompanyRecordProps;
+
+export const CompanyRecord = {
+  prefix: "Company",
+
+  makePk: () => CompanyRecord.prefix,
+  makeSk: (companyId: string) => `${CompanyRecord.prefix}#${companyId}`,
+
+  fromEntity: (entity: CompanyEntity): CompanyRecordType => ({
+    pk: entity.pk,
+    sk: entity.sk,
+    companyId: entity.companyId,
+    name: entity.name,
+    createdAt: entity.createdAt,
+    updatedAt: entity.updatedAt,
+  }),
+
+  intoEntity: (record: CompanyRecordType): CompanyEntity =>
+    companyEntity({
+      pk: record.pk,
+      sk: record.sk,
+      companyId: record.companyId,
+      name: record.name,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    }),
+} as const;
