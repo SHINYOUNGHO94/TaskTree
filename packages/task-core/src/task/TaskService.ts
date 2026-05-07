@@ -40,6 +40,7 @@ export const TaskService = {
           headers: {
             Authorization: idToken || ''
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           body: task as any,
         }
       });

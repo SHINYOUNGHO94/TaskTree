@@ -13,6 +13,7 @@ on:
 
 jobs:
   lint-test-build:
+    name: Lint, Test and Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,3 +34,11 @@ jobs:
 
       - name: Type check
         run: yarn type-check
+
+      - name: Build Applications
+        run: yarn workspace @task/app build
+
+      - name: AWS CDK Validation (Synth)
+        run: yarn workspace @task/infra cdk synth
+        env:
+          AWS_DEFAULT_REGION: ap-northeast-1

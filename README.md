@@ -62,5 +62,6 @@
 - **Task 5: ダッシュボードの実装と API データ連携** [[PR #5]](https://github.com/SHINYOUNGHO94/TaskTree/pull/5)
   - **AWS インフラの構築:** API Gateway, DynamoDB, Lambda を CDK で実際にデプロイ
   - **API 認証の連携:** AWS Amplify v6 を使い, API を呼ぶときに自動で認証情報を送るよう設定
+  - **CI 環境の強化 (Lint, Test and Build):** アプリのビルドおよび AWS CDK の構成検証を自動化
   - **コンポーネントの分割:** メンテナンスがしやすいよう, 画面の各パーツを部品(Component)として分けて作成
-  - **データの保存と表示:** 画面で入力したタスクを AWS に保存し, 一覧として表示する機能を実装
+  - **データの保存と表示:** 画面で入力したタスクを DynamoDB に保存し, 一覧として表示する機能を実装
