@@ -21,4 +21,11 @@ export class DivisionRepository extends BaseRepository<DivisionRecordType> {
 
     await this.put(record);
   };
+
+  // 事業部を取得します
+  findById = async (companyId: string, divisionId: string): Promise<DivisionRecordType | undefined> => {
+    const pk = DivisionRecord.makePk();
+    const sk = DivisionRecord.makeSk(companyId, divisionId);
+    return await this.get(pk, sk);
+  };
 }

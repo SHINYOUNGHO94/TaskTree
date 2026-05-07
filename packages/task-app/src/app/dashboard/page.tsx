@@ -3,34 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RefreshCw } from "lucide-react";
-import { AuthService, AuthUser, TaskService, TaskSummary, TaskDetail } from "@task/core";
+import { TaskService, TaskSummary, TaskStatus } from "@task/core";
+import { useUser } from "../../components/providers/UserProvider";
 import { TaskCard } from "../../components/dashboard/TaskCard";
 import { CreateTaskModal } from "../../components/dashboard/CreateTaskModal";
-import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { EmptyTaskState } from "../../components/dashboard/EmptyTaskState";
 
+// ダッシュボードメインページ
 const DashboardPage = () => {
+  const { user } = useUser();
   const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 1. ユーザー認証の確認と初期データのロード
+  // 初期データのロード
   useEffect(() => {
-    const init = async () => {
-      const currentUser = await AuthService.getCurrentUser();
-      if (!currentUser) {
-        router.push("/");
-        return;
-      }
-      setUser(currentUser);
-      await fetchTasks();
-    };
-    init();
-  }, [router]);
+    if (user) {
+      fetchTasks();
+    }
+  }, [user]);
 
-  // 2. タスク一覧の取得
+  // タスク一覧の取得
   const fetchTasks = async () => {
     setIsLoading(true);
     try {
@@ -43,67 +37,104 @@ const DashboardPage = () => {
     }
   };
 
-  // 3. 新規タスクの作成実行
-  const handleCreateTask = async (task: TaskDetail) => {
-    await TaskService.createTask(task);
+  // ステータスのクイック更新
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    try {
+      // 1. 現在の詳細情報を取得
+      const currentTask = await TaskService.getTask(taskId);
+      // 2. ステータスのみを書き換えて更新
+      await TaskService.updateTask({
+        ...currentTask,
+        status: newStatus
+      });
+      // 3. 一覧を再取得
+      await fetchTasks();
+    } catch (error) {
+      console.error("Failed to update status", error);
+      alert("Status update failed");
+    }
   };
 
-  const handleSignOut = async () => {
-    await AuthService.signOut();
-    router.push("/");
+  // タスクの削除
+  const handleDelete = async (taskId: string) => {
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    
+    try {
+      await TaskService.deleteTask(taskId);
+      await fetchTasks();
+    } catch (error) {
+      console.error("Failed to delete task", error);
+      alert("Delete failed");
+    }
+  };
+
+  // タスク詳細への遷移
+  const handleTaskClick = (id: string) => {
+    router.push(`/dashboard/tasks/${id}`);
   };
 
   if (!user) return null;
 
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900 p-8 font-sans">
-      <DashboardHeader userName={user.name} onSignOut={handleSignOut} />
-      <section className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            My Tasks <span className="text-gray-400 font-normal">({tasks.length})</span>
+    <section>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            マイタスク 
+            <span className="text-sm font-normal bg-gray-100 px-2 py-1 rounded text-gray-500">
+              {tasks.length}
+            </span>
           </h2>
-          <div className="flex gap-2">
-             <button 
-              onClick={fetchTasks}
-              className="p-2 border border-gray-200 bg-white rounded-md hover:bg-gray-50 transition-colors text-gray-500"
-            >
-              <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-            </button>
-            <button 
-              className="bg-gray-900 text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-gray-800 transition-colors flex items-center gap-2"
-              onClick={() => setIsModalOpen(true)}
-            >
-              <Plus size={16} /> New Task
-            </button>
-          </div>
+          <p className="text-gray-500 text-sm mt-1">タスクの管理・追跡ができます。</p>
         </div>
+        
+        <div className="flex gap-3">
+          <button 
+            onClick={fetchTasks}
+            className="p-2.5 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition-all text-gray-500 shadow-sm"
+            title="更新"
+          >
+            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+          </button>
+          <button 
+            className="bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all shadow-sm flex items-center gap-2"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus size={18} /> 新規タスク作成
+          </button>
+        </div>
+      </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-50">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-white/5 animate-pulse rounded-xl" />
-            ))}
-          </div>
-        ) : tasks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </div>
-        ) : (
-          <EmptyTaskState onCreateClick={() => setIsModalOpen(true)} />
-        )}
-      </section>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-48 bg-white border border-gray-100 animate-pulse rounded-2xl" />
+          ))}
+        </div>
+      ) : tasks.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {tasks.map((task) => (
+            <TaskCard 
+              key={task.id} 
+              task={task} 
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+              onClick={handleTaskClick}
+            />
+          ))}
+        </div>
+      ) : (
+        <EmptyTaskState onCreateClick={() => setIsModalOpen(true)} />
+      )}
       
       <CreateTaskModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchTasks}
-        onSubmitTask={handleCreateTask}
+        onSubmitTask={async (task) => await TaskService.createTask(task)}
         memberId={user.id}
       />
-    </main>
+    </section>
   );
 };
 

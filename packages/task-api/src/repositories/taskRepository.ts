@@ -33,4 +33,19 @@ export class TaskRepository extends BaseRepository<TaskRecordType> {
     const record = TaskRecord.fromEntity(task);
     await this.put(record);
   }
+
+  // 特定のタスクを1件取得する
+  async findById(memberId: string, taskId: string): Promise<TaskDetail | undefined> {
+    const pk = TaskRecord.makePk();
+    const sk = TaskRecord.makeSk(memberId, taskId);
+    const record = await super.get(pk, sk);
+    return record ? TaskRecord.intoEntity(record) : undefined;
+  }
+
+  // 特定のタスクを削除する
+  async delete(memberId: string, taskId: string): Promise<void> {
+    const pk = TaskRecord.makePk();
+    const sk = TaskRecord.makeSk(memberId, taskId);
+    await super.delete(pk, sk);
+  }
 }

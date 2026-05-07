@@ -37,31 +37,33 @@
   - `packages/task-infra`: AWS CDK によるインフラ構成管理 (IaC)
 
 - **Task 1: DynamoDB の階層構造と共通機能の実装** [[PR #1]](https://github.com/SHINYOUNGHO94/TaskTree/pull/1)
-  - 組織階層（会社 ➔ 事業部 ➔ 部署 ➔ チーム ➔ 社員）に合わせたデータ構造を設計
-  - データを自動変換する共通関数 `createHierarchyRecord` を作成
-  - 重複コードを減らして、安全に新しい階層を追加できるロジックを構築
+  - 組織階層（会社 ➔ 事業部 ➔ 部署 ➔ チーム ➔ 社員）に合わせたデータ構造の設計
+  - 共通関数 `createHierarchyRecord` によるデータ変換の自動化
+  - 重複コードを排除し、安全に階層を追加できるロジックを構築
 
 - **Task 2: CI/CD 環境の構築 (ESLint, Prettier, GitHub Actions)** [[PR #2]](https://github.com/SHINYOUNGHO94/TaskTree/pull/2)
-  - ESLint と Prettier を導入してコード品質を自動管理
-  - GitHub Actions で、自動ビルドと Lint チェックのパイプラインを作成
+  - ESLintとPrettierによるコード品質の自動管理
+  - GitHub Actionsによる自動ビルドとLintチェックの自動化
   - 実務で使われる `--immutable` などの設定を適用
 
 - **Task 3: AWS インフラ構築と API 実装 (DynamoDB / API Gateway)** [[PR #3]](https://github.com/SHINYOUNGHO94/TaskTree/pull/3)
-  - AWS CDK を使って、DynamoDB や API Gateway を IaC 化
-  - 会社からユーザーまで、全5階層の API とリポジトリを実装
-  - `BaseRepository<T>` を導入して共通ロジックを整理し、型安全性を確保
-  - 絶対パスを導入して、コードの可読性を向上
+  - AWS CDKによるDynamoDB、API GatewayのIaC化
+  - `BaseRepository<T>` による共通ロジックの集約と型安全性の確保
+  - 絶対パス（@/）の導入によるプロジェクトの可読性向上
 
 - **Task 4: AWS Cognito 連携とログイン画面の実装** [[PR #4]](https://github.com/SHINYOUNGHO94/TaskTree/pull/4)
-  - AWS Cognito を使ったユーザー認証機能の構築
-  - ログイン画面の作成
-  - 認証ロジックを `@task/core` にまとめて、フロント側との役割を分離
-  - `zod` と `react-hook-form` を使って、入力チェックとエラー表示を実装
-  - ログイン状態に合わせて、画面のリダイレクトやログアウト機能を実装
+  - AWS Cognitoによるユーザー認証基盤の構築
+  - 認証ロジックを `@task/core` に集約し、フロントエンドと分離
+  - `zod` と `react-hook-form` によるバリデーションとエラー表示の実装
+  - ログイン状態に基づいた画面遷移とログアウト機能の実装
 
 - **Task 5: ダッシュボードの実装と API データ連携** [[PR #5]](https://github.com/SHINYOUNGHO94/TaskTree/pull/5)
-  - **AWS インフラの構築:** API Gateway, DynamoDB, Lambda を CDK で実際にデプロイ
-  - **API 認証の連携:** AWS Amplify v6 を使い, API を呼ぶときに自動で認証情報を送るよう設定
-  - **CI 環境の強化 (Lint, Test and Build):** アプリのビルドおよび AWS CDK の構成検証を自動化
-  - **コンポーネントの分割:** メンテナンスがしやすいよう, 画面の各パーツを部品(Component)として分けて作成
-  - **データの保存と表示:** 画面で入力したタスクを DynamoDB に保存し, 一覧として表示する機能を実装
+  - AWS CDKによるAPI Gateway、DynamoDB、Lambdaのデプロイ
+  - AWS Amplify v6 による自動認証トークン送信の設定
+  - 画面のコンポーネント分割によるメンテナンス性の向上
+  - タスクの新規登録および一覧表示機能の実装
+
+- **Task 6: タスク管理機能の完成と組織情報の表示** [[PR #6]](https://github.com/SHINYOUNGHO94/TaskTree/pull/6)
+  - タスクのCRUD機能（作成・表示・編集・削除）をすべて実装
+  - ユーザーの所属組織（会社・部署など）をサイドバーに表示
+  - GSIによる高速なデータ取得とインフラの最適化
