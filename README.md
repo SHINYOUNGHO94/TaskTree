@@ -36,25 +36,32 @@
   - `packages/task-api`: AWS Lambda を利用したビジネスロジック (API)
   - `packages/task-infra`: AWS CDK によるインフラ構成管理 (IaC)
 
-- **Task 1: DynamoDB の階層構造と共通機能の実装**
+- **Task 1: DynamoDB の階層構造と共通機能の実装** [[PR #1]](https://github.com/SHINYOUNGHO94/TaskTree/pull/1)
   - 組織階層（会社 ➔ 事業部 ➔ 部署 ➔ チーム ➔ 社員）に合わせたデータ構造を設計
   - データを自動変換する共通関数 `createHierarchyRecord` を作成
   - 重複コードを減らして、安全に新しい階層を追加できるロジックを構築
 
-- **Task 2: CI/CD 環境の構築 (ESLint, Prettier, GitHub Actions)**
+- **Task 2: CI/CD 環境の構築 (ESLint, Prettier, GitHub Actions)** [[PR #2]](https://github.com/SHINYOUNGHO94/TaskTree/pull/2)
   - ESLint と Prettier を導入してコード品質を自動管理
   - GitHub Actions で、自動ビルドと Lint チェックのパイプラインを作成
   - 実務で使われる `--immutable` などの設定を適用
 
-- **Task 3: AWS インフラ構築と API 実装 (DynamoDB / API Gateway)**
+- **Task 3: AWS インフラ構築と API 実装 (DynamoDB / API Gateway)** [[PR #3]](https://github.com/SHINYOUNGHO94/TaskTree/pull/3)
   - AWS CDK を使って、DynamoDB や API Gateway を IaC 化
   - 会社からユーザーまで、全5階層の API とリポジトリを実装
   - `BaseRepository<T>` を導入して共通ロジックを整理し、型安全性を確保
   - 絶対パスを導入して、コードの可読性を向上
 
-- **Task 4: AWS Cognito 連携とログイン画面の実装**
+- **Task 4: AWS Cognito 連携とログイン画面の実装** [[PR #4]](https://github.com/SHINYOUNGHO94/TaskTree/pull/4)
   - AWS Cognito を使ったユーザー認証機能の構築
   - ログイン画面の作成
   - 認証ロジックを `@task/core` にまとめて、フロント側との役割を分離
   - `zod` と `react-hook-form` を使って、入力チェックとエラー表示を実装
   - ログイン状態に合わせて、画面のリダイレクトやログアウト機能を実装
+
+- **Task 5: ダッシュボードの実装と API データ連携** [[PR #5]](https://github.com/SHINYOUNGHO94/TaskTree/pull/5)
+  - **AWS インフラの構築:** API Gateway, DynamoDB, Lambda を CDK で実際にデプロイ
+  - **API 認証の連携:** AWS Amplify v6 を使い, API を呼ぶときに自動で認証情報を送るよう設定
+  - **CI 環境の強化 (Lint, Test and Build):** アプリのビルドおよび AWS CDK の構成検証を自動化
+  - **コンポーネントの分割:** メンテナンスがしやすいよう, 画面の各パーツを部品(Component)として分けて作成
+  - **データの保存と表示:** 画面で入力したタスクを DynamoDB に保存し, 一覧として表示する機能を実装

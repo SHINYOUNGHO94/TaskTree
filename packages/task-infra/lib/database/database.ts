@@ -1,6 +1,5 @@
 import { Construct } from "constructs";
-import { StagingEnvironment } from "../helpers/stagingEnvironment";
-import { Suffix } from "../helpers/suffix";
+import { StagingEnvironment, Suffix } from "@task/core";
 import { AttributeType, ITable, TableEncryptionV2, TableV2 } from "aws-cdk-lib/aws-dynamodb";
 import { taskCapacityMode } from "../helpers/capacityMode";
 import { CfnOutput } from "aws-cdk-lib";
@@ -18,7 +17,7 @@ export class TaskDatabase extends Construct {
         super(scope, id);
         const { stagingEnvironment, suffix, version } = props;
 
-        const tableNamePrefix = `task-db-stack-${version}-${suffix.kebabCase}`;
+        const tableNamePrefix = `task-db-stack-${version}-${suffix.toString()}`;
         const entities = new TableV2(scope, "TaskEntities", {
             tableName: `${tableNamePrefix}-TaskEntities`,
             partitionKey: { name: "pk", type: AttributeType.STRING },

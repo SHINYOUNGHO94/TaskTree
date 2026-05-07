@@ -1,5 +1,5 @@
 import { Billing } from "aws-cdk-lib/aws-dynamodb";
-import { StagingEnvironment } from "./stagingEnvironment";
+import { StagingEnvironment } from "@task/core";
 
 export const TaskDynamoDBs = {
   entities: "entities",
