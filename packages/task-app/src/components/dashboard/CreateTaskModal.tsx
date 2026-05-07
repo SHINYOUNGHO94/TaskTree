@@ -1,0 +1,147 @@
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Calendar, Flag } from 'lucide-react';
+import { TaskStatus, TaskLevel, TaskDetail } from '@task/core';
+
+interface CreateTaskModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  onSubmitTask: (task: TaskDetail) => Promise<void>;
+  memberId: string;
+}
+
+interface FormValues {
+  title: string;
+  content: string;
+  level: TaskLevel;
+  limitDate: string;
+}
+
+// 新規タスク作成モーダル
+export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ 
+  isOpen, onClose, onSuccess, onSubmitTask, memberId 
+}) => {
+  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormValues>({
+    defaultValues: {
+      level: TaskLevel.MEDIUM,
+      limitDate: 'NONE'
+    }
+  });
+
+  const onSubmit = async (data: FormValues) => {
+    try {
+      const now = new Date().toISOString();
+      const newTask: TaskDetail = {
+        id: crypto.randomUUID(),
+        companyId: "comp-1",
+        divisionId: "div-1",
+        departmentId: "dept-1",
+        teamId: "team-1",
+        creatorId: memberId,
+        memberId: memberId,
+        title: data.title,
+        content: data.content,
+        status: TaskStatus.NOT_STARTED,
+        level: data.level,
+        limitDate: data.limitDate,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await onSubmitTask(newTask);
+      reset();
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error("Failed to create task", error);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="w-full max-w-lg bg-white rounded-lg shadow-xl overflow-hidden"
+          >
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Create New Task</h2>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-600 uppercase">Title</label>
+                <input 
+                  {...register('title', { required: true })}
+                  placeholder="Task title"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-600 uppercase">Content</label>
+                <textarea 
+                  {...register('content')}
+                  placeholder="Task details..."
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none h-24"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1">
+                    <Flag size={12} /> Priority
+                  </label>
+                  <select 
+                    {...register('level')}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white"
+                  >
+                    <option value={TaskLevel.LOW}>Low</option>
+                    <option value={TaskLevel.MEDIUM}>Medium</option>
+                    <option value={TaskLevel.HIGH}>High</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1">
+                    <Calendar size={12} /> Due Date
+                  </label>
+                  <input 
+                    type="date"
+                    {...register('limitDate')}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button 
+                  type="button" 
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-bold hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {isSubmitting ? "Processing..." : "Create Task"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};

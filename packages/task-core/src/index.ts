@@ -6,3 +6,7 @@ export * from "./types/role";
 // 認証関連のエクスポート
 export * from "./types/auth";
 export * from "./auth/AuthService";
+
+// タスク関連のエクスポート
+export * from "./types/task";
+export * from "./task/TaskService";

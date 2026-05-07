@@ -14,7 +14,8 @@
     "type-check": "yarn workspaces foreach -A -v run type-check",
     "type-check:ui": "yarn workspace @task/ui type-check",
     "type-check:core": "yarn workspace @task/core type-check",
-    "type-check:api": "yarn workspace @task/api type-check"
+    "type-check:api": "yarn workspace @task/api type-check",
+    "esbuild": "esbuild"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.5",
@@ -22,6 +23,7 @@
     "@eslint/js": "^10.0.1",
     "@typescript-eslint/eslint-plugin": "^8.59.2",
     "@typescript-eslint/parser": "^8.59.2",
+    "esbuild": "^0.28.0",
     "eslint": "^9.9.0",
     "eslint-config-next": "^15.1.0",
     "eslint-import-resolver-typescript": "^4.4.4",
@@ -32,5 +34,8 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "typescript-eslint": "^8.59.2"
+  },
+  "dependencies": {
+    "uuid": "^14.0.0"
   }
 }
