@@ -72,7 +72,7 @@ const LoginPage = () => {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Email Address</label>
+              <label className="text-sm font-medium text-gray-700">メールアドレス</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
@@ -85,7 +85,7 @@ const LoginPage = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Password</label>
+              <label className="text-sm font-medium text-gray-700">パスワード</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
@@ -103,7 +103,7 @@ const LoginPage = () => {
               disabled={isSubmitting}
               className="w-full bg-gray-900 text-white font-bold py-3 rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
-              {isSubmitting ? "Signing In..." : "Sign In"}
+              {isSubmitting ? "ログイン中..." : "ログイン"}
             </button>
           </form>
         </div>

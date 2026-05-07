@@ -22,4 +22,11 @@ export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
 
     await this.put(record);
   };
+
+  // 部署を取得します
+  findById = async (divisionId: string, departmentId: string): Promise<DepartmentRecordType | undefined> => {
+    const pk = DepartmentRecord.makePk();
+    const sk = DepartmentRecord.makeSk(divisionId, departmentId);
+    return await this.get(pk, sk);
+  };
 }

@@ -23,4 +23,11 @@ export class TeamRepository extends BaseRepository<TeamRecordType> {
 
     await this.put(record);
   };
+
+  // チームを取得します
+  findById = async (departmentId: string, teamId: string): Promise<TeamRecordType | undefined> => {
+    const pk = TeamRecord.makePk();
+    const sk = TeamRecord.makeSk(departmentId, teamId);
+    return await this.get(pk, sk);
+  };
 }

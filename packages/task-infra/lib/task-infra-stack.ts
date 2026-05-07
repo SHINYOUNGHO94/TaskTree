@@ -77,6 +77,18 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
+    database.entities.grantWriteData(createUserFn);
+
+    // Lambda: ユーザープロファイル取得機能
+    const getUserProfileFn = new NodejsFunction(this, "GetUserProfileFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/user/getUserProfile.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    database.entities.grantReadData(getUserProfileFn);
 
     // Lambda: タスク一覧取得機能
     const getTasksFn = new NodejsFunction(this, "GetTasksFunction", {
@@ -87,7 +99,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantReadData(getTasksFn); // 読み取り権限の付与
+    database.entities.grantReadData(getTasksFn);
 
     // Lambda: タスク作成機能
     const createTaskFn = new NodejsFunction(this, "CreateTaskFunction", {
@@ -98,7 +110,40 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantWriteData(createTaskFn); // 書き込み権限の付与
+    database.entities.grantWriteData(createTaskFn);
+
+    // Lambda: タスク詳細取得機能
+    const getTaskFn = new NodejsFunction(this, "GetTaskFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/task/getTask.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    database.entities.grantReadData(getTaskFn);
+
+    // Lambda: タスク更新機能
+    const updateTaskFn = new NodejsFunction(this, "UpdateTaskFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/task/updateTask.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    database.entities.grantReadWriteData(updateTaskFn);
+
+    // Lambda: タスク削除機能
+    const deleteTaskFn = new NodejsFunction(this, "DeleteTaskFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/task/deleteTask.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    database.entities.grantReadWriteData(deleteTaskFn);
 
     // API Gateway の構築
     const api = new apigateway.RestApi(this, "TaskApi", {
@@ -125,6 +170,9 @@ export class TaskInfraStack extends cdk.Stack {
 
     const userResource = api.root.addResource("user");
     userResource.addMethod("POST", new apigateway.LambdaIntegration(createUserFn));
+    userResource.addMethod("GET", new apigateway.LambdaIntegration(getUserProfileFn), {
+      authorizer,
+    });
 
     // タスク関連のリソース定義 (認証が必要)
     const tasksResource = api.root.addResource("tasks");
@@ -132,6 +180,18 @@ export class TaskInfraStack extends cdk.Stack {
       authorizer,
     });
     tasksResource.addMethod("POST", new apigateway.LambdaIntegration(createTaskFn), {
+      authorizer,
+    });
+
+    // タスク詳細/更新/削除のリソース ( /tasks/{id} )
+    const tasksIdResource = tasksResource.addResource("{id}");
+    tasksIdResource.addMethod("GET", new apigateway.LambdaIntegration(getTaskFn), {
+      authorizer,
+    });
+    tasksIdResource.addMethod("PUT", new apigateway.LambdaIntegration(updateTaskFn), {
+      authorizer,
+    });
+    tasksIdResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteTaskFn), {
       authorizer,
     });
   }

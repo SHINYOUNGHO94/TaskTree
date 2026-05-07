@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Flag } from 'lucide-react';
-import { TaskStatus, TaskLevel, TaskDetail } from '@task/core';
+import { TaskLevel, TaskDetail } from '@task/core';
 
-interface CreateTaskModalProps {
+interface EditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  onSubmitTask: (task: TaskDetail) => Promise<void>;
-  memberId: string;
+  task: TaskDetail;
+  onUpdateTask: (task: TaskDetail) => Promise<void>;
 }
 
 interface FormValues {
@@ -19,43 +19,38 @@ interface FormValues {
   limitDate: string;
 }
 
-// 新規タスク作成モーダル
-export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ 
-  isOpen, onClose, onSuccess, onSubmitTask, memberId 
+export const EditTaskModal: React.FC<EditTaskModalProps> = ({ 
+  isOpen, onClose, onSuccess, task, onUpdateTask 
 }) => {
-  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormValues>({
-    defaultValues: {
-      level: TaskLevel.MEDIUM,
-      limitDate: 'NONE'
+  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormValues>();
+
+  useEffect(() => {
+    if (isOpen && task) {
+      reset({
+        title: task.title,
+        content: task.content,
+        level: task.level,
+        limitDate: task.limitDate
+      });
     }
-  });
+  }, [isOpen, task, reset]);
 
   const onSubmit = async (data: FormValues) => {
     try {
-      const now = new Date().toISOString();
-      const newTask: TaskDetail = {
-        id: crypto.randomUUID(),
-        companyId: "comp-1",
-        divisionId: "div-1",
-        departmentId: "dept-1",
-        teamId: "team-1",
-        creatorId: memberId,
-        memberId: memberId,
+      const updatedTask: TaskDetail = {
+        ...task,
         title: data.title,
         content: data.content,
-        status: TaskStatus.NOT_STARTED,
         level: data.level,
         limitDate: data.limitDate,
-        createdAt: now,
-        updatedAt: now,
+        updatedAt: new Date().toISOString(),
       };
 
-      await onSubmitTask(newTask);
-      reset();
+      await onUpdateTask(updatedTask);
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Failed to create task", error);
+      console.error("Failed to update task", error);
     }
   };
 
@@ -70,7 +65,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             className="w-full max-w-lg bg-white rounded-lg shadow-xl overflow-hidden"
           >
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">新規タスク作成</h2>
+              <h2 className="text-lg font-bold text-gray-900">タスクの編集</h2>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
@@ -81,7 +76,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 <label className="text-xs font-bold text-gray-600 uppercase">タイトル</label>
                 <input 
                   {...register('title', { required: true })}
-                  placeholder="タスクのタイトルを入力"
+                  placeholder="タスクのタイトル"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none"
                 />
               </div>
@@ -90,8 +85,8 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 <label className="text-xs font-bold text-gray-600 uppercase">内容</label>
                 <textarea 
                   {...register('content')}
-                  placeholder="詳細内容を入力..."
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none h-24"
+                  placeholder="詳細内容..."
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none h-40"
                 />
               </div>
 
@@ -126,16 +121,16 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
                 <button 
                   type="button" 
                   onClick={onClose}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   キャンセル
                 </button>
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-bold hover:bg-gray-800 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors shadow-sm"
                 >
-                  {isSubmitting ? "処理中..." : "作成する"}
+                  {isSubmitting ? "更新中..." : "変更を保存"}
                 </button>
               </div>
             </form>

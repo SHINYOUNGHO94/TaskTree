@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, GetCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
 export abstract class BaseRepository<T extends { pk: string; sk: string }> {
   protected readonly docClient: DynamoDBDocumentClient;
@@ -28,5 +28,14 @@ export abstract class BaseRepository<T extends { pk: string; sk: string }> {
       })
     );
     return response.Item as T | undefined;
+  }
+
+  protected async delete(pk: string, sk: string): Promise<void> {
+    await this.docClient.send(
+      new DeleteCommand({
+        TableName: this.tableName,
+        Key: { pk, sk },
+      })
+    );
   }
 }
