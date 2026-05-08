@@ -20,7 +20,14 @@ export const UserService = {
         }
       });
 
-      const { body } = await restOperation.response;
+      const response = await restOperation.response;
+
+      // 200以外のステータスコード(404等)の場合、body.json()を呼ばずにエラーを投げる
+      if (response.statusCode !== 200) {
+        throw new Error(`Profile not found (Status: ${response.statusCode})`);
+      }
+
+      const { body } = response;
       return await body.json() as unknown as UserProfile;
     } catch (error) {
       console.error('Error fetching user profile:', error);

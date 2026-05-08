@@ -26,19 +26,24 @@ export default function DashboardLayout({
   const handleSignOut = async () => {
     try {
       await AuthService.signOut();
-      router.push("/");
+      window.location.href = "/";
     } catch (error) {
       console.error("Sign out failed", error);
     }
   };
 
-  if (isLoading || !user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-white gap-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        <p className="text-xs font-bold text-gray-400 animate-pulse tracking-widest">読み込み中...</p>
-      </div>
-    );
+  // ユーザー(認証)情報がない場合の処理
+  if (!user) {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-white gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <p className="text-xs font-bold text-gray-400 animate-pulse tracking-widest">読み込み中...</p>
+        </div>
+      );
+    }
+    // 認証情報がなく、ローディングも終わっている場合は何も表示しない
+    return null;
   }
 
   return (
