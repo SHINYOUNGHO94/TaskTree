@@ -1,8 +1,50 @@
-import { signIn, signOut, fetchUserAttributes } from 'aws-amplify/auth';
+import { signIn, signOut, fetchUserAttributes, signUp, confirmSignUp, fetchAuthSession } from 'aws-amplify/auth';
 import { AuthResult, AuthUser } from '../types/auth';
 
 // AuthService: AWS Cognitoを利用した認証ロジックを管理するクラス
 export const AuthService = {
+  // ユーザーサインアップ（新規登録）
+  signUp: async (email: string, password: string, name: string): Promise<AuthResult> => {
+    try {
+      const { userId } = await signUp({
+        username: email,
+        password,
+        options: {
+          userAttributes: {
+            email,
+            name,
+            nickname: name,
+          },
+        }
+      });
+
+      return {
+        success: true,
+        user: userId ? { id: userId, email } : undefined
+      };
+    } catch (error: unknown) {
+      console.error('SignUp Error:', error);
+      const errorName = (error instanceof Error) ? error.name : 'UNKNOWN_ERROR';
+      return { success: false, error: errorName };
+    }
+  },
+
+  // ユーザーサインアップ確認
+  confirmSignUp: async (email: string, code: string): Promise<AuthResult> => {
+    try {
+      const { isSignUpComplete } = await confirmSignUp({
+        username: email,
+        confirmationCode: code,
+      });
+
+      return { success: isSignUpComplete };
+    } catch (error: unknown) {
+      console.error('ConfirmSignUp Error:', error);
+      const errorName = (error instanceof Error) ? error.name : 'UNKNOWN_ERROR';
+      return { success: false, error: errorName };
+    }
+  },
+
   // ユーザーサインイン処理
   signIn: async (email: string, password: string): Promise<AuthResult> => {
     try {
@@ -33,8 +75,8 @@ export const AuthService = {
       // エラーログの出力とクライアントへのエラー返却
       console.error('SignIn Error:', error);
       const errorName = (error instanceof Error) ? error.name : 'UNKNOWN_ERROR';
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: errorName
       };
     }
@@ -43,7 +85,13 @@ export const AuthService = {
   // 現在ログインしているユーザー情報を取得する処理
   getCurrentUser: async (): Promise<AuthUser | null> => {
     try {
-      // Amplify SDKを使用して現在のセッション情報を取得
+      // 1. セッションの存在を安全に確認
+      const session = await fetchAuthSession();
+      if (!session.tokens) {
+        return null;
+      }
+
+      // 2. セッションがあればユーザー属性を取得
       const attributes = await fetchUserAttributes();
       return {
         id: attributes.sub || '',

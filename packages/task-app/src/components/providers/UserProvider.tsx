@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { AuthService, AuthUser, UserService, UserProfile } from "@task/core";
 
 // Contextの型定義
@@ -19,23 +19,37 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const fetchLock = useRef(false);
 
   // ユーザー情報および組織プロファイルの取得処理
   const fetchUser = async () => {
+    if (fetchLock.current) return;
+    fetchLock.current = true;
+    
     setIsLoading(true);
     try {
       // 1. 認証情報の取得
       const currentUser = await AuthService.getCurrentUser();
       setUser(currentUser);
 
-      // 2. 認証済みであれば組織プロファイルを取得
+      // 認証情報が確認できた時点で即座にisLoadingをfalseにし、レンダリングをブロックしない
+      setIsLoading(false);
+
+      // 2. 認証済みであれば組織プロファイルをバックグラウンドで取得
       if (currentUser) {
         try {
           const userProfile = await UserService.getUserProfile();
           setProfile(userProfile);
         } catch (profileError) {
-          console.error("Failed to fetch user profile, but keeping auth session", profileError);
-          setProfile(null);
+          console.log("Profile not ready yet, retrying in 2 seconds...", profileError);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          try {
+            const secondAttempt = await UserService.getUserProfile();
+            setProfile(secondAttempt);
+          } catch (secondError) {
+            console.error("Final profile fetch attempt failed", secondError);
+            setProfile(null);
+          }
         }
       } else {  
         setProfile(null);
@@ -44,8 +58,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Auth session check failed", error);
       setUser(null);
       setProfile(null);
-    } finally {
       setIsLoading(false);
+    } finally {
+      fetchLock.current = false;
     }
   };
 

@@ -7,6 +7,7 @@ import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export class TaskInfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -78,6 +79,23 @@ export class TaskInfraStack extends cdk.Stack {
       },
     });
     database.entities.grantWriteData(createUserFn);
+
+    // Lambda: サインアップ後の自動オンボーディング (Post Confirmation)
+    const postConfirmationFn = new NodejsFunction(this, "PostConfirmationFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/auth/postConfirmation.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    postConfirmationFn.addPermission("CognitoInvoke", {
+      principal: new iam.ServicePrincipal("cognito-idp.amazonaws.com"),
+      sourceArn: userPool.userPoolArn,
+    });
+    database.entities.grantWriteData(postConfirmationFn);
+    database.entities.grantWriteData(createCompanyFn); // 権限追加
+    database.entities.grantWriteData(createDepartmentFn); // 権限追加
 
     // Lambda: ユーザープロファイル取得機能
     const getUserProfileFn = new NodejsFunction(this, "GetUserProfileFunction", {
