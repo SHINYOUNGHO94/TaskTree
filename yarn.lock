@@ -3390,6 +3390,7 @@ __metadata:
   dependencies:
     aws-amplify: "npm:^6.17.0"
     typescript: "npm:~5.7.3"
+    zod: "npm:^4.4.3"
   languageName: unknown
   linkType: soft
 

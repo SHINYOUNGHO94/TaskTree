@@ -1,5 +1,6 @@
 import { get, post } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { z } from 'zod';
 
 export interface Department {
   departmentId: string;
@@ -16,6 +17,29 @@ export interface Team {
   departmentId: string;
 }
 
+const DepartmentSchema = z.object({
+  departmentId: z.string(),
+  name: z.string(),
+  companyId: z.string(),
+  divisionId: z.string(),
+});
+
+const TeamSchema = z.object({
+  teamId: z.string(),
+  name: z.string(),
+  companyId: z.string(),
+  divisionId: z.string(),
+  departmentId: z.string(),
+});
+
+const DepartmentsResponseSchema = z.object({
+  departments: z.array(DepartmentSchema),
+});
+
+const TeamsResponseSchema = z.object({
+  teams: z.array(TeamSchema),
+});
+
 export const OrgService = {
   getDepartments: async (): Promise<Department[]> => {
     try {
@@ -27,7 +51,8 @@ export const OrgService = {
       });
       const response = await restOperation.response;
       if (response.statusCode !== 200) throw new Error("Failed to fetch departments");
-      const body = (await response.body.json()) as any;
+      const json = await response.body.json();
+      const body = DepartmentsResponseSchema.parse(json);
       return body.departments;
     } catch (error) {
       console.error("Failed to fetch departments", error);
@@ -66,7 +91,8 @@ export const OrgService = {
       });
       const response = await restOperation.response;
       if (response.statusCode !== 200) throw new Error("Failed to fetch teams");
-      const body = (await response.body.json()) as any;
+      const json = await response.body.json();
+      const body = TeamsResponseSchema.parse(json);
       return body.teams;
     } catch (error) {
       console.error("Failed to fetch teams", error);

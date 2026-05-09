@@ -1,6 +1,33 @@
 import { get, post } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { UserProfile } from '../types/user';
+import { UserRole } from '../types/role';
+import { z } from 'zod';
+
+const UserProfileSchema = z.object({
+  userId: z.string(),
+  email: z.string(),
+  name: z.string(),
+  role: z.enum([UserRole.ADMIN, UserRole.USER, UserRole.GUEST]),
+  companyId: z.string(),
+  divisionId: z.string(),
+  departmentId: z.string(),
+  teamId: z.string(),
+  companyName: z.string(),
+  divisionName: z.string(),
+  departmentName: z.string(),
+  teamName: z.string(),
+  createdAt: z.string().optional(),
+  lastSignInAt: z.string().optional()
+});
+
+const CompanyUsersResponseSchema = z.object({
+  users: z.array(UserProfileSchema),
+});
+
+const InviteUserResponseSchema = z.object({
+  userId: z.string(),
+});
 
 // ユーザー関連のAPI操作を担当するサービス
 export const UserService = {
@@ -24,7 +51,8 @@ export const UserService = {
       if (response.statusCode !== 200) {
         throw new Error(`Profile not found (Status: ${response.statusCode})`);
       }
-      const responseBody = (await response.body.json()) as any;
+      const json = await response.body.json();
+      const responseBody = UserProfileSchema.parse(json);
       return responseBody;
     } catch (error) {
       console.error("Failed to fetch user profile", error);
@@ -54,8 +82,9 @@ export const UserService = {
         throw new Error(`Failed to fetch company users (Status: ${response.statusCode})`);
       }
 
-      const responseBody = (await response.body.json()) as any;
-      return responseBody.users as UserProfile[];
+      const json = await response.body.json();
+      const responseBody = CompanyUsersResponseSchema.parse(json);
+      return responseBody.users;
     } catch (error) {
       console.error("Failed to fetch company users", error);
       throw error;
@@ -85,8 +114,9 @@ export const UserService = {
         throw new Error(`Failed to invite user (Status: ${response.statusCode})`);
       }
 
-      const responseBody = (await response.body.json()) as any;
-      return responseBody as { userId: string };
+      const json = await response.body.json();
+      const responseBody = InviteUserResponseSchema.parse(json);
+      return responseBody;
     } catch (error) {
       console.error("Failed to invite user", error);
       throw error;
