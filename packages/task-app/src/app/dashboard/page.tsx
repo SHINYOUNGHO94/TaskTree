@@ -11,7 +11,7 @@ import { EmptyTaskState } from "../../components/dashboard/EmptyTaskState";
 
 // ダッシュボードメインページ
 const DashboardPage = () => {
-  const { user } = useUser();
+  const { user, profile } = useUser();
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,7 +29,9 @@ const DashboardPage = () => {
     setIsLoading(true);
     try {
       const data = await TaskService.getTasks();
-      setTasks(data);
+      // IDの重複を排除（バックエンドの不整合データ対策）
+      const uniqueTasks = Array.from(new Map(data.map(item => [item.id, item])).values());
+      setTasks(uniqueTasks);
     } catch (error) {
       console.error("Failed to fetch tasks", error);
     } finally {
@@ -117,6 +119,8 @@ const DashboardPage = () => {
             <TaskCard 
               key={task.id} 
               task={task} 
+              currentUserId={user.id}
+              userRole={profile?.role}
               onStatusChange={handleStatusChange}
               onDelete={handleDelete}
               onClick={handleTaskClick}
@@ -133,6 +137,7 @@ const DashboardPage = () => {
         onSuccess={fetchTasks}
         onSubmitTask={async (task) => await TaskService.createTask(task)}
         memberId={user.id}
+        profile={profile}
       />
     </section>
   );

@@ -1,9 +1,10 @@
-import React from 'react';
-import { TaskSummary, TaskStatus, TaskLevel } from '@task/core';
+import { TaskSummary, TaskStatus, TaskLevel, UserRole } from '@task/core';
 import { Calendar, AlertCircle, CheckCircle2, Play, Trash2 } from 'lucide-react';
 
 interface TaskCardProps {
   task: TaskSummary;
+  currentUserId?: string;
+  userRole?: UserRole;
   onClick?: (id: string) => void;
   onStatusChange?: (id: string, status: TaskStatus) => void;
   onDelete?: (id: string) => void;
@@ -18,7 +19,9 @@ const statusStyles: Record<TaskStatus, string> = {
   [TaskStatus.CANCELLED]: 'bg-red-50 text-red-600 border border-red-100',
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onStatusChange, onDelete }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, currentUserId, userRole, onClick, onStatusChange, onDelete }) => {
+  const isEditable = task.memberId === currentUserId || userRole === UserRole.COMPANY_ADMIN;
+
   return (
     <div
       className="bg-white border border-gray-200 p-5 rounded-xl hover:border-gray-300 transition-all shadow-sm group"
@@ -31,33 +34,35 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onStatusChang
           {task.status.replace('_', ' ')}
         </span>
         
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {task.status !== TaskStatus.COMPLETED && (
+        {isEditable && (
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {task.status !== TaskStatus.COMPLETED && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onStatusChange?.(task.id, TaskStatus.COMPLETED); }}
+                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title="完了"
+              >
+                <CheckCircle2 size={16} />
+              </button>
+            )}
+            {task.status === TaskStatus.NOT_STARTED && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onStatusChange?.(task.id, TaskStatus.WORKING); }}
+                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="開始"
+              >
+                <Play size={16} />
+              </button>
+            )}
             <button 
-              onClick={(e) => { e.stopPropagation(); onStatusChange?.(task.id, TaskStatus.COMPLETED); }}
-              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-              title="完了"
+              onClick={(e) => { e.stopPropagation(); onDelete?.(task.id); }}
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="削除"
             >
-              <CheckCircle2 size={16} />
+              <Trash2 size={16} />
             </button>
-          )}
-          {task.status === TaskStatus.NOT_STARTED && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onStatusChange?.(task.id, TaskStatus.WORKING); }}
-              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title="開始"
-            >
-              <Play size={16} />
-            </button>
-          )}
-          <button 
-            onClick={(e) => { e.stopPropagation(); onDelete?.(task.id); }}
-            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="削除"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
+          </div>
+        )}
       </div>
       
       <h3 

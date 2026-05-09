@@ -35,14 +35,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return createResponse(403, { error: "Profile not found" });
     }
 
-    // ADMIN のみ招待可能
-    if (callerProfile.role !== UserRole.ADMIN) {
-      return createResponse(403, { error: "Forbidden: Only ADMIN can invite users" });
+    // 組織の管理者権限を持つユーザーのみ招待可能
+    const allowedRoles = [UserRole.COMPANY_ADMIN, UserRole.DIVISION_ADMIN, UserRole.DEPT_ADMIN, UserRole.TEAM_ADMIN];
+    if (!allowedRoles.includes(callerProfile.role as UserRole)) {
+      return createResponse(403, { error: "Forbidden: You do not have permission to invite users" });
     }
 
     // リクエストボディのパース
     const body = JSON.parse(event.body || "{}");
-    const { email, name, role = UserRole.USER, departmentId, teamId } = body;
+    const { email, name, role = UserRole.USER, divisionId, departmentId, teamId } = body;
 
     if (!email || !name) {
       return createResponse(400, { error: "Email and name are required" });
@@ -74,7 +75,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       name: name,
       role: role as UserRole,
       companyId: callerProfile.companyId,
-      divisionId: callerProfile.divisionId || "NONE",
+      divisionId: divisionId || callerProfile.divisionId || "NONE",
       departmentId: departmentId || callerProfile.departmentId || "NONE",
       teamId: teamId || "NONE"
     });

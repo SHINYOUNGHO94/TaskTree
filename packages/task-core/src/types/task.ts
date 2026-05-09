@@ -14,6 +14,15 @@ export enum TaskLevel {
   HIGH = "HIGH",
 }
 
+// タスクのアクセス範囲
+export enum AccessScope {
+  COMPANY = "COMPANY",       // 会社全体
+  DIVISION = "DIVISION",     // 本部/事業部全体
+  DEPARTMENT = "DEPARTMENT", // 部署全体
+  TEAM = "TEAM",             // チーム全体
+  PRIVATE = "PRIVATE",       // 担当者のみ
+}
+
 // 一覧表示用の要約情報
 export interface TaskSummary {
   // タスクID
@@ -30,6 +39,9 @@ export interface TaskSummary {
 
   // 担当者ID (Member)
   memberId: string;
+
+  // アクセス範囲
+  accessScope: AccessScope;
 
   // タイトル
   title: string;

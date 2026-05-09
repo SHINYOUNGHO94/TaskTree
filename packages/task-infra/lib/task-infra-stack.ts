@@ -48,6 +48,17 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
+ 
+    // Lambda: 事業部(Division)一覧取得機能
+    const getDivisionsFn = new NodejsFunction(this, "GetDivisionsFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/division/getDivisions.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    database.entities.grantReadData(getDivisionsFn);
 
     // Lambda: 部署(Department)作成機能
     const createDepartmentFn = new NodejsFunction(this, "CreateDepartmentFunction", {
@@ -144,6 +155,7 @@ export class TaskInfraStack extends cdk.Stack {
     });
     database.entities.grantWriteData(postConfirmationFn);
     database.entities.grantWriteData(createCompanyFn);
+    database.entities.grantWriteData(createDivisionFn);
     database.entities.grantWriteData(createDepartmentFn);
     database.entities.grantWriteData(createTeamFn);
 
@@ -235,6 +247,7 @@ export class TaskInfraStack extends cdk.Stack {
 
     const divisionResource = api.root.addResource("division");
     divisionResource.addMethod("POST", new apigateway.LambdaIntegration(createDivisionFn));
+    divisionResource.addMethod("GET", new apigateway.LambdaIntegration(getDivisionsFn), { authorizer });
 
     const departmentResource = api.root.addResource("department");
     departmentResource.addMethod("POST", new apigateway.LambdaIntegration(createDepartmentFn), { authorizer });

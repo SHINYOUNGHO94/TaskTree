@@ -11,8 +11,9 @@ import {
   Trash2,
   Edit3
 } from "lucide-react";
-import { TaskService, TaskDetail, TaskStatus, TaskLevel } from "@task/core";
+import { TaskService, TaskDetail, TaskStatus, TaskLevel, UserRole } from "@task/core";
 import { EditTaskModal } from "@/components/dashboard/EditTaskModal";
+import { useUser } from "@/components/providers/UserProvider";
 
 // ステータス別の表示スタイル
 const statusStyles: Record<TaskStatus, { label: string; class: string }> = {
@@ -31,11 +32,14 @@ const levelStyles: Record<TaskLevel, { label: string; class: string }> = {
 };
 
 const TaskDetailPage = () => {
+  const { user, profile } = useUser();
   const { id } = useParams();
   const router = useRouter();
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const isEditable = task && user && (task.memberId === user.id || profile?.role === UserRole.COMPANY_ADMIN);
 
   const fetchTaskDetail = useCallback(async () => {
     setIsLoading(true);
@@ -81,7 +85,7 @@ const TaskDetailPage = () => {
           onClick={() => router.push("/dashboard")}
           className="mt-4 text-blue-600 hover:underline flex items-center gap-2 justify-center"
         >
-          <ArrowLeft size={16} /> Back to Dashboard
+          <ArrowLeft size={16} /> 戻る
         </button>
       </div>
     );
@@ -97,22 +101,24 @@ const TaskDetailPage = () => {
           <ArrowLeft size={18} />
           戻る
         </button>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setIsEditModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all"
-          >
-            <Edit3 size={16} />
-            編集
-          </button>
-          <button 
-            onClick={handleDelete}
-            className="flex items-center gap-2 px-4 py-2 border border-red-100 rounded-lg text-sm font-bold text-red-500 hover:bg-red-50 transition-all"
-          >
-            <Trash2 size={16} />
-            削除
-          </button>
-        </div>
+        {isEditable && (
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all"
+            >
+              <Edit3 size={16} />
+              編集
+            </button>
+            <button 
+              onClick={handleDelete}
+              className="flex items-center gap-2 px-4 py-2 border border-red-100 rounded-lg text-sm font-bold text-red-500 hover:bg-red-50 transition-all"
+            >
+              <Trash2 size={16} />
+              削除
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">

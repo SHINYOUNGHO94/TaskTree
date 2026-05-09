@@ -1,19 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { UserProfile, UserService, UserRole, OrgService, Department, Team } from "@task/core";
+import { UserProfile, UserService, UserRole, OrgService, Department, Team, Division } from "@task/core";
 import { Users, Plus, Mail, Shield, Building, Layers } from "lucide-react";
 import { useUser } from "../../../components/providers/UserProvider";
 
 export default function TeamPage() {
   const { profile } = useUser();
   const [members, setMembers] = useState<UserProfile[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // モーダル状態
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isDivModalOpen, setIsDivModalOpen] = useState(false);
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
@@ -22,26 +24,31 @@ export default function TeamPage() {
   const [inviteFamilyName, setInviteFamilyName] = useState("");
   const [inviteGivenName, setInviteGivenName] = useState("");
   const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.USER);
+  const [inviteDivId, setInviteDivId] = useState("");
   const [inviteDeptId, setInviteDeptId] = useState("");
   const [inviteTeamId, setInviteTeamId] = useState("");
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   // 部署・チーム追加フォーム状態
+  const [newDivName, setNewDivName] = useState("");
   const [newDeptName, setNewDeptName] = useState("");
   const [newTeamName, setNewTeamName] = useState("");
+  const [selectedDivForDept, setSelectedDivForDept] = useState("");
   const [selectedDeptForTeam, setSelectedDeptForTeam] = useState("");
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [membersData, deptsData, teamsData] = await Promise.all([
+      const [membersData, divsData, deptsData, teamsData] = await Promise.all([
         UserService.getCompanyUsers(),
+        OrgService.getDivisions(),
         OrgService.getDepartments(),
         OrgService.getTeams()
       ]);
       setMembers(membersData);
+      setDivisions(divsData);
       setDepartments(deptsData);
       setTeams(teamsData);
     } catch (err) {
@@ -66,6 +73,7 @@ export default function TeamPage() {
         email: inviteEmail,
         name: `${inviteFamilyName} ${inviteGivenName}`,
         role: inviteRole,
+        divisionId: inviteDivId || undefined,
         departmentId: inviteDeptId || undefined,
         teamId: inviteTeamId || undefined
       });
@@ -74,6 +82,7 @@ export default function TeamPage() {
       setInviteFamilyName("");
       setInviteGivenName("");
       setInviteRole(UserRole.USER);
+      setInviteDivId("");
       setInviteDeptId("");
       setInviteTeamId("");
       fetchData();
@@ -84,14 +93,31 @@ export default function TeamPage() {
     }
   };
 
+  const handleCreateDivision = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    if (!newDivName || !profile?.companyId) return;
+    try {
+      setIsCreatingOrg(true);
+      await OrgService.createDivision(newDivName, profile.companyId);
+      setIsDivModalOpen(false);
+      setNewDivName("");
+      fetchData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCreatingOrg(false);
+    }
+  };
+
   const handleCreateDepartment = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!newDeptName || !profile?.companyId) return;
     try {
       setIsCreatingOrg(true);
-      await OrgService.createDepartment(newDeptName, profile.companyId);
+      await OrgService.createDepartment(newDeptName, profile.companyId, selectedDivForDept || "NONE");
       setIsDeptModalOpen(false);
       setNewDeptName("");
+      setSelectedDivForDept("");
       fetchData();
     } catch (err) {
       console.error(err);
@@ -117,7 +143,9 @@ export default function TeamPage() {
     }
   };
 
-  if (profile?.role !== UserRole.ADMIN) {
+  // 権限チェック: TEAM_ADMIN 以上の権限がないと組織管理ページは見れないようにする
+  const allowedRoles = [UserRole.COMPANY_ADMIN, UserRole.DIVISION_ADMIN, UserRole.DEPT_ADMIN, UserRole.TEAM_ADMIN];
+  if (!profile || !allowedRoles.includes(profile.role as UserRole)) {
     return (
       <div className="p-8">
         <p className="text-gray-500">このページにアクセスする権限がありません。</p>
@@ -126,8 +154,9 @@ export default function TeamPage() {
   }
 
   // Helper to get names for display
-  const getDeptName = (id: string) => departments.find(d => d.departmentId === id)?.name || id;
-  const getTeamName = (id: string) => teams.find(t => t.teamId === id)?.name || id;
+  const getDivName = (id?: string) => id ? (divisions.find(d => d.divisionId === id)?.name || id) : "---";
+  const getDeptName = (id?: string) => id ? (departments.find(d => d.departmentId === id)?.name || id) : "---";
+  const getTeamName = (id?: string) => id ? (teams.find(t => t.teamId === id)?.name || id) : "---";
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -144,6 +173,12 @@ export default function TeamPage() {
         </div>
 
         <div className="flex gap-3">
+          <button
+            onClick={() => setIsDivModalOpen(true)}
+            className="bg-white text-gray-700 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
+          >
+            <Shield size={16} /> 本部追加
+          </button>
           <button
             onClick={() => setIsDeptModalOpen(true)}
             className="bg-white text-gray-700 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
@@ -166,7 +201,6 @@ export default function TeamPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Org Structure */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex justify-between items-center mb-4">
@@ -179,36 +213,55 @@ export default function TeamPage() {
               <div className="flex justify-center p-4">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
               </div>
-            ) : departments.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">部署がありません</p>
+            ) : divisions.length === 0 && departments.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">組織データがありません</p>
             ) : (
-              <div className="space-y-4">
-                {departments.map((dept) => (
-                  <div key={dept.departmentId} className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      {dept.name}
+              <div className="space-y-6">
+                {divisions.map((div) => (
+                  <div key={div.divisionId} className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-bold text-indigo-600">
+                      <Shield size={14} />
+                      {div.name}
                     </div>
-                    <div className="pl-3.5 border-l border-gray-100 ml-0.5 space-y-2">
-                      {teams.filter(t => t.departmentId === dept.departmentId).length === 0 ? (
-                        <div className="text-xs text-gray-400 pl-3">チームなし</div>
-                      ) : (
-                        teams.filter(t => t.departmentId === dept.departmentId).map(team => (
-                          <div key={team.teamId} className="flex items-center gap-2 text-xs font-medium text-gray-600 pl-2">
-                            <Layers size={10} className="text-gray-400" />
-                            {team.name}
+                    <div className="pl-4 border-l-2 border-indigo-50 ml-1.5 space-y-4">
+                      {departments.filter(d => d.divisionId === div.divisionId).map((dept) => (
+                        <div key={dept.departmentId} className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            {dept.name}
                           </div>
-                        ))
-                      )}
+                          <div className="pl-3.5 border-l border-gray-100 ml-0.5 space-y-2">
+                            {teams.filter(t => t.departmentId === dept.departmentId).map(team => (
+                              <div key={team.teamId} className="flex items-center gap-2 text-[10px] font-medium text-gray-500 pl-2">
+                                <Layers size={10} className="text-gray-400" />
+                                {team.name}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
+
+                {departments.filter(d => d.divisionId === "NONE").length > 0 && (
+                  <div className="pt-4 border-t border-gray-50">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">部署（本部なし）</p>
+                    {departments.filter(d => d.divisionId === "NONE").map((dept) => (
+                      <div key={dept.departmentId} className="mb-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
+                          <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                          {dept.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Members Table */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -263,11 +316,12 @@ export default function TeamPage() {
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
                               <Building size={12} className="text-gray-400" />
-                              {member.departmentId === "NONE" ? "未配属" : getDeptName(member.departmentId)}
+                              {member.divisionId && member.divisionId !== "NONE" && `${getDivName(member.divisionId)} / `}
+                              {!member.departmentId || member.departmentId === "NONE" ? "未配属" : getDeptName(member.departmentId)}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-gray-500 ml-4 border-l border-gray-200 pl-2">
                               <Layers size={10} className="text-gray-400" />
-                              {member.teamId === "NONE" ? "未配属" : getTeamName(member.teamId)}
+                              {!member.teamId || member.teamId === "NONE" ? "未配属" : getTeamName(member.teamId)}
                             </div>
                           </div>
                         </td>
@@ -283,8 +337,46 @@ export default function TeamPage() {
           </div>
         </div>
       </div>
-
-      {/* Invite Modal */}
+ 
+      {isDivModalOpen && (
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">本部を追加</h3>
+            </div>
+            <form onSubmit={handleCreateDivision} className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">本部名</label>
+                <input
+                  type="text"
+                  required
+                  value={newDivName}
+                  onChange={(e) => setNewDivName(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm"
+                  placeholder="例: 戦略営業本部"
+                />
+              </div>
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDivModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl transition-all"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingOrg}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all disabled:opacity-50 flex justify-center items-center"
+                >
+                  {isCreatingOrg ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : "追加する"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+ 
       {isInviteModalOpen && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
@@ -343,42 +435,78 @@ export default function TeamPage() {
                   onChange={(e) => setInviteRole(e.target.value as UserRole)}
                   className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white"
                 >
-                  <option value={UserRole.USER}>一般社員</option>
-                  <option value={UserRole.ADMIN}>管理者</option>
+                  <option value={UserRole.USER}>一般メンバー</option>
+                  {(profile?.role === UserRole.TEAM_ADMIN ||
+                    profile?.role === UserRole.DEPT_ADMIN ||
+                    profile?.role === UserRole.DIVISION_ADMIN ||
+                    profile?.role === UserRole.COMPANY_ADMIN) && (
+                    <option value={UserRole.TEAM_ADMIN}>チームリーダー</option>
+                  )}
+                  {(profile?.role === UserRole.DEPT_ADMIN ||
+                    profile?.role === UserRole.DIVISION_ADMIN ||
+                    profile?.role === UserRole.COMPANY_ADMIN) && (
+                    <option value={UserRole.DEPT_ADMIN}>部門管理者（部長）</option>
+                  )}
+                  {(profile?.role === UserRole.DIVISION_ADMIN ||
+                    profile?.role === UserRole.COMPANY_ADMIN) && (
+                    <option value={UserRole.DIVISION_ADMIN}>統括管理者（本部長）</option>
+                  )}
+                  {profile?.role === UserRole.COMPANY_ADMIN && (
+                    <option value={UserRole.COMPANY_ADMIN}>全体管理者（社長）</option>
+                  )}
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">所属本部</label>
+                  <select
+                    value={inviteDivId}
+                    onChange={(e) => {
+                      setInviteDivId(e.target.value);
+                      setInviteDeptId("");
+                      setInviteTeamId("");
+                    }}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white"
+                  >
+                    <option value="">未配属</option>
+                    {divisions.map(d => (
+                      <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1.5">所属部署</label>
                   <select
                     value={inviteDeptId}
                     onChange={(e) => {
                       setInviteDeptId(e.target.value);
-                      setInviteTeamId(""); // 部署が変わったらチーム選択をリセット
+                      setInviteTeamId(""); 
                     }}
-                    className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white"
+                    disabled={!inviteDivId && divisions.length > 0}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white disabled:bg-gray-50 disabled:text-gray-400"
                   >
                     <option value="">未配属</option>
-                    {departments.map(d => (
+                    {departments.filter(d => d.divisionId === inviteDivId || (inviteDivId === "" && d.divisionId === "NONE")).map(d => (
                       <option key={d.departmentId} value={d.departmentId}>{d.name}</option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1.5">所属チーム</label>
-                  <select
-                    value={inviteTeamId}
-                    onChange={(e) => setInviteTeamId(e.target.value)}
-                    disabled={!inviteDeptId}
-                    className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white disabled:bg-gray-50 disabled:text-gray-400"
-                  >
-                    <option value="">未配属</option>
-                    {teams.filter(t => t.departmentId === inviteDeptId).map(t => (
-                      <option key={t.teamId} value={t.teamId}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">所属チーム</label>
+                <select
+                  value={inviteTeamId}
+                  onChange={(e) => setInviteTeamId(e.target.value)}
+                  disabled={!inviteDeptId}
+                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="">未配属</option>
+                  {teams.filter(t => t.departmentId === inviteDeptId).map(t => (
+                    <option key={t.teamId} value={t.teamId}>{t.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="pt-4 flex gap-3">
@@ -402,7 +530,6 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Create Department Modal */}
       {isDeptModalOpen && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
@@ -410,6 +537,19 @@ export default function TeamPage() {
               <h3 className="text-lg font-bold text-gray-900">部署を追加</h3>
             </div>
             <form onSubmit={handleCreateDepartment} className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">上位の本部</label>
+                <select
+                  value={selectedDivForDept}
+                  onChange={(e) => setSelectedDivForDept(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white"
+                >
+                  <option value="">本部なし（直속）</option>
+                  {divisions.map(d => (
+                    <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1.5">部署名</label>
                 <input
@@ -442,7 +582,6 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Create Team Modal */}
       {isTeamModalOpen && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">

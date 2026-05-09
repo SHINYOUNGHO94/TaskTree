@@ -8,15 +8,15 @@ const UserProfileSchema = z.object({
   userId: z.string(),
   email: z.string(),
   name: z.string(),
-  role: z.enum([UserRole.ADMIN, UserRole.USER, UserRole.GUEST]),
-  companyId: z.string(),
-  divisionId: z.string(),
-  departmentId: z.string(),
-  teamId: z.string(),
-  companyName: z.string(),
-  divisionName: z.string(),
-  departmentName: z.string(),
-  teamName: z.string(),
+  role: z.enum([UserRole.COMPANY_ADMIN, UserRole.DIVISION_ADMIN, UserRole.DEPT_ADMIN, UserRole.TEAM_ADMIN, UserRole.USER, UserRole.GUEST]),
+  companyId: z.string().optional(),
+  divisionId: z.string().optional(),
+  departmentId: z.string().optional(),
+  teamId: z.string().optional(),
+  companyName: z.string().optional(),
+  divisionName: z.string().optional(),
+  departmentName: z.string().optional(),
+  teamName: z.string().optional(),
   createdAt: z.string().optional(),
   lastSignInAt: z.string().optional()
 });
@@ -92,7 +92,7 @@ export const UserService = {
   },
 
   // 新しいメンバーを招待する
-  inviteUser: async (params: { email: string; name: string; departmentId?: string; teamId?: string; role?: string }): Promise<{ userId: string }> => {
+  inviteUser: async (params: { email: string; name: string; divisionId?: string; departmentId?: string; teamId?: string; role?: string }): Promise<{ userId: string }> => {
     try {
       const { tokens } = await fetchAuthSession();
       const idToken = tokens?.idToken?.toString();
