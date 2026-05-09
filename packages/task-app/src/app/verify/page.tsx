@@ -20,6 +20,7 @@ const VerifyContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
+  const companyName = searchParams.get("company") || "";
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -32,10 +33,9 @@ const VerifyContent = () => {
 
   const onSubmit = async (data: VerifyFormValues) => {
     setError(null);
-    const result = await AuthService.confirmSignUp(email, data.code);
+    const result = await AuthService.confirmSignUp(email, data.code, companyName);
     
     if (result.success) {
-      // 認証成功 -> ログインページへ（あるいはそのままサインイン）
       router.push("/?verified=true");
     } else {
       setError("認証コードが正しくないか、期限が切れています。");
@@ -111,7 +111,7 @@ const VerifyPage = () => {
         </Suspense>
 
         <div className="mt-8 text-center text-xs text-gray-400">
-          TaskTree
+          © 2026 TaskTree
         </div>
       </div>
     </main>

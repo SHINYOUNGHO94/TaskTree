@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, AlertCircle, UserPlus, ArrowLeft, User } from "lucide-react";
+import { Mail, Lock, AlertCircle, UserPlus, ArrowLeft, User, Building2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,6 +11,7 @@ import { AuthService } from "@task/core";
 
 // 1. バリデーションスキーマ
 const signupSchema = z.object({
+  companyName: z.string().min(1, { message: "会社名を入力してください。" }),
   familyName: z.string().min(1, { message: "姓を入力してください。" }),
   givenName: z.string().min(1, { message: "名を入力してください。" }),
   email: z.email({ message: "有効なメールアドレスを入力してください。" }),
@@ -43,11 +44,11 @@ const SignupPage = () => {
 
     // フルネームを作成 (姓 + 名)
     const fullName = `${data.familyName} ${data.givenName}`;
-    const result = await AuthService.signUp(data.email, data.password, fullName);
+    const result = await AuthService.signUp(data.email, data.password, fullName, data.companyName);
     
     if (result.success) {
       // 登録成功 -> 認証画面へ
-      router.push(`/verify?email=${encodeURIComponent(data.email)}`);
+      router.push(`/verify?email=${encodeURIComponent(data.email)}&company=${encodeURIComponent(data.companyName)}`);
     } else {
       // エラーハンドリング
       let message = "登録に失敗しました。";
@@ -84,6 +85,19 @@ const SignupPage = () => {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">会社名</label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  {...register("companyName")}
+                  placeholder="TaskTree株式会社"
+                  className="w-full border border-gray-300 rounded-md py-2.5 pl-10 pr-4 text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+              {errors.companyName && <p className="text-xs text-red-500 mt-1">{errors.companyName.message}</p>}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">姓</label>

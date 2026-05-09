@@ -16,11 +16,12 @@ export const handler = async (event: PostConfirmationConfirmSignUpTriggerEvent):
   console.log("PostConfirmation Event:", JSON.stringify(event));
 
   const { sub: userId, email, name } = event.request.userAttributes;
+  const companyName = event.request.clientMetadata?.companyName || "個人組織";
 
   try {
     // 1. デフォルト会社 (Company) の作成
     const companyId = `COMP-${userId.slice(0, 8)}`;
-    await companyRepo.create(companyId, "個人組織 (Default)");
+    await companyRepo.create(companyId, companyName);
 
     // 2. デフォルト部署 (Department) の作成
     const deptId = `DEPT-${userId.slice(0, 8)}`;

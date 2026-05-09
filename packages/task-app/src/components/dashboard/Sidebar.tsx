@@ -8,15 +8,17 @@ import {
   ChevronRight,
   TreeDeciduous,
   Building2,
-  Layers
+  Layers,
+  Users
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useUser } from '../providers/UserProvider';
 
 // サイドバーのメニュー項目定義
-const MENU_ITEMS = [
+const getMenuItems = (role?: string) => [
   { id: 'dashboard', label: 'ダッシュボード', icon: LayoutDashboard, href: '/dashboard' },
   { id: 'tasks', label: 'マイタスク', icon: CheckSquare, href: '/dashboard/tasks' },
+  ...(role === 'ADMIN' ? [{ id: 'team', label: '組織管理', icon: Users, href: '/dashboard/team' }] : []),
   { id: 'settings', label: '設定', icon: Settings, href: '/dashboard/settings' },
 ];
 
@@ -40,7 +42,7 @@ export const Sidebar: React.FC = () => {
         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">
           メインメニュー
         </div>
-        {MENU_ITEMS.map((item) => {
+        {getMenuItems(profile?.role).map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

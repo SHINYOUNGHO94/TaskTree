@@ -1,5 +1,6 @@
 import { DepartmentRecord, DepartmentRecordType } from "@/aws/entities/items/departmentRecord";
 import { BaseRepository } from "@/repositories/baseRepository";
+import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
   constructor(tableName: string) {
@@ -28,5 +29,21 @@ export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
     const pk = DepartmentRecord.makePk();
     const sk = DepartmentRecord.makeSk(divisionId, departmentId);
     return await this.get(pk, sk);
+  };
+
+  // 会社に所属する全部署を取得します
+  findByCompanyId = async (companyId: string): Promise<DepartmentRecordType[]> => {
+    const response = await this.docClient.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        IndexName: "company",
+        KeyConditionExpression: "companyId = :companyId AND pk = :pk",
+        ExpressionAttributeValues: {
+          ":companyId": companyId,
+          ":pk": DepartmentRecord.prefix,
+        },
+      })
+    );
+    return (response.Items || []) as DepartmentRecordType[];
   };
 }

@@ -40,14 +40,14 @@ const DashboardPage = () => {
   // ステータスのクイック更新
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
-      // 1. 現在の詳細情報を取得
+      // 現在の詳細情報を取得
       const currentTask = await TaskService.getTask(taskId);
-      // 2. ステータスのみを書き換えて更新
+      // ステータスのみを書き換えて更新
       await TaskService.updateTask({
         ...currentTask,
         status: newStatus
       });
-      // 3. 一覧を再取得
+      // 一覧を再取得
       await fetchTasks();
     } catch (error) {
       console.error("Failed to update status", error);
@@ -80,14 +80,14 @@ const DashboardPage = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            マイタスク 
+            マイタスク
             <span className="text-sm font-normal bg-gray-100 px-2 py-1 rounded text-gray-500">
               {tasks.length}
             </span>
           </h2>
-          <p className="text-gray-500 text-sm mt-1">タスクの管理・追跡ができます。</p>
+          <p className="text-gray-500 text-sm mt-1">タスク管理・追跡</p>
         </div>
-        
+
         <div className="flex gap-3">
           <button 
             onClick={fetchTasks}

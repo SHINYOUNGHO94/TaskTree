@@ -263,6 +263,53 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aws-sdk/client-cognito-identity-provider@npm:^3.1045.0":
+  version: 3.1045.0
+  resolution: "@aws-sdk/client-cognito-identity-provider@npm:3.1045.0"
+  dependencies:
+    "@aws-crypto/sha256-browser": "npm:5.2.0"
+    "@aws-crypto/sha256-js": "npm:5.2.0"
+    "@aws-sdk/core": "npm:^3.974.8"
+    "@aws-sdk/credential-provider-node": "npm:^3.972.39"
+    "@aws-sdk/middleware-host-header": "npm:^3.972.10"
+    "@aws-sdk/middleware-logger": "npm:^3.972.10"
+    "@aws-sdk/middleware-recursion-detection": "npm:^3.972.11"
+    "@aws-sdk/middleware-user-agent": "npm:^3.972.38"
+    "@aws-sdk/region-config-resolver": "npm:^3.972.13"
+    "@aws-sdk/types": "npm:^3.973.8"
+    "@aws-sdk/util-endpoints": "npm:^3.996.8"
+    "@aws-sdk/util-user-agent-browser": "npm:^3.972.10"
+    "@aws-sdk/util-user-agent-node": "npm:^3.973.24"
+    "@smithy/config-resolver": "npm:^4.4.17"
+    "@smithy/core": "npm:^3.23.17"
+    "@smithy/fetch-http-handler": "npm:^5.3.17"
+    "@smithy/hash-node": "npm:^4.2.14"
+    "@smithy/invalid-dependency": "npm:^4.2.14"
+    "@smithy/middleware-content-length": "npm:^4.2.14"
+    "@smithy/middleware-endpoint": "npm:^4.4.32"
+    "@smithy/middleware-retry": "npm:^4.5.7"
+    "@smithy/middleware-serde": "npm:^4.2.20"
+    "@smithy/middleware-stack": "npm:^4.2.14"
+    "@smithy/node-config-provider": "npm:^4.3.14"
+    "@smithy/node-http-handler": "npm:^4.6.1"
+    "@smithy/protocol-http": "npm:^5.3.14"
+    "@smithy/smithy-client": "npm:^4.12.13"
+    "@smithy/types": "npm:^4.14.1"
+    "@smithy/url-parser": "npm:^4.2.14"
+    "@smithy/util-base64": "npm:^4.3.2"
+    "@smithy/util-body-length-browser": "npm:^4.2.2"
+    "@smithy/util-body-length-node": "npm:^4.2.3"
+    "@smithy/util-defaults-mode-browser": "npm:^4.3.49"
+    "@smithy/util-defaults-mode-node": "npm:^4.2.54"
+    "@smithy/util-endpoints": "npm:^3.4.2"
+    "@smithy/util-middleware": "npm:^4.2.14"
+    "@smithy/util-retry": "npm:^4.3.6"
+    "@smithy/util-utf8": "npm:^4.2.2"
+    tslib: "npm:^2.6.2"
+  checksum: 10c0/b22f822dd7b314c7222f7f25c564ff0101b0bb071285dbfef72af39fdeef707628b9a449b78337e0ba5d7ec4e56829777e4fa39a53a838467d546d9ba81f9f2d
+  languageName: node
+  linkType: hard
+
 "@aws-sdk/client-dynamodb@npm:^3.1043.0":
   version: 3.1043.0
   resolution: "@aws-sdk/client-dynamodb@npm:3.1043.0"
@@ -3303,6 +3350,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@task/api@workspace:packages/task-api"
   dependencies:
+    "@aws-sdk/client-cognito-identity-provider": "npm:^3.1045.0"
     "@aws-sdk/client-dynamodb": "npm:^3.1043.0"
     "@aws-sdk/lib-dynamodb": "npm:^3.1043.0"
     "@task/core": "workspace:*"
@@ -3342,6 +3390,7 @@ __metadata:
   dependencies:
     aws-amplify: "npm:^6.17.0"
     typescript: "npm:~5.7.3"
+    zod: "npm:^4.4.3"
   languageName: unknown
   linkType: soft
 

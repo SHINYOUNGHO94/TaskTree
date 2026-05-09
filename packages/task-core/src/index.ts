@@ -14,3 +14,4 @@ export * from "./task/TaskService";
 // ユーザー関連のエクスポート
 export * from "./types/user";
 export * from "./user/UserService";
+export * from './user/OrgService';
