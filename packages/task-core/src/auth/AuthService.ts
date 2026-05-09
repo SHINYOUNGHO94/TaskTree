@@ -1,10 +1,10 @@
-import { signIn, signOut, fetchUserAttributes, signUp, confirmSignUp, fetchAuthSession } from 'aws-amplify/auth';
+import { signIn, signOut, fetchUserAttributes, signUp, confirmSignUp, fetchAuthSession, confirmSignIn } from 'aws-amplify/auth';
 import { AuthResult, AuthUser } from '../types/auth';
 
 // AuthService: AWS Cognitoを利用した認証ロジックを管理するクラス
 export const AuthService = {
-  // ユーザーサインアップ（新規登録）
-  signUp: async (email: string, password: string, name: string): Promise<AuthResult> => {
+  // ユーザーサインアップ
+  signUp: async (email: string, password: string, name: string, companyName?: string): Promise<AuthResult> => {
     try {
       const { userId } = await signUp({
         username: email,
@@ -14,6 +14,7 @@ export const AuthService = {
             email,
             name,
             nickname: name,
+            profile: companyName || "個人組織",
           },
         }
       });
@@ -30,11 +31,16 @@ export const AuthService = {
   },
 
   // ユーザーサインアップ確認
-  confirmSignUp: async (email: string, code: string): Promise<AuthResult> => {
+  confirmSignUp: async (email: string, code: string, companyName?: string): Promise<AuthResult> => {
     try {
       const { isSignUpComplete } = await confirmSignUp({
         username: email,
         confirmationCode: code,
+        options: {
+          clientMetadata: {
+            companyName: companyName || "個人組織",
+          }
+        }
       });
 
       return { success: isSignUpComplete };
@@ -79,6 +85,30 @@ export const AuthService = {
         success: false,
         error: errorName
       };
+    }
+  },
+
+  // 初回ログイン時のパスワード変更処理
+  confirmNewPassword: async (newPassword: string): Promise<AuthResult> => {
+    try {
+      const { isSignedIn } = await confirmSignIn({
+        challengeResponse: newPassword,
+      });
+
+      if (isSignedIn) {
+        const attributes = await fetchUserAttributes();
+        const user: AuthUser = {
+          id: attributes.sub || '',
+          email: attributes.email || '',
+          name: attributes.nickname || attributes.email,
+        };
+        return { success: true, user };
+      }
+      return { success: false, error: 'SIGN_IN_FAILED' };
+    } catch (error: unknown) {
+      console.error('ConfirmSignIn Error:', error);
+      const errorName = (error instanceof Error) ? error.name : 'UNKNOWN_ERROR';
+      return { success: false, error: errorName };
     }
   },
 

@@ -23,6 +23,8 @@ const LoginContent = () => {
   const searchParams = useSearchParams();
   const isVerified = searchParams.get("verified") === "true";
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   const { user, isLoading, refreshUser } = useUser();
   
   // 2. 認証チェック
@@ -47,10 +49,73 @@ const LoginContent = () => {
     if (result.success || result.error === "UserAlreadyAuthenticatedException") {
       await refreshUser(); // グローバル状態を更新してから遷移
       router.push("/dashboard");
+    } else if (result.error === "NEW_PASSWORD_REQUIRED") {
+      setIsNewPasswordRequired(true);
     } else {
       setAuthError(result.error || "UNKNOWN_ERROR");
     }
   };
+
+  const onConfirmNewPassword = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    if (newPassword.length < 8) {
+      setAuthError("パスワードは8文字以上で入力してください。");
+      return;
+    }
+    const result = await AuthService.confirmNewPassword(newPassword);
+    if (result.success) {
+      await refreshUser();
+      router.push("/dashboard");
+    } else {
+      setAuthError(result.error || "パスワードの変更に失敗しました。");
+    }
+  };
+
+  if (isNewPasswordRequired) {
+    return (
+      <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">パスワードの再設定</h2>
+          <p className="text-sm text-gray-600">
+            初期パスワードでログインしました。セキュリティのため、新しいパスワードを設定してください。
+          </p>
+        </div>
+
+        {authError && (
+          <div className="mb-6 p-3 bg-red-50 border border-red-100 rounded text-red-600 text-sm flex items-center gap-2">
+            <AlertCircle size={16} />
+            <span>{authError}</span>
+          </div>
+        )}
+
+        <form onSubmit={onConfirmNewPassword} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">新しいパスワード</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="8文字以上"
+                className="w-full border border-gray-300 rounded-md py-2.5 pl-10 pr-4 text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={isSubmitting || !newPassword}
+            className="w-full bg-gray-900 text-white font-bold py-3 rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            パスワードを設定してログイン
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">

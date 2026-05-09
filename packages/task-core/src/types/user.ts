@@ -11,9 +11,11 @@ export interface UserProfile {
   departmentId: string;
   teamId: string;
 
-  // 組織階층名 (UI表示用)
+  // 組織階層名
   companyName: string;
   divisionName: string;
   departmentName: string;
   teamName: string;
+  createdAt?: string;
+  lastSignInAt?: string;
 }

@@ -69,6 +69,28 @@ export class TaskInfraStack extends cdk.Stack {
       },
     });
 
+    // Lambda: 部署一覧取得機能
+    const getDepartmentsFn = new NodejsFunction(this, "GetDepartmentsFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/department/getDepartments.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    database.entities.grantReadData(getDepartmentsFn);
+
+    // Lambda: チーム一覧取得機能
+    const getTeamsFn = new NodejsFunction(this, "GetTeamsFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/team/getTeams.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    database.entities.grantReadData(getTeamsFn);
+
     // Lambda: ユーザー(User)作成機能
     const createUserFn = new NodejsFunction(this, "CreateUserFunction", {
       runtime: Runtime.NODEJS_20_X,
@@ -79,6 +101,33 @@ export class TaskInfraStack extends cdk.Stack {
       },
     });
     database.entities.grantWriteData(createUserFn);
+
+    // Lambda: ユーザー招待機能
+    const inviteUserFn = new NodejsFunction(this, "InviteUserFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/user/inviteUser.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        USER_POOL_ID: userPool.userPoolId,
+      },
+    });
+    database.entities.grantReadWriteData(inviteUserFn);
+    inviteUserFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ["cognito-idp:AdminCreateUser"],
+      resources: [userPool.userPoolArn],
+    }));
+
+    // Lambda: 会社ユーザー一覧取得機能
+    const getCompanyUsersFn = new NodejsFunction(this, "GetCompanyUsersFunction", {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../../task-api/src/aws/handlers/user/getCompanyUsers.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    database.entities.grantReadData(getCompanyUsersFn);
 
     // Lambda: サインアップ後の自動オンボーディング (Post Confirmation)
     const postConfirmationFn = new NodejsFunction(this, "PostConfirmationFunction", {
@@ -94,8 +143,9 @@ export class TaskInfraStack extends cdk.Stack {
       sourceArn: userPool.userPoolArn,
     });
     database.entities.grantWriteData(postConfirmationFn);
-    database.entities.grantWriteData(createCompanyFn); // 権限追加
-    database.entities.grantWriteData(createDepartmentFn); // 権限追加
+    database.entities.grantWriteData(createCompanyFn);
+    database.entities.grantWriteData(createDepartmentFn);
+    database.entities.grantWriteData(createTeamFn);
 
     // Lambda: ユーザープロファイル取得機能
     const getUserProfileFn = new NodejsFunction(this, "GetUserProfileFunction", {
@@ -166,7 +216,13 @@ export class TaskInfraStack extends cdk.Stack {
     // API Gateway の構築
     const api = new apigateway.RestApi(this, "TaskApi", {
       restApiName: "Task Tree API",
-      description: "API for TaskTree management",
+      description: "API for TaskTree management - v2",
+      deployOptions: {
+        stageName: "prod",
+        variables: {
+          deploymentTrigger: new Date().toISOString()
+        }
+      },
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
@@ -181,14 +237,26 @@ export class TaskInfraStack extends cdk.Stack {
     divisionResource.addMethod("POST", new apigateway.LambdaIntegration(createDivisionFn));
 
     const departmentResource = api.root.addResource("department");
-    departmentResource.addMethod("POST", new apigateway.LambdaIntegration(createDepartmentFn));
+    departmentResource.addMethod("POST", new apigateway.LambdaIntegration(createDepartmentFn), { authorizer });
+    departmentResource.addMethod("GET", new apigateway.LambdaIntegration(getDepartmentsFn), { authorizer });
 
     const teamResource = api.root.addResource("team");
-    teamResource.addMethod("POST", new apigateway.LambdaIntegration(createTeamFn));
+    teamResource.addMethod("POST", new apigateway.LambdaIntegration(createTeamFn), { authorizer });
+    teamResource.addMethod("GET", new apigateway.LambdaIntegration(getTeamsFn), { authorizer });
 
     const userResource = api.root.addResource("user");
     userResource.addMethod("POST", new apigateway.LambdaIntegration(createUserFn));
     userResource.addMethod("GET", new apigateway.LambdaIntegration(getUserProfileFn), {
+      authorizer,
+    });
+
+    const userInviteResource = userResource.addResource("invite");
+    userInviteResource.addMethod("POST", new apigateway.LambdaIntegration(inviteUserFn), {
+      authorizer,
+    });
+
+    const companyUsersResource = userResource.addResource("company-users");
+    companyUsersResource.addMethod("GET", new apigateway.LambdaIntegration(getCompanyUsersFn), {
       authorizer,
     });
 

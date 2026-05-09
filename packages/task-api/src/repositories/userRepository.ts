@@ -8,7 +8,7 @@ export class UserRepository extends BaseRepository<UserRecordType> {
     super(tableName);
   }
 
-  // ユーザーID(sub)からユーザー情報を取得する
+  // ユーザーID(sub)からユーザー情報を取得
   async findByUserId(userId: string): Promise<UserEntity | undefined> {
     const response = await this.docClient.send(
       new QueryCommand({
@@ -24,6 +24,24 @@ export class UserRepository extends BaseRepository<UserRecordType> {
 
     const item = response.Items?.[0] as UserRecordType | undefined;
     return item ? UserRecord.intoEntity(item) : undefined;
+  }
+
+  // 会社IDから所属するユーザー一覧を取得
+  async findByCompanyId(companyId: string): Promise<UserEntity[]> {
+    const response = await this.docClient.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        IndexName: "company",
+        KeyConditionExpression: "companyId = :companyId AND pk = :pk",
+        ExpressionAttributeValues: {
+          ":companyId": companyId,
+          ":pk": UserRecord.prefix,
+        },
+      })
+    );
+
+    const items = (response.Items || []) as UserRecordType[];
+    return items.map(item => UserRecord.intoEntity(item));
   }
 
   async create(params: {
