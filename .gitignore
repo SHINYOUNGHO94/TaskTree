@@ -11,6 +11,9 @@ dist/
 out/
 cdk.out/
 build/
+*.tsbuildinfo
+packages/**/*.js
+packages/**/*.d.ts
 
 # Environment variables
 .env*

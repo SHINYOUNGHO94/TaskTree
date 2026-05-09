@@ -1,0 +1,51 @@
+export interface TaskApiError {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
+const COMMON_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE",
+  "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+};
+
+// 必要なデータが足りないときに使います
+export const requiredFieldsMissing = (): TaskApiError => ({
+  statusCode: 400,
+  headers: COMMON_HEADERS,
+  body: JSON.stringify({
+    code: "REQUIRED_FIELDS_MISSING",
+    message: "Required fields are missing",
+  })
+});
+
+// リクエストの内容が正しくないときに使います
+export const invalidRequestBody = (): TaskApiError => ({
+  statusCode: 400,
+  headers: COMMON_HEADERS,
+  body: JSON.stringify({
+    code: "INVALID_REQUEST_BODY",
+    message: "Invalid request body",
+  }),
+});
+
+// システムにエラーが起きたときに使います
+export const internalServerError = (message: string = "Internal server error"): TaskApiError => ({
+  statusCode: 500,
+  headers: COMMON_HEADERS,
+  body: JSON.stringify({
+    code: "INTERNAL_SERVER_ERROR",
+    message: message,
+  })
+});
+
+// データが見つからないときに使います
+export const notFound = (message: string = "Resource not found"): TaskApiError => ({
+  statusCode: 404,
+  headers: COMMON_HEADERS,
+  body: JSON.stringify({
+    code: "NOT_FOUND",
+    message: message,
+  })
+});

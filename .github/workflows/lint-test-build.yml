@@ -1,0 +1,44 @@
+name: Lint, Test and Build
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    types:
+      - opened
+      - synchronize
+  workflow_dispatch:
+
+jobs:
+  lint-test-build:
+    name: Lint, Test and Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          
+      - name: Enable Corepack
+        run: corepack enable
+        
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Lint
+        run: yarn lint --max-warnings 0
+
+      - name: Type check
+        run: yarn type-check
+
+      - name: Build Applications
+        run: yarn workspace @task/app build
+
+      - name: AWS CDK Validation (Synth)
+        run: yarn workspace @task/infra cdk synth
+        env:
+          AWS_DEFAULT_REGION: ap-northeast-1
