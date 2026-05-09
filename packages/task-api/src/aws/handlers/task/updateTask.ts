@@ -1,10 +1,18 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { TaskRepository } from "@/repositories/taskRepository";
+import { UserRepository } from "@/repositories/userRepository";
 import { internalServerError } from "@/errors/utils";
-import { TaskDetail } from "@task/core";
+import { TaskDetail, UserRole } from "@task/core";
 
 const tableName = process.env.TABLE_NAME || "";
-const repository = new TaskRepository(tableName);
+const taskRepo = new TaskRepository(tableName);
+const userRepo = new UserRepository(tableName);
+
+const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResult => ({
+  statusCode,
+  headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
 
 // タスク情報を更新するLambdaハンドラー
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -14,35 +22,36 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const body = event.body ? JSON.parse(event.body) : null;
 
     if (!memberId || !taskId || !body) {
-      return internalServerError("Missing required parameters");
+      return createResponse(400, { message: "Missing required parameters" });
     }
 
     // 更新対象の存在確認
-    const existingTask = await repository.findById(memberId, taskId);
+    const existingTask = await taskRepo.findByTaskId(taskId);
     if (!existingTask) {
-      return {
-        statusCode: 404,
-        headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ message: "Task not found" }),
-      };
+      return createResponse(404, { message: "Task not found" });
     }
 
-    // 内容の更新（作成日などは維持）
+    // 権限チェック: 自分のタスク、または COMPANY_ADMIN のみ更新可能
+    const isOwner = existingTask.memberId === memberId;
+    const callerProfile = await userRepo.findByUserId(memberId);
+    const isCompanyAdmin = callerProfile?.role === UserRole.COMPANY_ADMIN;
+
+    if (!isOwner && !isCompanyAdmin) {
+      return createResponse(403, { message: "Access denied. Only owners or company admins can edit." });
+    }
+
+    // 内容の更新
     const updatedTask: TaskDetail = {
       ...existingTask,
       ...body,
-      memberId, 
+      memberId: existingTask.memberId,
       id: taskId, 
       updatedAt: new Date().toISOString(),
     };
 
-    await repository.save(updatedTask);
+    await taskRepo.save(updatedTask);
 
-    return {
-      statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify(updatedTask),
-    };
+    return createResponse(200, updatedTask);
   } catch (error) {
     console.error(error);
     return internalServerError();

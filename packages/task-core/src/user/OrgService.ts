@@ -2,6 +2,12 @@ import { get, post } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { z } from 'zod';
 
+export interface Division {
+  divisionId: string;
+  name: string;
+  companyId: string;
+}
+
 export interface Department {
   departmentId: string;
   name: string;
@@ -16,6 +22,12 @@ export interface Team {
   divisionId: string;
   departmentId: string;
 }
+
+const DivisionSchema = z.object({
+  divisionId: z.string(),
+  name: z.string(),
+  companyId: z.string(),
+});
 
 const DepartmentSchema = z.object({
   departmentId: z.string(),
@@ -32,6 +44,10 @@ const TeamSchema = z.object({
   departmentId: z.string(),
 });
 
+const DivisionsResponseSchema = z.object({
+  divisions: z.array(DivisionSchema),
+});
+
 const DepartmentsResponseSchema = z.object({
   departments: z.array(DepartmentSchema),
 });
@@ -40,7 +56,48 @@ const TeamsResponseSchema = z.object({
   teams: z.array(TeamSchema),
 });
 
+
 export const OrgService = {
+  getDivisions: async (): Promise<Division[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const restOperation = get({
+        apiName: "TaskApi",
+        path: "division",
+        options: { headers: { Authorization: tokens?.idToken?.toString() || '' } }
+      });
+      const response = await restOperation.response;
+      if (response.statusCode !== 200) throw new Error("Failed to fetch divisions");
+      const json = await response.body.json();
+      const body = DivisionsResponseSchema.parse(json);
+      return body.divisions;
+    } catch (error) {
+      console.error("Failed to fetch divisions", error);
+      return [];
+    }
+  },
+ 
+  createDivision: async (name: string, companyId: string): Promise<{ divisionId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const divisionId = `DIV-${Date.now()}`;
+      const restOperation = post({
+        apiName: "TaskApi",
+        path: "division",
+        options: {
+          headers: { Authorization: tokens?.idToken?.toString() || '' },
+          body: { name, companyId, divisionId }
+        }
+      });
+      const response = await restOperation.response;
+      if (response.statusCode !== 201) throw new Error("Failed to create division");
+      return { divisionId };
+    } catch (error) {
+      console.error("Failed to create division", error);
+      throw error;
+    }
+  },
+ 
   getDepartments: async (): Promise<Department[]> => {
     try {
       const { tokens } = await fetchAuthSession();

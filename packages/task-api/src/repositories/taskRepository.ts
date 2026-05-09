@@ -1,4 +1,4 @@
-import { QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { BaseRepository } from "./baseRepository";
 import { TaskRecord, TaskRecordType } from "@/aws/entities/items/taskRecord";
 import { TaskDetail } from "@task/core";
@@ -9,7 +9,7 @@ export class TaskRepository extends BaseRepository<TaskRecordType> {
     super(tableName);
   }
 
-  // 指定された担当者(memberId)のタスク一覧を取得する
+  // 指定された担当者のタスク一覧を取得する
   async listByMemberId(memberId: string): Promise<TaskDetail[]> {
     const pk = TaskRecord.makePk();
     const skPrefix = `Member#${memberId}#`;
@@ -27,6 +27,38 @@ export class TaskRepository extends BaseRepository<TaskRecordType> {
 
     const items = (response.Items as TaskRecordType[]) || [];
     return items.map((item) => TaskRecord.intoEntity(item));
+  }
+
+  // 会社に属する全タスクを取得する 
+  async listByCompanyId(companyId: string): Promise<TaskDetail[]> {
+    const response = await this.docClient.send(
+      new ScanCommand({
+        TableName: this.tableName,
+        FilterExpression: "pk = :pk AND companyId = :companyId",
+        ExpressionAttributeValues: {
+          ":pk": TaskRecord.prefix,
+          ":companyId": companyId,
+        },
+      })
+    );
+    const items = (response.Items as TaskRecordType[]) || [];
+    return items.map((item) => TaskRecord.intoEntity(item));
+  }
+
+  // タスクIDのみでタスクを取得する
+  async findByTaskId(taskId: string): Promise<TaskDetail | undefined> {
+    const response = await this.docClient.send(
+      new ScanCommand({
+        TableName: this.tableName,
+        FilterExpression: "pk = :pk AND id = :taskId",
+        ExpressionAttributeValues: {
+          ":pk": TaskRecord.prefix,
+          ":taskId": taskId,
+        },
+      })
+    );
+    const item = (response.Items as TaskRecordType[])?.[0];
+    return item ? TaskRecord.intoEntity(item) : undefined;
   }
 
   async save(task: TaskDetail): Promise<void> {
