@@ -16,11 +16,13 @@ export class DivisionRepository extends BaseRepository<DivisionRecordType> {
     const record: DivisionRecordType = {
       pk: DivisionRecord.makePk(),
       sk: DivisionRecord.makeSk(params.companyId, params.divisionId),
-      ...params,
-      createdAt: new Date().toISOString(),
+      Company: params.companyId,
+      Division: params.divisionId,
+      name: params.name,
+      at: new Date().toISOString(),
     };
 
-    await this.put(record);
+    await this.put(record, "attribute_not_exists(pk)");
   };
 
   // 事業部を取得します
@@ -36,10 +38,13 @@ export class DivisionRepository extends BaseRepository<DivisionRecordType> {
       new QueryCommand({
         TableName: this.tableName,
         IndexName: "company",
-        KeyConditionExpression: "companyId = :companyId AND pk = :pk",
+        KeyConditionExpression: "#comp = :companyId AND pk = :pk",
+        ExpressionAttributeNames: {
+            "#comp": "Company",
+        },
         ExpressionAttributeValues: {
           ":companyId": companyId,
-          ":pk": DivisionRecord.prefix,
+          ":pk": DivisionRecord.entityName,
         },
       })
     );

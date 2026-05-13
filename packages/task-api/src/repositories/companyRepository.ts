@@ -10,12 +10,12 @@ export class CompanyRepository extends BaseRepository<CompanyRecordType> {
     const record: CompanyRecordType = {
       pk: CompanyRecord.makePk(),
       sk: CompanyRecord.makeSk(companyId),
-      companyId,
+      Company: companyId,
       name,
-      createdAt: new Date().toISOString(),
+      at: new Date().toISOString(),
     };
 
-    await this.put(record);
+    await this.put(record, "attribute_not_exists(pk)");
   }
 
   async findById(companyId: string): Promise<CompanyRecordType | undefined> {

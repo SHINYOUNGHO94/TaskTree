@@ -11,15 +11,14 @@ type DepartmentMemberAdditional = {
     email: string;
 };
 
-export type DepartmentMemberEntity = HierarchyEntityBase<"memberId", DepartmentMemberHierarchy, DepartmentMemberAdditional>;
-export type DepartmentMemberRecordProps = HierarchyRecordProps<"memberId", DepartmentMemberHierarchy, DepartmentMemberAdditional>;
-export type DepartmentMemberRecordType = HierarchyRecordType<"memberId", DepartmentMemberHierarchy, DepartmentMemberAdditional>;
+export type DepartmentMemberEntity = HierarchyEntityBase<"DepartmentMember", DepartmentMemberHierarchy, DepartmentMemberAdditional>;
+export type DepartmentMemberRecordProps = HierarchyRecordProps<"DepartmentMember", DepartmentMemberHierarchy, DepartmentMemberAdditional>;
+export type DepartmentMemberRecordType = HierarchyRecordType<"DepartmentMember", DepartmentMemberHierarchy, DepartmentMemberAdditional>;
 
 export const DepartmentMemberRecord = createHierarchyRecord<
-    "memberId", DepartmentMemberHierarchy, DepartmentMemberAdditional
+    "DepartmentMember", DepartmentMemberHierarchy, DepartmentMemberAdditional
 >({
-    prefix: "DepartmentMember",
-    nameKey: "memberId",
+    entityName: "DepartmentMember",
     makeSkFn: (departmentId: string, memberId: string) => `Department#${departmentId}#Member#${memberId}`,
     hierarchyKeys: ["companyId", "divisionId", "departmentId"],
     additionalKeys: ["role", "email"],
