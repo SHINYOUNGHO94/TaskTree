@@ -44,8 +44,8 @@ export const handler = async (event: PostConfirmationConfirmSignUpTriggerEvent):
 
     console.log(`Onboarding successful for user: ${email}`);
     return event;
-  } catch (error: any) {
-    if (error.name === "ConditionalCheckFailedException") {
+  } catch (error) {
+    if (error instanceof Error && error.name === "ConditionalCheckFailedException") {
       console.log(`User or organization already exists, skipping onboarding: ${email}`);
       return event;
     }
