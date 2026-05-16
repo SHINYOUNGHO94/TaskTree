@@ -27,7 +27,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const departments = await deptRepo.findByCompanyId(user.companyId);
-    departments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    departments.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
     return createResponse(200, { departments });
   } catch (error) {

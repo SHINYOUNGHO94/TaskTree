@@ -27,7 +27,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const teams = await teamRepo.findByCompanyId(user.companyId);
-    teams.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    teams.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
     return createResponse(200, { teams });
   } catch (error) {
