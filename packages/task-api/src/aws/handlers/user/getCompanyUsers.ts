@@ -27,12 +27,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     const users = await userRepo.findByCompanyId(callerProfile.companyId);
     const safeUsers = users.map(u => ({
-      userId: u.userId,
+      userId: u.User,
       email: u.email,
       name: u.name,
       role: u.role,
       departmentId: u.departmentId,
-      createdAt: u.createdAt
+      createdAt: u.at
     }));
 
     safeUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

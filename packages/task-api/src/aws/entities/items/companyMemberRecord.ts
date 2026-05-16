@@ -9,15 +9,14 @@ type CompanyMemberAdditional = {
     email: string;
 };
 
-export type CompanyMemberEntity = HierarchyEntityBase<"memberId", CompanyMemberHierarchy, CompanyMemberAdditional>;
-export type CompanyMemberRecordProps = HierarchyRecordProps<"memberId", CompanyMemberHierarchy, CompanyMemberAdditional>;
-export type CompanyMemberRecordType = HierarchyRecordType<"memberId", CompanyMemberHierarchy, CompanyMemberAdditional>;
+export type CompanyMemberEntity = HierarchyEntityBase<"CompanyMember", CompanyMemberHierarchy, CompanyMemberAdditional>;
+export type CompanyMemberRecordProps = HierarchyRecordProps<"CompanyMember", CompanyMemberHierarchy, CompanyMemberAdditional>;
+export type CompanyMemberRecordType = HierarchyRecordType<"CompanyMember", CompanyMemberHierarchy, CompanyMemberAdditional>;
 
 export const CompanyMemberRecord = createHierarchyRecord<
-    "memberId", CompanyMemberHierarchy, CompanyMemberAdditional
+    "CompanyMember", CompanyMemberHierarchy, CompanyMemberAdditional
 >({
-    prefix: "CompanyMember",
-    nameKey: "memberId",
+    entityName: "CompanyMember",
     makeSkFn: (companyId: string, memberId: string) => `Company#${companyId}#Member#${memberId}`,
     hierarchyKeys: ["companyId"],
     additionalKeys: ["role", "email"],

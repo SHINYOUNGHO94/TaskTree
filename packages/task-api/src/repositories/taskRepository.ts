@@ -26,7 +26,7 @@ export class TaskRepository extends BaseRepository<TaskRecordType> {
     );
 
     const items = (response.Items as TaskRecordType[]) || [];
-    return items.map((item) => TaskRecord.intoEntity(item));
+    return items.map((item) => TaskRecord.toDetail(item));
   }
 
   // 会社に属する全タスクを取得する 
@@ -36,13 +36,13 @@ export class TaskRepository extends BaseRepository<TaskRecordType> {
         TableName: this.tableName,
         FilterExpression: "pk = :pk AND companyId = :companyId",
         ExpressionAttributeValues: {
-          ":pk": TaskRecord.prefix,
+          ":pk": TaskRecord.entityName,
           ":companyId": companyId,
         },
       })
     );
     const items = (response.Items as TaskRecordType[]) || [];
-    return items.map((item) => TaskRecord.intoEntity(item));
+    return items.map((item) => TaskRecord.toDetail(item));
   }
 
   // タスクIDのみでタスクを取得する
@@ -50,19 +50,22 @@ export class TaskRepository extends BaseRepository<TaskRecordType> {
     const response = await this.docClient.send(
       new ScanCommand({
         TableName: this.tableName,
-        FilterExpression: "pk = :pk AND id = :taskId",
+        FilterExpression: "pk = :pk AND #taskAttr = :taskId",
+        ExpressionAttributeNames: {
+          "#taskAttr": "Task",
+        },
         ExpressionAttributeValues: {
-          ":pk": TaskRecord.prefix,
+          ":pk": TaskRecord.entityName,
           ":taskId": taskId,
         },
       })
     );
     const item = (response.Items as TaskRecordType[])?.[0];
-    return item ? TaskRecord.intoEntity(item) : undefined;
+    return item ? TaskRecord.toDetail(item) : undefined;
   }
 
   async save(task: TaskDetail): Promise<void> {
-    const record = TaskRecord.fromEntity(task);
+    const record = TaskRecord.fromDetail(task);
     await this.put(record);
   }
 
@@ -71,7 +74,7 @@ export class TaskRepository extends BaseRepository<TaskRecordType> {
     const pk = TaskRecord.makePk();
     const sk = TaskRecord.makeSk(memberId, taskId);
     const record = await super.get(pk, sk);
-    return record ? TaskRecord.intoEntity(record) : undefined;
+    return record ? TaskRecord.toDetail(record) : undefined;
   }
 
   // 特定のタスクを削除する

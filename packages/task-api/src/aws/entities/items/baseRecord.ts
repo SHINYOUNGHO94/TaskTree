@@ -26,19 +26,19 @@ export type HierarchyRecordType<
 > = DynamoDBRecord & HierarchyRecordProps<TName, THierarchy, TAdditional>;
 
 export const createHierarchyRecord = <
-    TName extends string,
+    TEntityName extends string,
     THierarchy = {},
     TAdditional = {},
 >(options: {
-    prefix: string;
-    nameKey: TName;
+    entityName: TEntityName;
     makeSkFn: (...ids: string[]) => string;
     hierarchyKeys?: (keyof THierarchy)[];
     additionalKeys?: (keyof TAdditional)[];
 }) => {
-    const { prefix, nameKey, hierarchyKeys = [], additionalKeys = [], makeSkFn } = options;
+    const { entityName, hierarchyKeys = [], additionalKeys = [], makeSkFn } = options;
+    const nameKey = entityName;
 
-    const makePk = () => prefix;
+    const makePk = () => entityName;
 
     const makeKey = (...ids: string[]) => ({
         pk: makePk(),
@@ -46,12 +46,12 @@ export const createHierarchyRecord = <
     });
 
     return {
-        prefix,
+        entityName,
         makePk,
         makeSk: makeSkFn,
         makeKey,
 
-        fromEntity: (entity: HierarchyEntityBase<TName, THierarchy, TAdditional>): HierarchyRecordType<TName, THierarchy, TAdditional> => {
+        fromEntity: (entity: HierarchyEntityBase<TEntityName, THierarchy, TAdditional>): HierarchyRecordType<TEntityName, THierarchy, TAdditional> => {
             const base: Record<string, unknown> = {
                 pk: entity.pk,
                 sk: entity.sk,
@@ -66,10 +66,10 @@ export const createHierarchyRecord = <
             for (const key of additionalKeys) {
                 base[key as string] = entity[key as keyof typeof entity];
             }
-            return base as HierarchyRecordType<TName, THierarchy, TAdditional>;
+            return base as HierarchyRecordType<TEntityName, THierarchy, TAdditional>;
         },
 
-        toEntity: (record: HierarchyRecordType<TName, THierarchy, TAdditional>): HierarchyEntityBase<TName, THierarchy, TAdditional> => {
+        toEntity: (record: HierarchyRecordType<TEntityName, THierarchy, TAdditional>): HierarchyEntityBase<TEntityName, THierarchy, TAdditional> => {
             const base: Record<string, unknown> = {
                 pk: record.pk,
                 sk: record.sk,
@@ -84,10 +84,10 @@ export const createHierarchyRecord = <
             for (const key of additionalKeys) {
                 base[key as string] = record[key as keyof typeof record];
             }
-            return base as HierarchyEntityBase<TName, THierarchy, TAdditional>;
+            return base as HierarchyEntityBase<TEntityName, THierarchy, TAdditional>;
         },
 
-        isValidStructure: (value: unknown): value is HierarchyRecordType<TName, THierarchy, TAdditional> => {
+        isValidStructure: (value: unknown): value is HierarchyRecordType<TEntityName, THierarchy, TAdditional> => {
             if (!isObject(value)) return false;
 
             const baseValid =
@@ -111,4 +111,4 @@ export const createHierarchyRecord = <
             return true;
         }
     } as const;
-}
+}

@@ -53,7 +53,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     // 3. プロファイル情報の構築
     const profile: UserProfile = {
-      userId: user.userId,
+      userId: user.User,
       email: user.email,
       name: user.name,
       role: user.role,

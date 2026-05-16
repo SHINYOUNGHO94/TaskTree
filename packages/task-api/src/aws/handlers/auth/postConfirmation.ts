@@ -45,7 +45,12 @@ export const handler = async (event: PostConfirmationConfirmSignUpTriggerEvent):
     console.log(`Onboarding successful for user: ${email}`);
     return event;
   } catch (error) {
-    console.error("Onboarding failed:", error);
-    return event;
+    if (error instanceof Error && error.name === "ConditionalCheckFailedException") {
+      console.log(`User or organization already exists, skipping onboarding: ${email}`);
+      return event;
+    }
+    console.error("Onboarding failed with actual error:", error);
+    // Explicitly throw error so AWS can retry or move to DLQ
+    throw error;
   }
 };
