@@ -3,9 +3,7 @@ import { UserRepository } from "../../../repositories/userRepository";
 import { UserRole } from "@task/core";
 import { CognitoIdentityProviderClient, AdminCreateUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 
-const tableName = process.env.TABLE_NAME || "";
 const userPoolId = process.env.USER_POOL_ID || "";
-const userRepo = new UserRepository(tableName);
 const cognitoClient = new CognitoIdentityProviderClient({});
 
 // API Gateway 共通レスポンス
@@ -20,7 +18,11 @@ const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResul
 
 // 管理者が新しいメンバーを組織に招待する
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export interface InviteUserDeps {
+  userRepo: UserRepository;
+}
+
+export const createHandler = (deps: InviteUserDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     // 権限確認
     const authorizer = event.requestContext.authorizer;
@@ -29,7 +31,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const callerId = authorizer.claims.sub as string;
-    const callerProfile = await userRepo.findByUserId(callerId);
+    const callerProfile = await deps.userRepo.findByUserId(callerId);
 
     if (!callerProfile) {
       return createResponse(403, { error: "Profile not found" });
@@ -69,7 +71,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // DynamoDBにユーザー情報を保存
-    await userRepo.create({
+    await deps.userRepo.create({
       userId: newUserId,
       email: email,
       name: name,
@@ -91,3 +93,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return createResponse(500, { error: errorMessage });
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  userRepo: new UserRepository(tableName)
+});

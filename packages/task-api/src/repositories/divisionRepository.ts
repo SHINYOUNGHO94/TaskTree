@@ -16,7 +16,7 @@ export class DivisionRepository extends BaseRepository<DivisionRecordType> {
     const record: DivisionRecordType = {
       pk: DivisionRecord.makePk(),
       sk: DivisionRecord.makeSk(params.companyId, params.divisionId),
-      Company: params.companyId,
+      companyId: params.companyId,
       Division: params.divisionId,
       name: params.name,
       at: new Date().toISOString(),
@@ -38,10 +38,7 @@ export class DivisionRepository extends BaseRepository<DivisionRecordType> {
       new QueryCommand({
         TableName: this.tableName,
         IndexName: "company",
-        KeyConditionExpression: "#comp = :companyId AND pk = :pk",
-        ExpressionAttributeNames: {
-            "#comp": "Company",
-        },
+        KeyConditionExpression: "companyId = :companyId AND pk = :pk",
         ExpressionAttributeValues: {
           ":companyId": companyId,
           ":pk": DivisionRecord.entityName,

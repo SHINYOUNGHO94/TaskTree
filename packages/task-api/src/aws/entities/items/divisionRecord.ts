@@ -1,7 +1,7 @@
 import { createHierarchyRecord, HierarchyEntityBase, HierarchyRecordProps, HierarchyRecordType } from "./baseRecord";
 
 type DivisionHierarchy = {
-    Company: string;
+    companyId: string;
 };
 
 export type DivisionEntity = HierarchyEntityBase<"Division", DivisionHierarchy>;
@@ -11,5 +11,5 @@ export type DivisionRecordType = HierarchyRecordType<"Division", DivisionHierarc
 export const DivisionRecord = createHierarchyRecord<"Division", DivisionHierarchy>({
     entityName: "Division",
     makeSkFn: (companyId: string, divisionId: string) => `Company#${companyId}#Division#${divisionId}`,
-    hierarchyKeys: ["Company"],
+    hierarchyKeys: ["companyId"],
 });

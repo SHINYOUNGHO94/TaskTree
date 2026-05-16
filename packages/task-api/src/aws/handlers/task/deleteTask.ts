@@ -4,10 +4,6 @@ import { UserRepository } from "@/repositories/userRepository";
 import { internalServerError } from "@/errors/utils";
 import { UserRole } from "@task/core";
 
-const tableName = process.env.TABLE_NAME || "";
-const taskRepo = new TaskRepository(tableName);
-const userRepo = new UserRepository(tableName);
-
 const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
@@ -15,7 +11,12 @@ const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResul
 });
 
 // タスクを削除するLambdaハンドラー
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export interface DeleteTaskDeps {
+  taskRepo: TaskRepository;
+  userRepo: UserRepository;
+}
+
+export const createHandler = (deps: DeleteTaskDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const callerId = event.requestContext.authorizer?.claims.sub;
     const taskId = event.pathParameters?.id;
@@ -25,14 +26,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // 削除前にタスクが存在するか確認
-    const existingTask = await taskRepo.findByTaskId(taskId);
+    const existingTask = await deps.taskRepo.findByTaskId(taskId);
     if (!existingTask) {
       return createResponse(404, { message: "Task not found" });
     }
 
     // 権限チェック: 自分のタスク、または COMPANY_ADMIN のみ削除可能
     const isOwner = existingTask.memberId === callerId;
-    const callerProfile = await userRepo.findByUserId(callerId);
+    const callerProfile = await deps.userRepo.findByUserId(callerId);
     const isCompanyAdmin = callerProfile?.role === UserRole.COMPANY_ADMIN;
 
     if (!isOwner && !isCompanyAdmin) {
@@ -40,7 +41,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // タスク削除
-    await taskRepo.delete(existingTask.memberId, taskId);
+    await deps.taskRepo.delete(existingTask.memberId, taskId);
 
     return createResponse(200, { message: "Task deleted successfully" });
   } catch (error) {
@@ -48,3 +49,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return internalServerError();
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  taskRepo: new TaskRepository(tableName),
+  userRepo: new UserRepository(tableName)
+});

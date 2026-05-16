@@ -52,7 +52,7 @@ export class TaskDatabase extends Construct {
 
         entities.addGlobalSecondaryIndex({
             indexName: "user",
-            partitionKey: { name: "userId", type: AttributeType.STRING },
+            partitionKey: { name: "User", type: AttributeType.STRING },
             sortKey: { name: "pk", type: AttributeType.STRING },
         });
 
