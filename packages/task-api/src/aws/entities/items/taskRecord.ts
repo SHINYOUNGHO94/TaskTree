@@ -2,11 +2,11 @@ import { createHierarchyRecord, HierarchyEntityBase, HierarchyRecordProps, Hiera
 import { AccessScope, TaskLevel, TaskStatus, TaskDetail } from "@task/core";
 
 type TaskHierarchy = {
-    Company: string;
-    Division: string;
-    Department: string;
-    Team: string;
-    Member: string;
+    companyId: string;
+    divisionId: string;
+    departmentId: string;
+    teamId: string;
+    memberId: string;
 };
 
 type TaskAdditional = {
@@ -26,7 +26,7 @@ export const TaskRecord = {
     ...createHierarchyRecord<"Task", TaskHierarchy, TaskAdditional>({
         entityName: "Task",
         makeSkFn: (memberId: string, taskId: string) => `Member#${memberId}#Task#${taskId}`,
-        hierarchyKeys: ["Company", "Division", "Department", "Team", "Member"],
+        hierarchyKeys: ["companyId", "divisionId", "departmentId", "teamId", "memberId"],
         additionalKeys: ["creatorId", "accessScope", "status", "level", "limitDate", "content"],
     }),
 
@@ -38,11 +38,11 @@ export const TaskRecord = {
             name: detail.title,
             at: detail.createdAt,
             update_at: detail.updatedAt,
-            Company: detail.companyId,
-            Division: detail.divisionId,
-            Department: detail.departmentId,
-            Team: detail.teamId,
-            Member: detail.memberId,
+            companyId: detail.companyId,
+            divisionId: detail.divisionId,
+            departmentId: detail.departmentId,
+            teamId: detail.teamId,
+            memberId: detail.memberId,
             creatorId: detail.creatorId,
             accessScope: detail.accessScope,
             status: detail.status,
@@ -60,11 +60,11 @@ export const TaskRecord = {
             title: entity.name,
             createdAt: entity.at,
             updatedAt: entity.update_at || entity.at,
-            companyId: entity.Company,
-            divisionId: entity.Division,
-            departmentId: entity.Department,
-            teamId: entity.Team,
-            memberId: entity.Member,
+            companyId: entity.companyId,
+            divisionId: entity.divisionId,
+            departmentId: entity.departmentId,
+            teamId: entity.teamId,
+            memberId: entity.memberId,
             creatorId: entity.creatorId,
             accessScope: entity.accessScope,
             status: entity.status,

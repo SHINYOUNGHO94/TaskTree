@@ -29,7 +29,6 @@ export class TaskRepository extends BaseRepository<TaskRecordType> {
     return items.map((item) => TaskRecord.toDetail(item));
   }
 
-  // 会社に属する全タスクを取得する 
   async listByCompanyId(companyId: string): Promise<TaskDetail[]> {
     const response = await this.docClient.send(
       new ScanCommand({

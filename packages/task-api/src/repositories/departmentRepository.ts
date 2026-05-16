@@ -17,8 +17,8 @@ export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
     const record: DepartmentRecordType = {
       pk: DepartmentRecord.makePk(),
       sk: DepartmentRecord.makeSk(params.divisionId, params.departmentId),
-      Company: params.companyId,
-      Division: params.divisionId,
+      companyId: params.companyId,
+      divisionId: params.divisionId,
       Department: params.departmentId,
       name: params.name,
       at: new Date().toISOString(),
@@ -40,10 +40,7 @@ export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
       new QueryCommand({
         TableName: this.tableName,
         IndexName: "company",
-        KeyConditionExpression: "#comp = :companyId AND pk = :pk",
-        ExpressionAttributeNames: {
-            "#comp": "Company",
-        },
+        KeyConditionExpression: "companyId = :companyId AND pk = :pk",
         ExpressionAttributeValues: {
           ":companyId": companyId,
           ":pk": DepartmentRecord.entityName,

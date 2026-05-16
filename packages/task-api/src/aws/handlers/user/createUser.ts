@@ -2,10 +2,11 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { UserRepository } from "@/repositories/userRepository";
 import { invalidRequestBody, internalServerError, requiredFieldsMissing } from "@/errors/utils";
 
-const tableName = process.env.TABLE_NAME || "";
-const repository = new UserRepository(tableName);
+export interface CreateUserDeps {
+  repository: UserRepository;
+}
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const createHandler = (deps: CreateUserDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     if (!event.body) {
       return invalidRequestBody();
@@ -18,7 +19,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return requiredFieldsMissing();
     }
 
-    await repository.create({
+    await deps.repository.create({
       companyId,
       divisionId,
       departmentId,
@@ -38,3 +39,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return internalServerError();
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  repository: new UserRepository(tableName)
+});

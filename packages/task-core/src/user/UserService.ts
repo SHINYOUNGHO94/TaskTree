@@ -9,16 +9,16 @@ const UserProfileSchema = z.object({
   email: z.string(),
   name: z.string(),
   role: z.enum([UserRole.COMPANY_ADMIN, UserRole.DIVISION_ADMIN, UserRole.DEPT_ADMIN, UserRole.TEAM_ADMIN, UserRole.USER, UserRole.GUEST]),
-  companyId: z.string().optional(),
-  divisionId: z.string().optional(),
-  departmentId: z.string().optional(),
-  teamId: z.string().optional(),
-  companyName: z.string().optional(),
-  divisionName: z.string().optional(),
-  departmentName: z.string().optional(),
-  teamName: z.string().optional(),
-  createdAt: z.string().optional(),
-  lastSignInAt: z.string().optional()
+  companyId: z.string(),
+  divisionId: z.string(),
+  departmentId: z.string(),
+  teamId: z.string(),
+  companyName: z.string().nullable(),
+  divisionName: z.string().nullable(),
+  departmentName: z.string().nullable(),
+  teamName: z.string().nullable(),
+  createdAt: z.string(),
+  lastSignInAt: z.string().nullable()
 });
 
 const CompanyUsersResponseSchema = z.object({

@@ -4,10 +4,6 @@ import { UserRepository } from "@/repositories/userRepository";
 import { internalServerError } from "@/errors/utils";
 import { AccessScope, UserRole } from "@task/core";
 
-const tableName = process.env.TABLE_NAME || "";
-const taskRepo = new TaskRepository(tableName);
-const userRepo = new UserRepository(tableName);
-
 const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
@@ -15,7 +11,12 @@ const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResul
 });
 
 // タスク詳細を取得するLambdaハンドラー
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export interface GetTaskDeps {
+  taskRepo: TaskRepository;
+  userRepo: UserRepository;
+}
+
+export const createHandler = (deps: GetTaskDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const callerId = event.requestContext.authorizer?.claims.sub;
     const taskId = event.pathParameters?.id;
@@ -25,13 +26,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // タスクをIDのみで取得
-    const task = await taskRepo.findByTaskId(taskId);
+    const task = await deps.taskRepo.findByTaskId(taskId);
     if (!task) {
       return createResponse(404, { message: "Task not found" });
     }
 
     // 閲覧権限チェック: 呼び出し元のプロファイルを確認
-    const callerProfile = await userRepo.findByUserId(callerId);
+    const callerProfile = await deps.userRepo.findByUserId(callerId);
     if (!callerProfile) {
       return createResponse(404, { message: "User profile not found" });
     }
@@ -83,3 +84,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return internalServerError();
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  taskRepo: new TaskRepository(tableName),
+  userRepo: new UserRepository(tableName)
+});

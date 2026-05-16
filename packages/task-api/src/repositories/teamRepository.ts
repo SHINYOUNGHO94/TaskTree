@@ -18,9 +18,9 @@ export class TeamRepository extends BaseRepository<TeamRecordType> {
     const record: TeamRecordType = {
       pk: TeamRecord.makePk(),
       sk: TeamRecord.makeSk(params.departmentId, params.teamId),
-      Company: params.companyId,
-      Division: params.divisionId,
-      Department: params.departmentId,
+      companyId: params.companyId,
+      divisionId: params.divisionId,
+      departmentId: params.departmentId,
       Team: params.teamId,
       name: params.name,
       at: new Date().toISOString(),
@@ -42,10 +42,7 @@ export class TeamRepository extends BaseRepository<TeamRecordType> {
       new QueryCommand({
         TableName: this.tableName,
         IndexName: "company",
-        KeyConditionExpression: "#comp = :companyId AND pk = :pk",
-        ExpressionAttributeNames: {
-            "#comp": "Company",
-        },
+        KeyConditionExpression: "companyId = :companyId AND pk = :pk",
         ExpressionAttributeValues: {
           ":companyId": companyId,
           ":pk": TeamRecord.entityName,

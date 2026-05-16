@@ -4,13 +4,14 @@ import { CompanyRepository } from "../../../repositories/companyRepository";
 import { DepartmentRepository } from "../../../repositories/departmentRepository";
 import { UserRole } from "@task/core";
 
-const tableName = process.env.TABLE_NAME || "";
-const userRepo = new UserRepository(tableName);
-const companyRepo = new CompanyRepository(tableName);
-const deptRepo = new DepartmentRepository(tableName);
-
 // Cognito メール認証完了後に実行されるオンボーディング関数
-export const handler = async (event: PostConfirmationConfirmSignUpTriggerEvent): Promise<PostConfirmationConfirmSignUpTriggerEvent> => {
+export interface PostConfirmationDeps {
+  userRepo: UserRepository;
+  companyRepo: CompanyRepository;
+  deptRepo: DepartmentRepository;
+}
+
+export const createHandler = (deps: PostConfirmationDeps) => async (event: PostConfirmationConfirmSignUpTriggerEvent): Promise<PostConfirmationConfirmSignUpTriggerEvent> => {
   console.log("PostConfirmation Event:", JSON.stringify(event));
 
   const { sub: userId, email, name } = event.request.userAttributes;
@@ -19,11 +20,11 @@ export const handler = async (event: PostConfirmationConfirmSignUpTriggerEvent):
   try {
     // 1. デフォルト会社の作成
     const companyId = `COMP-${userId.slice(0, 8)}`;
-    await companyRepo.create(companyId, companyName);
+    await deps.companyRepo.create(companyId, companyName);
 
     // 2. デフォルト部署の作成
     const deptId = `DEPT-${userId.slice(0, 8)}`;
-    await deptRepo.create({
+    await deps.deptRepo.create({
       companyId: companyId,
       divisionId: "NONE",
       departmentId: deptId,
@@ -31,7 +32,7 @@ export const handler = async (event: PostConfirmationConfirmSignUpTriggerEvent):
     });
 
     // 3. ユーザーレコードの作成
-    await userRepo.create({
+    await deps.userRepo.create({
       userId: userId,
       email: email,
       name: name || "Unknown User",
@@ -54,3 +55,10 @@ export const handler = async (event: PostConfirmationConfirmSignUpTriggerEvent):
     throw error;
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  userRepo: new UserRepository(tableName),
+  companyRepo: new CompanyRepository(tableName),
+  deptRepo: new DepartmentRepository(tableName)
+});

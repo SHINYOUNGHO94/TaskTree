@@ -4,10 +4,6 @@ import { UserRepository } from "@/repositories/userRepository";
 import { internalServerError } from "@/errors/utils";
 import { TaskDetail, UserRole } from "@task/core";
 
-const tableName = process.env.TABLE_NAME || "";
-const taskRepo = new TaskRepository(tableName);
-const userRepo = new UserRepository(tableName);
-
 const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
@@ -15,7 +11,12 @@ const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResul
 });
 
 // タスク情報を更新するLambdaハンドラー
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export interface UpdateTaskDeps {
+  taskRepo: TaskRepository;
+  userRepo: UserRepository;
+}
+
+export const createHandler = (deps: UpdateTaskDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const memberId = event.requestContext.authorizer?.claims.sub;
     const taskId = event.pathParameters?.id;
@@ -26,14 +27,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // 更新対象の存在確認
-    const existingTask = await taskRepo.findByTaskId(taskId);
+    const existingTask = await deps.taskRepo.findByTaskId(taskId);
     if (!existingTask) {
       return createResponse(404, { message: "Task not found" });
     }
 
     // 権限チェック: 自分のタスク、または COMPANY_ADMIN のみ更新可能
     const isOwner = existingTask.memberId === memberId;
-    const callerProfile = await userRepo.findByUserId(memberId);
+    const callerProfile = await deps.userRepo.findByUserId(memberId);
     const isCompanyAdmin = callerProfile?.role === UserRole.COMPANY_ADMIN;
 
     if (!isOwner && !isCompanyAdmin) {
@@ -49,7 +50,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       updatedAt: new Date().toISOString(),
     };
 
-    await taskRepo.save(updatedTask);
+    await deps.taskRepo.save(updatedTask);
 
     return createResponse(200, updatedTask);
   } catch (error) {
@@ -57,3 +58,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return internalServerError();
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  taskRepo: new TaskRepository(tableName),
+  userRepo: new UserRepository(tableName)
+});
