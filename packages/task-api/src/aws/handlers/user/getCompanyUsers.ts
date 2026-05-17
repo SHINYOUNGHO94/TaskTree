@@ -1,9 +1,20 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { UserRepository } from "@/repositories/userRepository";
+import { UserProfile } from "@task/core";
 
 export interface GetCompanyUsersDeps {
   userRepo: UserRepository;
 }
+
+const fallbackDate = "1970-01-01T00:00:00.000Z";
+
+const toRequiredString = (value: unknown, fallback: string): string => {
+  return typeof value === "string" && value.length > 0 ? value : fallback;
+};
+
+const toNullableString = (value: unknown): string | null => {
+  return typeof value === "string" && value.length > 0 ? value : null;
+};
 
 const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResult => ({
   statusCode,
@@ -27,13 +38,21 @@ export const createHandler = (deps: GetCompanyUsersDeps) => async (event: APIGat
 
     const users = await deps.userRepo.findByCompanyId(callerProfile.companyId);
 
-    const safeUsers = users.map(u => ({
+    const safeUsers: UserProfile[] = users.map(u => ({
       userId: u.User,
       email: u.email || "",
       name: u.name || "",
       role: u.role,
+      companyId: u.companyId || "NONE",
+      divisionId: u.divisionId || "NONE",
       departmentId: u.departmentId || "NONE",
-      createdAt: u.at
+      teamId: u.teamId || "NONE",
+      companyName: null,
+      divisionName: null,
+      departmentName: null,
+      teamName: null,
+      createdAt: toRequiredString(u.at, fallbackDate),
+      lastSignInAt: toNullableString(u.update_at),
     }));
 
     safeUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

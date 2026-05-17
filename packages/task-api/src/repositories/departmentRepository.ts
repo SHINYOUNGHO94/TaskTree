@@ -19,7 +19,7 @@ export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
       sk: DepartmentRecord.makeSk(params.divisionId, params.departmentId),
       companyId: params.companyId,
       divisionId: params.divisionId,
-      Department: params.departmentId,
+      departmentId: params.departmentId,
       name: params.name,
       at: new Date().toISOString(),
     };
