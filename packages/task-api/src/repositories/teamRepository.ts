@@ -18,11 +18,15 @@ export class TeamRepository extends BaseRepository<TeamRecordType> {
     const record: TeamRecordType = {
       pk: TeamRecord.makePk(),
       sk: TeamRecord.makeSk(params.departmentId, params.teamId),
-      ...params,
-      createdAt: new Date().toISOString(),
+      companyId: params.companyId,
+      divisionId: params.divisionId,
+      departmentId: params.departmentId,
+      teamId: params.teamId,
+      name: params.name,
+      at: new Date().toISOString(),
     };
 
-    await this.put(record);
+    await this.put(record, "attribute_not_exists(pk)");
   };
 
   // チームを取得します
@@ -41,7 +45,7 @@ export class TeamRepository extends BaseRepository<TeamRecordType> {
         KeyConditionExpression: "companyId = :companyId AND pk = :pk",
         ExpressionAttributeValues: {
           ":companyId": companyId,
-          ":pk": TeamRecord.prefix,
+          ":pk": TeamRecord.entityName,
         },
       })
     );

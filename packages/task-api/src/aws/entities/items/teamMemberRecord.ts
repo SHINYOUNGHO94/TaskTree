@@ -12,13 +12,12 @@ type TeamMemberAdditional = {
     email: string;
 };
 
-export type TeamMemberEntity = HierarchyEntityBase<"memberId", TeamMemberHierarchy, TeamMemberAdditional>;
-export type TeamMemberRecordProps = HierarchyRecordProps<"memberId", TeamMemberHierarchy, TeamMemberAdditional>;
-export type TeamMemberRecordType = HierarchyRecordType<"memberId", TeamMemberHierarchy, TeamMemberAdditional>;
+export type TeamMemberEntity = HierarchyEntityBase<"TeamMember", TeamMemberHierarchy, TeamMemberAdditional>;
+export type TeamMemberRecordProps = HierarchyRecordProps<"TeamMember", TeamMemberHierarchy, TeamMemberAdditional>;
+export type TeamMemberRecordType = HierarchyRecordType<"TeamMember", TeamMemberHierarchy, TeamMemberAdditional>;
 
-export const TeamMemberRecord = createHierarchyRecord<"memberId", TeamMemberHierarchy, TeamMemberAdditional>({
-    prefix: "TeamMember",
-    nameKey: "memberId",
+export const TeamMemberRecord = createHierarchyRecord<"TeamMember", TeamMemberHierarchy, TeamMemberAdditional>({
+    entityName: "TeamMember",
     makeSkFn: (teamId: string, memberId: string) => `Team#${teamId}#Member#${memberId}`,
     hierarchyKeys: ["companyId", "divisionId", "departmentId", "teamId"],
     additionalKeys: ["role", "email"],

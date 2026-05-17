@@ -7,79 +7,80 @@ import { TeamRepository } from "@/repositories/teamRepository";
 import { internalServerError } from "@/errors/utils";
 import { UserProfile } from "@task/core";
 
-const tableName = process.env.TABLE_NAME || "";
-const userRepo = new UserRepository(tableName);
-const companyRepo = new CompanyRepository(tableName);
-const divisionRepo = new DivisionRepository(tableName);
-const deptRepo = new DepartmentRepository(tableName);
-const teamRepo = new TeamRepository(tableName);
+const fallbackDate = "1970-01-01T00:00:00.000Z";
 
-// ユーザーの組織情報を含む詳細プロファイルを取得するハンドラー
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  console.log("GetUserProfile Event:", JSON.stringify(event.requestContext.authorizer));
+const toRequiredString = (value: unknown, fallback: string): string => {
+  return typeof value === "string" && value.length > 0 ? value : fallback;
+};
 
+const toNullableString = (value: unknown): string | null => {
+  return typeof value === "string" && value.length > 0 ? value : null;
+};
+
+export interface GetUserProfileDeps {
+  userRepo: UserRepository;
+  companyRepo: CompanyRepository;
+  divisionRepo: DivisionRepository;
+  deptRepo: DepartmentRepository;
+  teamRepo: TeamRepository;
+}
+
+export const createHandler = (deps: GetUserProfileDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const userId = event.requestContext.authorizer?.claims.sub;
     if (!userId) {
-      console.error("User ID not found in token claims");
       return internalServerError("User ID not found in token");
     }
 
-    // 1. ユーザー基本情報の取得
-    console.log("Fetching user for ID:", userId);
-    const user = await userRepo.findByUserId(userId);
-
+    const user = await deps.userRepo.findByUserId(userId);
     if (!user) {
-      console.warn("User record not found in DynamoDB for ID:", userId);
       return {
         statusCode: 404,
-        headers: { 
-          "Access-Control-Allow-Origin": "*",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ message: "User profile not found. Please ensure your user record is created." }),
+        headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "User profile not found." }),
       };
     }
 
-    console.log("User found:", JSON.stringify(user));
-
-    // 2. 各組織階層の名称を取得
     const [company, division, dept, team] = await Promise.all([
-      user.companyId && user.companyId !== "NONE" ? companyRepo.findById(user.companyId) : null,
-      user.divisionId && user.divisionId !== "NONE" ? divisionRepo.findById(user.companyId, user.divisionId) : null,
-      user.departmentId && user.departmentId !== "NONE" ? deptRepo.findById(user.divisionId, user.departmentId) : null,
-      user.teamId && user.teamId !== "NONE" ? teamRepo.findById(user.departmentId, user.teamId) : null,
+      user.companyId && user.companyId !== "NONE" ? deps.companyRepo.findById(user.companyId) : null,
+      user.divisionId && user.divisionId !== "NONE" ? deps.divisionRepo.findById(user.companyId, user.divisionId) : null,
+      user.departmentId && user.departmentId !== "NONE" ? deps.deptRepo.findById(user.divisionId, user.departmentId) : null,
+      user.teamId && user.teamId !== "NONE" ? deps.teamRepo.findById(user.departmentId, user.teamId) : null,
     ]);
 
-    // 3. プロファイル情報の構築
     const profile: UserProfile = {
-      userId: user.userId,
-      email: user.email,
-      name: user.name,
+      userId: user.User,
+      email: user.email || "",
+      name: user.name || "",
       role: user.role,
-      companyId: user.companyId,
-      divisionId: user.divisionId,
-      departmentId: user.departmentId,
-      teamId: user.teamId,
-      companyName: company?.name || "No Company",
-      divisionName: division?.name || "No Division",
-      departmentName: dept?.name || "No Department",
-      teamName: team?.name || "No Team",
+      companyId: user.companyId || "NONE",
+      divisionId: user.divisionId || "NONE",
+      departmentId: user.departmentId || "NONE",
+      teamId: user.teamId || "NONE",
+      companyName: company?.name || null,
+      divisionName: division?.name || null,
+      departmentName: dept?.name || null,
+      teamName: team?.name || null,
+      createdAt: toRequiredString(user.at, fallbackDate),
+      lastSignInAt: toNullableString(user.update_at),
     };
-
-    console.log("Profile constructed successfully");
 
     return {
       statusCode: 200,
-      headers: { 
-        "Access-Control-Allow-Origin": "*",
-        "Content-Type": "application/json"
-      },
+      headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
       body: JSON.stringify(profile),
     };
   } catch (error) {
-    console.error("GetUserProfile Error Detail:", error);
     const message = error instanceof Error ? error.message : "Unknown Error";
     return internalServerError(message);
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  userRepo: new UserRepository(tableName),
+  companyRepo: new CompanyRepository(tableName),
+  divisionRepo: new DivisionRepository(tableName),
+  deptRepo: new DepartmentRepository(tableName),
+  teamRepo: new TeamRepository(tableName),
+});

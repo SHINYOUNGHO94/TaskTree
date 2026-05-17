@@ -17,11 +17,14 @@ export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
     const record: DepartmentRecordType = {
       pk: DepartmentRecord.makePk(),
       sk: DepartmentRecord.makeSk(params.divisionId, params.departmentId),
-      ...params,
-      createdAt: new Date().toISOString(),
+      companyId: params.companyId,
+      divisionId: params.divisionId,
+      departmentId: params.departmentId,
+      name: params.name,
+      at: new Date().toISOString(),
     };
 
-    await this.put(record);
+    await this.put(record, "attribute_not_exists(pk)");
   };
 
   // 部署を取得します
@@ -40,7 +43,7 @@ export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
         KeyConditionExpression: "companyId = :companyId AND pk = :pk",
         ExpressionAttributeValues: {
           ":companyId": companyId,
-          ":pk": DepartmentRecord.prefix,
+          ":pk": DepartmentRecord.entityName,
         },
       })
     );

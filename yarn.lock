@@ -3355,6 +3355,7 @@ __metadata:
     "@aws-sdk/lib-dynamodb": "npm:^3.1043.0"
     "@task/core": "workspace:*"
     "@types/aws-lambda": "npm:^8.10.161"
+    eslint: "npm:^9.9.0"
     typescript: "npm:~5.7.3"
   languageName: unknown
   linkType: soft

@@ -4,10 +4,6 @@ import { UserRepository } from "@/repositories/userRepository";
 import { internalServerError } from "@/errors/utils";
 import { AccessScope, TaskDetail, UserRole } from "@task/core";
 
-const tableName = process.env.TABLE_NAME || "";
-const taskRepo = new TaskRepository(tableName);
-const userRepo = new UserRepository(tableName);
-
 const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" },
@@ -76,19 +72,24 @@ const filterTasksByScope = (
   });
 };
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export interface GetTasksDeps {
+  taskRepo: TaskRepository;
+  userRepo: UserRepository;
+}
+
+export const createHandler = (deps: GetTasksDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const callerId = event.requestContext.authorizer?.claims.sub;
     if (!callerId) return internalServerError("Member ID not found");
 
     // ログインユーザーのプロファイルを取得し、権限と組織情報を確認する
-    const callerProfile = await userRepo.findByUserId(callerId);
+    const callerProfile = await deps.userRepo.findByUserId(callerId);
     if (!callerProfile) return internalServerError("User profile not found");
 
     const { role, companyId, divisionId = "NONE", departmentId = "NONE", teamId = "NONE" } = callerProfile;
 
     // 全ロールで会社のタスクを取得し、filterTasksByScope で権限に応じて絞り込む
-    const tasks = await taskRepo.listByCompanyId(companyId);
+    const tasks = await deps.taskRepo.listByCompanyId(companyId);
 
     const filteredTasks = filterTasksByScope(
       tasks,
@@ -106,3 +107,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return internalServerError();
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  taskRepo: new TaskRepository(tableName),
+  userRepo: new UserRepository(tableName)
+});

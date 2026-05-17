@@ -2,11 +2,12 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { DepartmentRepository } from "@/repositories/departmentRepository";
 import { invalidRequestBody, internalServerError, requiredFieldsMissing } from "@/errors/utils";
 
-const tableName = process.env.TABLE_NAME || "";
-const repository = new DepartmentRepository(tableName);
-
 // 部署を作成するハンドラー
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export interface CreateDepartmentDeps {
+  repository: DepartmentRepository;
+}
+
+export const createHandler = (deps: CreateDepartmentDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     if (!event.body) {
       return invalidRequestBody();
@@ -18,7 +19,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return requiredFieldsMissing();
     }
 
-    await repository.create({ companyId, divisionId, departmentId, name });
+    await deps.repository.create({ companyId, divisionId, departmentId, name });
 
     return {
       statusCode: 201,
@@ -33,3 +34,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return internalServerError();
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  repository: new DepartmentRepository(tableName)
+});

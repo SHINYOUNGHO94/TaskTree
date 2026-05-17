@@ -1,297 +1,347 @@
 import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
-import { TaskDatabase } from './database/database';
-import { Suffix, StagingEnvironment } from '@task/core';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import * as path from 'path';
-import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as iam from "aws-cdk-lib/aws-iam";
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { Suffix, StagingEnvironment } from '@task/core';
+import { Construct } from 'constructs';
+import * as path from 'path';
+import { TaskDatabase } from './database/database';
 
 export class TaskInfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // データベース(DynamoDB)の初期設定
-    const databaseProps = {
+    const database = new TaskDatabase(this, 'TaskDatabase', {
       stagingEnvironment: StagingEnvironment.development,
-      suffix: new Suffix("task-tree"),
-      version: "v1",
+      suffix: new Suffix('task-tree'),
+      version: 'v1',
+    });
+
+    const tableArn = database.entities.tableArn;
+    const tableIndexesArn = `${tableArn}/index/*`;
+
+    const grantTableRead = (fn: NodejsFunction) => {
+      fn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['dynamodb:GetItem', 'dynamodb:Query'],
+        resources: [tableArn, tableIndexesArn],
+      }));
     };
-    const database = new TaskDatabase(this, "TaskDatabase", databaseProps);
 
-    // 既存の Cognito UserPool を ID で参照
-    const userPool = cognito.UserPool.fromUserPoolId(this, "ImportedUserPool", "ap-northeast-1_uWKGi9IjG");
+    const grantTableScanRead = (fn: NodejsFunction) => {
+      fn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:Scan'],
+        resources: [tableArn, tableIndexesArn],
+      }));
+    };
 
-    // API Gateway 用の Cognito オーソライザー定義
-    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, "TaskApiAuthorizer", {
+    const grantTableCreate = (fn: NodejsFunction) => {
+      fn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['dynamodb:PutItem'],
+        resources: [tableArn],
+      }));
+    };
+
+    const grantTaskMutation = (fn: NodejsFunction, writeActions: string[]) => {
+      fn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:Scan', ...writeActions],
+        resources: [tableArn, tableIndexesArn],
+      }));
+    };
+
+    const postConfirmationFn = new NodejsFunction(this, 'PostConfirmationFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/auth/postConfirmation.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableCreate(postConfirmationFn);
+
+    const userPool = new cognito.UserPool(this, 'TaskUserPool', {
+      userPoolName: 'task-tree-user-pool',
+      selfSignUpEnabled: true,
+      signInAliases: {
+        email: true,
+      },
+      autoVerify: {
+        email: true,
+      },
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: true,
+        },
+        fullname: {
+          required: false,
+          mutable: true,
+        },
+        nickname: {
+          required: false,
+          mutable: true,
+        },
+        profilePage: {
+          required: false,
+          mutable: true,
+        },
+      },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: false,
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      lambdaTriggers: {
+        postConfirmation: postConfirmationFn,
+      },
+    });
+
+    const userPoolClient = new cognito.UserPoolClient(this, 'TaskUserPoolClient', {
+      userPool,
+      userPoolClientName: 'task-tree-web-client',
+      authFlows: {
+        userSrp: true,
+        userPassword: true,
+      },
+      disableOAuth: true,
+      preventUserExistenceErrors: true,
+    });
+
+    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'TaskApiAuthorizer', {
       cognitoUserPools: [userPool],
     });
 
-    // Lambda: 会社(Company)作成機能
-    const createCompanyFn = new NodejsFunction(this, "CreateCompanyFunction", {
+    const createCompanyFn = new NodejsFunction(this, 'CreateCompanyFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/company/createCompany.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/company/createCompany.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
+    grantTableCreate(createCompanyFn);
 
-    // Lambda: 事業部(Division)作成機能
-    const createDivisionFn = new NodejsFunction(this, "CreateDivisionFunction", {
+    const createDivisionFn = new NodejsFunction(this, 'CreateDivisionFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/division/createDivision.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/division/createDivision.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
- 
-    // Lambda: 事業部(Division)一覧取得機能
-    const getDivisionsFn = new NodejsFunction(this, "GetDivisionsFunction", {
-      runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/division/getDivisions.ts"),
-      handler: "handler",
-      environment: {
-        TABLE_NAME: database.entities.tableName,
-      },
-    });
-    database.entities.grantReadData(getDivisionsFn);
+    grantTableCreate(createDivisionFn);
 
-    // Lambda: 部署(Department)作成機能
-    const createDepartmentFn = new NodejsFunction(this, "CreateDepartmentFunction", {
+    const getDivisionsFn = new NodejsFunction(this, 'GetDivisionsFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/department/createDepartment.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/division/getDivisions.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
+    grantTableRead(getDivisionsFn);
 
-    // Lambda: チーム(Team)作成機能
-    const createTeamFn = new NodejsFunction(this, "CreateTeamFunction", {
+    const createDepartmentFn = new NodejsFunction(this, 'CreateDepartmentFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/team/createTeam.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/department/createDepartment.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
+    grantTableCreate(createDepartmentFn);
 
-    // Lambda: 部署一覧取得機能
-    const getDepartmentsFn = new NodejsFunction(this, "GetDepartmentsFunction", {
+    const getDepartmentsFn = new NodejsFunction(this, 'GetDepartmentsFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/department/getDepartments.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/department/getDepartments.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantReadData(getDepartmentsFn);
+    grantTableRead(getDepartmentsFn);
 
-    // Lambda: チーム一覧取得機能
-    const getTeamsFn = new NodejsFunction(this, "GetTeamsFunction", {
+    const createTeamFn = new NodejsFunction(this, 'CreateTeamFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/team/getTeams.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/team/createTeam.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantReadData(getTeamsFn);
+    grantTableCreate(createTeamFn);
 
-    // Lambda: ユーザー(User)作成機能
-    const createUserFn = new NodejsFunction(this, "CreateUserFunction", {
+    const getTeamsFn = new NodejsFunction(this, 'GetTeamsFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/user/createUser.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/team/getTeams.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantWriteData(createUserFn);
+    grantTableRead(getTeamsFn);
 
-    // Lambda: ユーザー招待機能
-    const inviteUserFn = new NodejsFunction(this, "InviteUserFunction", {
+    const createUserFn = new NodejsFunction(this, 'CreateUserFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/user/inviteUser.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/user/createUser.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableCreate(createUserFn);
+
+    const inviteUserFn = new NodejsFunction(this, 'InviteUserFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/user/inviteUser.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
         USER_POOL_ID: userPool.userPoolId,
       },
     });
-    database.entities.grantReadWriteData(inviteUserFn);
+    grantTaskMutation(inviteUserFn, ['dynamodb:PutItem']);
     inviteUserFn.addToRolePolicy(new iam.PolicyStatement({
-      actions: ["cognito-idp:AdminCreateUser"],
+      actions: ['cognito-idp:AdminCreateUser'],
       resources: [userPool.userPoolArn],
     }));
 
-    // Lambda: 会社ユーザー一覧取得機能
-    const getCompanyUsersFn = new NodejsFunction(this, "GetCompanyUsersFunction", {
+    const getCompanyUsersFn = new NodejsFunction(this, 'GetCompanyUsersFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/user/getCompanyUsers.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/user/getCompanyUsers.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantReadData(getCompanyUsersFn);
+    grantTableRead(getCompanyUsersFn);
 
-    // Lambda: サインアップ後の自動オンボーディング (Post Confirmation)
-    const postConfirmationFn = new NodejsFunction(this, "PostConfirmationFunction", {
+    const getUserProfileFn = new NodejsFunction(this, 'GetUserProfileFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/auth/postConfirmation.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/user/getUserProfile.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    postConfirmationFn.addPermission("CognitoInvoke", {
-      principal: new iam.ServicePrincipal("cognito-idp.amazonaws.com"),
-      sourceArn: userPool.userPoolArn,
-    });
-    database.entities.grantWriteData(postConfirmationFn);
-    database.entities.grantWriteData(createCompanyFn);
-    database.entities.grantWriteData(createDivisionFn);
-    database.entities.grantWriteData(createDepartmentFn);
-    database.entities.grantWriteData(createTeamFn);
+    grantTableRead(getUserProfileFn);
 
-    // Lambda: ユーザープロファイル取得機能
-    const getUserProfileFn = new NodejsFunction(this, "GetUserProfileFunction", {
+    const getTasksFn = new NodejsFunction(this, 'GetTasksFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/user/getUserProfile.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/getTasks.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantReadData(getUserProfileFn);
+    grantTableScanRead(getTasksFn);
 
-    // Lambda: タスク一覧取得機能
-    const getTasksFn = new NodejsFunction(this, "GetTasksFunction", {
+    const createTaskFn = new NodejsFunction(this, 'CreateTaskFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/task/getTasks.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/createTask.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantReadData(getTasksFn);
+    grantTableCreate(createTaskFn);
 
-    // Lambda: タスク作成機能
-    const createTaskFn = new NodejsFunction(this, "CreateTaskFunction", {
+    const getTaskFn = new NodejsFunction(this, 'GetTaskFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/task/createTask.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/getTask.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantWriteData(createTaskFn);
+    grantTableScanRead(getTaskFn);
 
-    // Lambda: タスク詳細取得機能
-    const getTaskFn = new NodejsFunction(this, "GetTaskFunction", {
+    const updateTaskFn = new NodejsFunction(this, 'UpdateTaskFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/task/getTask.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/updateTask.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantReadData(getTaskFn);
+    grantTaskMutation(updateTaskFn, ['dynamodb:PutItem']);
 
-    // Lambda: タスク更新機能
-    const updateTaskFn = new NodejsFunction(this, "UpdateTaskFunction", {
+    const deleteTaskFn = new NodejsFunction(this, 'DeleteTaskFunction', {
       runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/task/updateTask.ts"),
-      handler: "handler",
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/deleteTask.ts'),
+      handler: 'handler',
       environment: {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    database.entities.grantReadWriteData(updateTaskFn);
+    grantTaskMutation(deleteTaskFn, ['dynamodb:DeleteItem']);
 
-    // Lambda: タスク削除機能
-    const deleteTaskFn = new NodejsFunction(this, "DeleteTaskFunction", {
-      runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, "../../task-api/src/aws/handlers/task/deleteTask.ts"),
-      handler: "handler",
-      environment: {
-        TABLE_NAME: database.entities.tableName,
-      },
-    });
-    database.entities.grantReadWriteData(deleteTaskFn);
-
-    // API Gateway の構築
-    const api = new apigateway.RestApi(this, "TaskApi", {
-      restApiName: "Task Tree API",
-      description: "API for TaskTree management - v2",
+    const api = new apigateway.RestApi(this, 'TaskApi', {
+      restApiName: 'Task Tree API',
+      description: 'API for TaskTree management - v2',
       deployOptions: {
-        stageName: "prod",
+        stageName: 'prod',
         variables: {
-          deploymentTrigger: new Date().toISOString()
-        }
+          deploymentTrigger: new Date().toISOString(),
+        },
       },
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
-      }
+      },
     });
 
-    // 組織関連のリソースとメソッドの定義
-    const companyResource = api.root.addResource("company");
-    companyResource.addMethod("POST", new apigateway.LambdaIntegration(createCompanyFn));
+    const companyResource = api.root.addResource('company');
+    companyResource.addMethod('POST', new apigateway.LambdaIntegration(createCompanyFn));
 
-    const divisionResource = api.root.addResource("division");
-    divisionResource.addMethod("POST", new apigateway.LambdaIntegration(createDivisionFn));
-    divisionResource.addMethod("GET", new apigateway.LambdaIntegration(getDivisionsFn), { authorizer });
+    const divisionResource = api.root.addResource('division');
+    divisionResource.addMethod('POST', new apigateway.LambdaIntegration(createDivisionFn));
+    divisionResource.addMethod('GET', new apigateway.LambdaIntegration(getDivisionsFn), { authorizer });
 
-    const departmentResource = api.root.addResource("department");
-    departmentResource.addMethod("POST", new apigateway.LambdaIntegration(createDepartmentFn), { authorizer });
-    departmentResource.addMethod("GET", new apigateway.LambdaIntegration(getDepartmentsFn), { authorizer });
+    const departmentResource = api.root.addResource('department');
+    departmentResource.addMethod('POST', new apigateway.LambdaIntegration(createDepartmentFn), { authorizer });
+    departmentResource.addMethod('GET', new apigateway.LambdaIntegration(getDepartmentsFn), { authorizer });
 
-    const teamResource = api.root.addResource("team");
-    teamResource.addMethod("POST", new apigateway.LambdaIntegration(createTeamFn), { authorizer });
-    teamResource.addMethod("GET", new apigateway.LambdaIntegration(getTeamsFn), { authorizer });
+    const teamResource = api.root.addResource('team');
+    teamResource.addMethod('POST', new apigateway.LambdaIntegration(createTeamFn), { authorizer });
+    teamResource.addMethod('GET', new apigateway.LambdaIntegration(getTeamsFn), { authorizer });
 
-    const userResource = api.root.addResource("user");
-    userResource.addMethod("POST", new apigateway.LambdaIntegration(createUserFn));
-    userResource.addMethod("GET", new apigateway.LambdaIntegration(getUserProfileFn), {
-      authorizer,
+    const userResource = api.root.addResource('user');
+    userResource.addMethod('POST', new apigateway.LambdaIntegration(createUserFn));
+    userResource.addMethod('GET', new apigateway.LambdaIntegration(getUserProfileFn), { authorizer });
+
+    const userInviteResource = userResource.addResource('invite');
+    userInviteResource.addMethod('POST', new apigateway.LambdaIntegration(inviteUserFn), { authorizer });
+
+    const companyUsersResource = userResource.addResource('company-users');
+    companyUsersResource.addMethod('GET', new apigateway.LambdaIntegration(getCompanyUsersFn), { authorizer });
+
+    const tasksResource = api.root.addResource('tasks');
+    tasksResource.addMethod('GET', new apigateway.LambdaIntegration(getTasksFn), { authorizer });
+    tasksResource.addMethod('POST', new apigateway.LambdaIntegration(createTaskFn), { authorizer });
+
+    const tasksIdResource = tasksResource.addResource('{id}');
+    tasksIdResource.addMethod('GET', new apigateway.LambdaIntegration(getTaskFn), { authorizer });
+    tasksIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateTaskFn), { authorizer });
+    tasksIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTaskFn), { authorizer });
+
+    new cdk.CfnOutput(this, 'CognitoUserPoolId', {
+      value: userPool.userPoolId,
+      description: 'Set this value as NEXT_PUBLIC_COGNITO_USER_POOL_ID.',
     });
 
-    const userInviteResource = userResource.addResource("invite");
-    userInviteResource.addMethod("POST", new apigateway.LambdaIntegration(inviteUserFn), {
-      authorizer,
+    new cdk.CfnOutput(this, 'CognitoUserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+      description: 'Set this value as NEXT_PUBLIC_COGNITO_CLIENT_ID.',
     });
 
-    const companyUsersResource = userResource.addResource("company-users");
-    companyUsersResource.addMethod("GET", new apigateway.LambdaIntegration(getCompanyUsersFn), {
-      authorizer,
-    });
-
-    // タスク関連のリソース定義 (認証が必要)
-    const tasksResource = api.root.addResource("tasks");
-    tasksResource.addMethod("GET", new apigateway.LambdaIntegration(getTasksFn), {
-      authorizer,
-    });
-    tasksResource.addMethod("POST", new apigateway.LambdaIntegration(createTaskFn), {
-      authorizer,
-    });
-
-    // タスク詳細/更新/削除のリソース ( /tasks/{id} )
-    const tasksIdResource = tasksResource.addResource("{id}");
-    tasksIdResource.addMethod("GET", new apigateway.LambdaIntegration(getTaskFn), {
-      authorizer,
-    });
-    tasksIdResource.addMethod("PUT", new apigateway.LambdaIntegration(updateTaskFn), {
-      authorizer,
-    });
-    tasksIdResource.addMethod("DELETE", new apigateway.LambdaIntegration(deleteTaskFn), {
-      authorizer,
+    new cdk.CfnOutput(this, 'TaskApiUrl', {
+      value: api.url,
+      description: 'Set this value as NEXT_PUBLIC_API_URL.',
     });
   }
 }

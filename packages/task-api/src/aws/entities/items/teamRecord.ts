@@ -1,62 +1,18 @@
-import { DynamoDBRecord } from "./DynamoDBRecord";
+import { createHierarchyRecord, HierarchyEntityBase, HierarchyRecordProps, HierarchyRecordType } from "./baseRecord";
 
-export interface TeamEntity {
-  pk: string;
-  sk: string;
-  companyId: string;
-  divisionId: string;
-  departmentId: string;
-  teamId: string;
-  name: string;
-  createdAt: string;
-  updatedAt?: string;
-}
+type TeamHierarchy = {
+    companyId: string;
+    divisionId: string;
+    departmentId: string;
+};
 
-export function teamEntity(params: TeamEntity): TeamEntity {
-  return { ...params };
-}
+export type TeamEntity = HierarchyEntityBase<"teamId", TeamHierarchy>;
+export type TeamRecordProps = HierarchyRecordProps<"teamId", TeamHierarchy>;
+export type TeamRecordType = HierarchyRecordType<"teamId", TeamHierarchy>;
 
-export interface TeamRecordProps {
-  companyId: string;
-  divisionId: string;
-  departmentId: string;
-  teamId: string;
-  name: string;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export type TeamRecordType = DynamoDBRecord & TeamRecordProps;
-
-export const TeamRecord = {
-  prefix: "Team",
-
-  makePk: () => TeamRecord.prefix,
-  makeSk: (departmentId: string, teamId: string) =>
-    `Department#${departmentId}#${TeamRecord.prefix}#${teamId}`,
-
-  fromEntity: (entity: TeamEntity): TeamRecordType => ({
-    pk: entity.pk,
-    sk: entity.sk,
-    companyId: entity.companyId,
-    divisionId: entity.divisionId,
-    departmentId: entity.departmentId,
-    teamId: entity.teamId,
-    name: entity.name,
-    createdAt: entity.createdAt,
-    updatedAt: entity.updatedAt,
-  }),
-
-  intoEntity: (record: TeamRecordType): TeamEntity =>
-    teamEntity({
-      pk: record.pk,
-      sk: record.sk,
-      companyId: record.companyId,
-      divisionId: record.divisionId,
-      departmentId: record.departmentId,
-      teamId: record.teamId,
-      name: record.name,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
-    }),
-} as const;
+export const TeamRecord = createHierarchyRecord<"Team", TeamHierarchy, {}, "teamId">({
+    entityName: "Team",
+    idKey: "teamId",
+    makeSkFn: (departmentId: string, teamId: string) => `Department#${departmentId}#Team#${teamId}`,
+    hierarchyKeys: ["companyId", "divisionId", "departmentId"],
+});

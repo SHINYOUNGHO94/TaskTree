@@ -14,16 +14,19 @@ export class UserRepository extends BaseRepository<UserRecordType> {
       new QueryCommand({
         TableName: this.tableName,
         IndexName: "user",
-        KeyConditionExpression: "userId = :userId AND pk = :pk",
+        KeyConditionExpression: "#userAttr = :userId AND pk = :pk",
+        ExpressionAttributeNames: {
+          "#userAttr": "User",
+        },
         ExpressionAttributeValues: {
           ":userId": userId,
-          ":pk": UserRecord.prefix,
+          ":pk": UserRecord.entityName,
         },
       })
     );
 
     const item = response.Items?.[0] as UserRecordType | undefined;
-    return item ? UserRecord.intoEntity(item) : undefined;
+    return item ? UserRecord.toEntity(item) : undefined;
   }
 
   // 会社IDから所属するユーザー一覧を取得
@@ -35,13 +38,13 @@ export class UserRepository extends BaseRepository<UserRecordType> {
         KeyConditionExpression: "companyId = :companyId AND pk = :pk",
         ExpressionAttributeValues: {
           ":companyId": companyId,
-          ":pk": UserRecord.prefix,
+          ":pk": UserRecord.entityName,
         },
       })
     );
 
     const items = (response.Items || []) as UserRecordType[];
-    return items.map(item => UserRecord.intoEntity(item));
+    return items.map(item => UserRecord.toEntity(item));
   }
 
   async create(params: {
@@ -61,13 +64,17 @@ export class UserRepository extends BaseRepository<UserRecordType> {
     const record: UserRecordType = {
       pk: UserRecord.makePk(),
       sk: UserRecord.makeSk(teamId, params.userId),
-      ...params,
+      companyId: params.companyId,
       divisionId,
       departmentId,
       teamId,
-      createdAt: new Date().toISOString(),
+      User: params.userId,
+      email: params.email,
+      name: params.name,
+      role: params.role,
+      at: new Date().toISOString(),
     };
 
-    await this.put(record);
+    await this.put(record, "attribute_not_exists(pk)");
   }
 }

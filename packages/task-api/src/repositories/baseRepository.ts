@@ -11,11 +11,12 @@ export abstract class BaseRepository<T extends { pk: string; sk: string }> {
     this.tableName = tableName;
   }
 
-  protected async put(item: T): Promise<void> {
+  protected async put(item: T, condition?: string): Promise<void> {
     await this.docClient.send(
       new PutCommand({
         TableName: this.tableName,
         Item: item,
+        ConditionExpression: condition,
       })
     );
   }

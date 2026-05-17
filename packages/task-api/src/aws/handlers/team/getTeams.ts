@@ -2,17 +2,18 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { TeamRepository } from "../../../repositories/teamRepository";
 import { UserRepository } from "../../../repositories/userRepository";
 
-const tableName = process.env.TABLE_NAME || "";
-const teamRepo = new TeamRepository(tableName);
-const userRepo = new UserRepository(tableName);
-
 const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
   body: JSON.stringify(body),
 });
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export interface GetTeamsDeps {
+  teamRepo: TeamRepository;
+  userRepo: UserRepository;
+}
+
+export const createHandler = (deps: GetTeamsDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const authorizer = event.requestContext.authorizer;
     if (!authorizer || !authorizer.claims) {
@@ -20,14 +21,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const userId = authorizer.claims.sub as string;
-    const user = await userRepo.findByUserId(userId);
+    const user = await deps.userRepo.findByUserId(userId);
 
     if (!user) {
       return createResponse(403, { error: "Profile not found" });
     }
 
-    const teams = await teamRepo.findByCompanyId(user.companyId);
-    teams.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const teams = await deps.teamRepo.findByCompanyId(user.companyId);
+    teams.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
     return createResponse(200, { teams });
   } catch (error) {
@@ -35,3 +36,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return createResponse(500, { error: "Internal Server Error" });
   }
 };
+
+const tableName = process.env.TABLE_NAME || "";
+export const handler = createHandler({
+  teamRepo: new TeamRepository(tableName),
+  userRepo: new UserRepository(tableName)
+});

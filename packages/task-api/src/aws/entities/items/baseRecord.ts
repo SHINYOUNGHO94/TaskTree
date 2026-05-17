@@ -26,19 +26,21 @@ export type HierarchyRecordType<
 > = DynamoDBRecord & HierarchyRecordProps<TName, THierarchy, TAdditional>;
 
 export const createHierarchyRecord = <
-    TName extends string,
+    TEntityName extends string,
     THierarchy = {},
     TAdditional = {},
+    TName extends string = TEntityName,
 >(options: {
-    prefix: string;
-    nameKey: TName;
+    entityName: TEntityName;
+    idKey?: TName;
     makeSkFn: (...ids: string[]) => string;
     hierarchyKeys?: (keyof THierarchy)[];
     additionalKeys?: (keyof TAdditional)[];
 }) => {
-    const { prefix, nameKey, hierarchyKeys = [], additionalKeys = [], makeSkFn } = options;
+    const { entityName, hierarchyKeys = [], additionalKeys = [], makeSkFn } = options;
+    const idKey = options.idKey ?? (entityName as unknown as TName);
 
-    const makePk = () => prefix;
+    const makePk = () => entityName;
 
     const makeKey = (...ids: string[]) => ({
         pk: makePk(),
@@ -46,7 +48,7 @@ export const createHierarchyRecord = <
     });
 
     return {
-        prefix,
+        entityName,
         makePk,
         makeSk: makeSkFn,
         makeKey,
@@ -55,7 +57,7 @@ export const createHierarchyRecord = <
             const base: Record<string, unknown> = {
                 pk: entity.pk,
                 sk: entity.sk,
-                [nameKey]: entity[nameKey],
+                [idKey]: entity[idKey],
                 name: entity.name,
                 at: entity.at,
                 update_at: entity.update_at,
@@ -73,7 +75,7 @@ export const createHierarchyRecord = <
             const base: Record<string, unknown> = {
                 pk: record.pk,
                 sk: record.sk,
-                [nameKey]: record[nameKey],
+                [idKey]: record[idKey],
                 name: record.name,
                 at: record.at,
                 update_at: record.update_at,
@@ -93,7 +95,7 @@ export const createHierarchyRecord = <
             const baseValid =
                 isString(value.pk) &&
                 isString(value.sk) &&
-                isString(value[nameKey as string]) &&
+                isString(value[idKey as string]) &&
                 isString(value.name) &&
                 isString(value.at) &&
                 (value.update_at === undefined || isString(value.update_at));

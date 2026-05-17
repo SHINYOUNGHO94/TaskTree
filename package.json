@@ -15,6 +15,7 @@
     "type-check:ui": "yarn workspace @task/ui type-check",
     "type-check:core": "yarn workspace @task/core type-check",
     "type-check:api": "yarn workspace @task/api type-check",
+    "deploy:infra": "yarn workspace @task/infra deploy",
     "esbuild": "esbuild"
   },
   "devDependencies": {
