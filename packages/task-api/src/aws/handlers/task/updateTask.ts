@@ -10,7 +10,6 @@ const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResul
   body: JSON.stringify(body),
 });
 
-// タスク情報を更新するLambdaハンドラー
 export interface UpdateTaskDeps {
   taskRepo: TaskRepository;
   userRepo: UserRepository;
@@ -26,7 +25,6 @@ export const createHandler = (deps: UpdateTaskDeps) => async (event: APIGatewayP
       return createResponse(400, { message: "Missing required parameters" });
     }
 
-    // 更新対象の存在確認
     const existingTask = await deps.taskRepo.findByTaskId(taskId);
     if (!existingTask) {
       return createResponse(404, { message: "Task not found" });
@@ -41,12 +39,11 @@ export const createHandler = (deps: UpdateTaskDeps) => async (event: APIGatewayP
       return createResponse(403, { message: "Access denied. Only owners or company admins can edit." });
     }
 
-    // 内容の更新
     const updatedTask: TaskDetail = {
       ...existingTask,
       ...body,
       memberId: existingTask.memberId,
-      id: taskId, 
+      id: taskId,
       updatedAt: new Date().toISOString(),
     };
 

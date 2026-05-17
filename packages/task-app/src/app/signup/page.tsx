@@ -9,7 +9,6 @@ import * as z from "zod";
 import Link from "next/link";
 import { AuthService } from "@task/core";
 
-// 1. バリデーションスキーマ
 const signupSchema = z.object({
   companyName: z.string().min(1, { message: "会社名を入力してください。" }),
   familyName: z.string().min(1, { message: "姓を入力してください。" }),
@@ -35,22 +34,18 @@ const SignupPage = () => {
 
   const onSubmit = async (data: SignupFormValues) => {
     setError(null);
-    
-    // パスワード一致チェック
+
     if (data.password !== data.confirmPassword) {
       setError("パスワードが一致しません。");
       return;
     }
 
-    // フルネームを作成 (姓 + 名)
     const fullName = `${data.familyName} ${data.givenName}`;
     const result = await AuthService.signUp(data.email, data.password, fullName, data.companyName);
-    
+
     if (result.success) {
-      // 登録成功 -> 認証画面へ
       router.push(`/verify?email=${encodeURIComponent(data.email)}&company=${encodeURIComponent(data.companyName)}`);
     } else {
-      // エラーハンドリング
       let message = "登録に失敗しました。";
       if (result.error === "UsernameExistsException") {
         message = "このメールアドレスは既に登録されています。";
