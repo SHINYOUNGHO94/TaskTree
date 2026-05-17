@@ -7,6 +7,16 @@ import { TeamRepository } from "@/repositories/teamRepository";
 import { internalServerError } from "@/errors/utils";
 import { UserProfile } from "@task/core";
 
+const fallbackDate = "1970-01-01T00:00:00.000Z";
+
+const toRequiredString = (value: unknown, fallback: string): string => {
+  return typeof value === "string" && value.length > 0 ? value : fallback;
+};
+
+const toNullableString = (value: unknown): string | null => {
+  return typeof value === "string" && value.length > 0 ? value : null;
+};
+
 export interface GetUserProfileDeps {
   userRepo: UserRepository;
   companyRepo: CompanyRepository;
@@ -51,8 +61,8 @@ export const createHandler = (deps: GetUserProfileDeps) => async (event: APIGate
       divisionName: division?.name || null,
       departmentName: dept?.name || null,
       teamName: team?.name || null,
-      createdAt: user.at,
-      lastSignInAt: user.update_at || null,
+      createdAt: toRequiredString(user.at, fallbackDate),
+      lastSignInAt: toNullableString(user.update_at),
     };
 
     return {

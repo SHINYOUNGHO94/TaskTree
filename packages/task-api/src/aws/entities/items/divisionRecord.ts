@@ -4,12 +4,13 @@ type DivisionHierarchy = {
     companyId: string;
 };
 
-export type DivisionEntity = HierarchyEntityBase<"Division", DivisionHierarchy>;
-export type DivisionRecordProps = HierarchyRecordProps<"Division", DivisionHierarchy>;
-export type DivisionRecordType = HierarchyRecordType<"Division", DivisionHierarchy>;
+export type DivisionEntity = HierarchyEntityBase<"divisionId", DivisionHierarchy>;
+export type DivisionRecordProps = HierarchyRecordProps<"divisionId", DivisionHierarchy>;
+export type DivisionRecordType = HierarchyRecordType<"divisionId", DivisionHierarchy>;
 
-export const DivisionRecord = createHierarchyRecord<"Division", DivisionHierarchy>({
+export const DivisionRecord = createHierarchyRecord<"Division", DivisionHierarchy, {}, "divisionId">({
     entityName: "Division",
+    idKey: "divisionId",
     makeSkFn: (companyId: string, divisionId: string) => `Company#${companyId}#Division#${divisionId}`,
     hierarchyKeys: ["companyId"],
 });

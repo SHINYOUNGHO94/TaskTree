@@ -19,16 +19,6 @@ export class TaskInfraStack extends cdk.Stack {
       version: 'v1',
     });
 
-    const userPool = cognito.UserPool.fromUserPoolId(
-      this,
-      'ImportedUserPool',
-      'ap-northeast-1_uWKGi9IjG',
-    );
-
-    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'TaskApiAuthorizer', {
-      cognitoUserPools: [userPool],
-    });
-
     const tableArn = database.entities.tableArn;
     const tableIndexesArn = `${tableArn}/index/*`;
 
@@ -59,6 +49,71 @@ export class TaskInfraStack extends cdk.Stack {
         resources: [tableArn, tableIndexesArn],
       }));
     };
+
+    const postConfirmationFn = new NodejsFunction(this, 'PostConfirmationFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/auth/postConfirmation.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableCreate(postConfirmationFn);
+
+    const userPool = new cognito.UserPool(this, 'TaskUserPool', {
+      userPoolName: 'task-tree-user-pool',
+      selfSignUpEnabled: true,
+      signInAliases: {
+        email: true,
+      },
+      autoVerify: {
+        email: true,
+      },
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: true,
+        },
+        fullname: {
+          required: false,
+          mutable: true,
+        },
+        nickname: {
+          required: false,
+          mutable: true,
+        },
+        profilePage: {
+          required: false,
+          mutable: true,
+        },
+      },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: false,
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      lambdaTriggers: {
+        postConfirmation: postConfirmationFn,
+      },
+    });
+
+    const userPoolClient = new cognito.UserPoolClient(this, 'TaskUserPoolClient', {
+      userPool,
+      userPoolClientName: 'task-tree-web-client',
+      authFlows: {
+        userSrp: true,
+        userPassword: true,
+      },
+      disableOAuth: true,
+      preventUserExistenceErrors: true,
+    });
+
+    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'TaskApiAuthorizer', {
+      cognitoUserPools: [userPool],
+    });
 
     const createCompanyFn = new NodejsFunction(this, 'CreateCompanyFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -164,20 +219,6 @@ export class TaskInfraStack extends cdk.Stack {
       },
     });
     grantTableRead(getCompanyUsersFn);
-
-    const postConfirmationFn = new NodejsFunction(this, 'PostConfirmationFunction', {
-      runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, '../../task-api/src/aws/handlers/auth/postConfirmation.ts'),
-      handler: 'handler',
-      environment: {
-        TABLE_NAME: database.entities.tableName,
-      },
-    });
-    postConfirmationFn.addPermission('CognitoInvoke', {
-      principal: new iam.ServicePrincipal('cognito-idp.amazonaws.com'),
-      sourceArn: userPool.userPoolArn,
-    });
-    grantTableCreate(postConfirmationFn);
 
     const getUserProfileFn = new NodejsFunction(this, 'GetUserProfileFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -287,5 +328,20 @@ export class TaskInfraStack extends cdk.Stack {
     tasksIdResource.addMethod('GET', new apigateway.LambdaIntegration(getTaskFn), { authorizer });
     tasksIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateTaskFn), { authorizer });
     tasksIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTaskFn), { authorizer });
+
+    new cdk.CfnOutput(this, 'CognitoUserPoolId', {
+      value: userPool.userPoolId,
+      description: 'Set this value as NEXT_PUBLIC_COGNITO_USER_POOL_ID.',
+    });
+
+    new cdk.CfnOutput(this, 'CognitoUserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+      description: 'Set this value as NEXT_PUBLIC_COGNITO_CLIENT_ID.',
+    });
+
+    new cdk.CfnOutput(this, 'TaskApiUrl', {
+      value: api.url,
+      description: 'Set this value as NEXT_PUBLIC_API_URL.',
+    });
   }
 }

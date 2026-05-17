@@ -17,7 +17,7 @@ export class DivisionRepository extends BaseRepository<DivisionRecordType> {
       pk: DivisionRecord.makePk(),
       sk: DivisionRecord.makeSk(params.companyId, params.divisionId),
       companyId: params.companyId,
-      Division: params.divisionId,
+      divisionId: params.divisionId,
       name: params.name,
       at: new Date().toISOString(),
     };

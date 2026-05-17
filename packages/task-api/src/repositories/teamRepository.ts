@@ -21,7 +21,7 @@ export class TeamRepository extends BaseRepository<TeamRecordType> {
       companyId: params.companyId,
       divisionId: params.divisionId,
       departmentId: params.departmentId,
-      Team: params.teamId,
+      teamId: params.teamId,
       name: params.name,
       at: new Date().toISOString(),
     };
