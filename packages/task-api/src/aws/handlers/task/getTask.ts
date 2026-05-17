@@ -10,7 +10,6 @@ const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResul
   body: JSON.stringify(body),
 });
 
-// タスク詳細を取得するLambdaハンドラー
 export interface GetTaskDeps {
   taskRepo: TaskRepository;
   userRepo: UserRepository;
@@ -25,13 +24,11 @@ export const createHandler = (deps: GetTaskDeps) => async (event: APIGatewayProx
       return createResponse(400, { message: "Missing required parameters" });
     }
 
-    // タスクをIDのみで取得
     const task = await deps.taskRepo.findByTaskId(taskId);
     if (!task) {
       return createResponse(404, { message: "Task not found" });
     }
 
-    // 閲覧権限チェック: 呼び出し元のプロファイルを確認
     const callerProfile = await deps.userRepo.findByUserId(callerId);
     if (!callerProfile) {
       return createResponse(404, { message: "User profile not found" });
@@ -39,7 +36,6 @@ export const createHandler = (deps: GetTaskDeps) => async (event: APIGatewayProx
 
     const { role, companyId, divisionId, departmentId, teamId } = callerProfile;
 
-    // 権限判定ロジック
     let canAccess = false;
 
     // PRIVATE: 所有者のみ
@@ -50,7 +46,6 @@ export const createHandler = (deps: GetTaskDeps) => async (event: APIGatewayProx
     else if (role === UserRole.COMPANY_ADMIN || (task.accessScope === AccessScope.COMPANY && task.companyId === companyId)) {
       canAccess = task.companyId === companyId;
     }
-
     // DIVISION Scope: 本部長以上
     else if (task.accessScope === AccessScope.DIVISION) {
       canAccess = role === UserRole.DIVISION_ADMIN && task.divisionId === divisionId;
@@ -69,7 +64,6 @@ export const createHandler = (deps: GetTaskDeps) => async (event: APIGatewayProx
       canAccess = isDirectTeamMember || isDeptAdmin || isDivAdmin;
     }
 
-    // 作成者/担当者は無条件
     if (task.memberId === callerId || task.creatorId === callerId) {
       canAccess = true;
     }

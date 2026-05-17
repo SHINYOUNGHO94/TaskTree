@@ -9,17 +9,14 @@ export interface CreateTaskDeps {
 
 export const createHandler = (deps: CreateTaskDeps) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    // 1. リクエストボディの確認
     if (!event.body) return invalidRequestBody();
     const task: TaskDetail = JSON.parse(event.body);
-    
-    // 2. ログイン中のユーザーIDを認証トークンから取得して設定
+
     const creatorId = event.requestContext.authorizer?.claims.sub;
     if (!creatorId) return internalServerError("Creator ID not found");
-    
+
     task.creatorId = creatorId;
 
-    // 3. リポジトリを使用してタスクを保存
     await deps.repository.save(task);
 
     return {

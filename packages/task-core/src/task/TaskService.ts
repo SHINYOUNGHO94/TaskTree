@@ -2,9 +2,7 @@ import { get, post, put, del } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { TaskSummary, TaskDetail } from '../types/task';
 
-// タスク関連のAPI操作を担当するサービス
 export const TaskService = {
-  // 1. タスク一覧の取得 (GET)
   getTasks: async (): Promise<TaskSummary[]> => {
     try {
       const { tokens } = await fetchAuthSession();
@@ -27,7 +25,6 @@ export const TaskService = {
     }
   },
 
-  // 2. 新規タスクの作成 (POST)
   createTask: async (task: TaskDetail): Promise<void> => {
     try {
       const { tokens } = await fetchAuthSession();
@@ -51,7 +48,6 @@ export const TaskService = {
     }
   },
 
-  // 3. タスク詳細の取得 (GET)
   getTask: async (taskId: string): Promise<TaskDetail> => {
     try {
       const { tokens } = await fetchAuthSession();
@@ -72,7 +68,6 @@ export const TaskService = {
     }
   },
 
-  // 4. タスクの更新 (PUT)
   updateTask: async (task: TaskDetail): Promise<void> => {
     try {
       const { tokens } = await fetchAuthSession();
@@ -94,7 +89,6 @@ export const TaskService = {
     }
   },
 
-  // 5. タスクの削除 (DELETE)
   deleteTask: async (taskId: string): Promise<void> => {
     try {
       const { tokens } = await fetchAuthSession();

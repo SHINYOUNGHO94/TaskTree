@@ -13,13 +13,11 @@ export default function TeamPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // モーダル状態
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isDivModalOpen, setIsDivModalOpen] = useState(false);
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
-  // 招待フォーム状態
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteFamilyName, setInviteFamilyName] = useState("");
   const [inviteGivenName, setInviteGivenName] = useState("");
@@ -30,7 +28,6 @@ export default function TeamPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
-  // 部署・チーム追加フォーム状態
   const [newDivName, setNewDivName] = useState("");
   const [newDeptName, setNewDeptName] = useState("");
   const [newTeamName, setNewTeamName] = useState("");
@@ -153,7 +150,6 @@ export default function TeamPage() {
     );
   }
 
-  // Helper to get names for display
   const getDivName = (id?: string) => id ? (divisions.find(d => d.divisionId === id)?.name || id) : "---";
   const getDeptName = (id?: string) => id ? (departments.find(d => d.departmentId === id)?.name || id) : "---";
   const getTeamName = (id?: string) => id ? (teams.find(t => t.teamId === id)?.name || id) : "---";
