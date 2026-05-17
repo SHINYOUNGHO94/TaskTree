@@ -35,6 +35,9 @@ jobs:
       - name: Type check
         run: yarn type-check
 
+      - name: API test
+        run: yarn test:api
+
       - name: Build Applications
         run: yarn workspace @task/app build
 
