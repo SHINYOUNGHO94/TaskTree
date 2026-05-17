@@ -10,7 +10,6 @@ const createResponse = (statusCode: number, body: unknown): APIGatewayProxyResul
   body: JSON.stringify(body),
 });
 
-// タスクを削除するLambdaハンドラー
 export interface DeleteTaskDeps {
   taskRepo: TaskRepository;
   userRepo: UserRepository;
@@ -25,7 +24,6 @@ export const createHandler = (deps: DeleteTaskDeps) => async (event: APIGatewayP
       return createResponse(400, { message: "Missing required parameters" });
     }
 
-    // 削除前にタスクが存在するか確認
     const existingTask = await deps.taskRepo.findByTaskId(taskId);
     if (!existingTask) {
       return createResponse(404, { message: "Task not found" });
@@ -40,7 +38,6 @@ export const createHandler = (deps: DeleteTaskDeps) => async (event: APIGatewayP
       return createResponse(403, { message: "Access denied. Only owners or company admins can delete." });
     }
 
-    // タスク削除
     await deps.taskRepo.delete(existingTask.memberId, taskId);
 
     return createResponse(200, { message: "Task deleted successfully" });

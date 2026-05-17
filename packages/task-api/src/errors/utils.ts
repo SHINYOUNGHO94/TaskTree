@@ -10,7 +10,6 @@ const COMMON_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
 };
 
-// 必要なデータが足りないときに使います
 export const requiredFieldsMissing = (): TaskApiError => ({
   statusCode: 400,
   headers: COMMON_HEADERS,
@@ -20,7 +19,6 @@ export const requiredFieldsMissing = (): TaskApiError => ({
   })
 });
 
-// リクエストの内容が正しくないときに使います
 export const invalidRequestBody = (): TaskApiError => ({
   statusCode: 400,
   headers: COMMON_HEADERS,
@@ -30,7 +28,6 @@ export const invalidRequestBody = (): TaskApiError => ({
   }),
 });
 
-// システムにエラーが起きたときに使います
 export const internalServerError = (message: string = "Internal server error"): TaskApiError => ({
   statusCode: 500,
   headers: COMMON_HEADERS,
@@ -40,7 +37,6 @@ export const internalServerError = (message: string = "Internal server error"): 
   })
 });
 
-// データが見つからないときに使います
 export const notFound = (message: string = "Resource not found"): TaskApiError => ({
   statusCode: 404,
   headers: COMMON_HEADERS,

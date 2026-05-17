@@ -4,7 +4,6 @@ import { CompanyRepository } from "../../../repositories/companyRepository";
 import { DepartmentRepository } from "../../../repositories/departmentRepository";
 import { UserRole } from "@task/core";
 
-// Cognito メール認証完了後に実行されるオンボーディング関数
 export interface PostConfirmationDeps {
   userRepo: UserRepository;
   companyRepo: CompanyRepository;
@@ -18,11 +17,9 @@ export const createHandler = (deps: PostConfirmationDeps) => async (event: PostC
   const companyName = event.request.clientMetadata?.companyName || "個人組織";
 
   try {
-    // 1. デフォルト会社の作成
     const companyId = `COMP-${userId.slice(0, 8)}`;
     await deps.companyRepo.create(companyId, companyName);
 
-    // 2. デフォルト部署の作成
     const deptId = `DEPT-${userId.slice(0, 8)}`;
     await deps.deptRepo.create({
       companyId: companyId,
@@ -31,7 +28,6 @@ export const createHandler = (deps: PostConfirmationDeps) => async (event: PostC
       name: "一般部署",
     });
 
-    // 3. ユーザーレコードの作成
     await deps.userRepo.create({
       userId: userId,
       email: email,

@@ -7,7 +7,6 @@ import { useUser } from "../../components/providers/UserProvider";
 import { Sidebar } from "../../components/dashboard/Sidebar";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 
-// 認証チェック、サイドバー、ヘッダーの共通構造を管理
 export default function DashboardLayout({
   children,
 }: {
@@ -22,7 +21,6 @@ export default function DashboardLayout({
     }
   }, [user, isLoading, router]);
 
-  // サインアウト処理
   const handleSignOut = async () => {
     try {
       await AuthService.signOut();
@@ -32,7 +30,6 @@ export default function DashboardLayout({
     }
   };
 
-  // ユーザー(認証)情報がない場合の処理
   if (!user) {
     if (isLoading) {
       return (
@@ -42,7 +39,6 @@ export default function DashboardLayout({
         </div>
       );
     }
-    // 認証情報がなく、ローディングも終わっている場合は何も表示しない
     return null;
   }
 
