@@ -38,6 +38,7 @@ const TaskDetailPage = () => {
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const isEditable = task && user && (task.memberId === user.id || profile?.role === UserRole.COMPANY_ADMIN);
 
@@ -61,11 +62,13 @@ const TaskDetailPage = () => {
 
   const handleDelete = async () => {
     if (!window.confirm("このタスクを削除しますか？")) return;
+    setActionError(null);
     try {
       await TaskService.deleteTask(id as string);
       router.push("/dashboard");
     } catch (error) {
       console.error("Delete failed", error);
+      setActionError('タスクの削除に失敗しました。再度お試しください。');
     }
   };
 
@@ -93,6 +96,11 @@ const TaskDetailPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {actionError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+          {actionError}
+        </div>
+      )}
       <div className="flex justify-between items-center mb-8">
         <button 
           onClick={() => router.push("/dashboard")}

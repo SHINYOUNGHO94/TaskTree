@@ -16,6 +16,7 @@ const DashboardPage = () => {
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // 初期データのロード
   useEffect(() => {
@@ -41,32 +42,26 @@ const DashboardPage = () => {
 
   // ステータスのクイック更新
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    setActionError(null);
     try {
-      // 現在の詳細情報を取得
-      const currentTask = await TaskService.getTask(taskId);
-      // ステータスのみを書き換えて更新
-      await TaskService.updateTask({
-        ...currentTask,
-        status: newStatus
-      });
-      // 一覧を再取得
+      await TaskService.updateTask({ id: taskId, status: newStatus });
       await fetchTasks();
     } catch (error) {
       console.error("Failed to update status", error);
-      alert("Status update failed");
+      setActionError('ステータスの更新に失敗しました。再度お試しください。');
     }
   };
 
   // タスクの削除
   const handleDelete = async (taskId: string) => {
-    if (!window.confirm("Are you sure you want to delete this task?")) return;
-    
+    if (!window.confirm("このタスクを削除しますか？")) return;
+    setActionError(null);
     try {
       await TaskService.deleteTask(taskId);
       await fetchTasks();
     } catch (error) {
       console.error("Failed to delete task", error);
-      alert("Delete failed");
+      setActionError('タスクの削除に失敗しました。再度お試しください。');
     }
   };
 
@@ -106,6 +101,12 @@ const DashboardPage = () => {
           </button>
         </div>
       </div>
+
+      {actionError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+          {actionError}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Flag, Lock, Users, Building, Globe, Shield } from 'lucide-react';
-import { TaskStatus, TaskLevel, TaskDetail, AccessScope, UserProfile, UserRole, OrgService, Division, Department, Team } from '@task/core';
+import { TaskLevel, CreateTaskInput, AccessScope, UserProfile, UserRole, OrgService, Division, Department, Team } from '@task/core';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  onSubmitTask: (task: TaskDetail) => Promise<void>;
+  onSubmitTask: (task: CreateTaskInput) => Promise<void>;
   memberId: string;
   profile?: UserProfile | null;
 }
@@ -57,14 +57,13 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     (opt) => (roleLevel[opt.minRole] ?? 0) <= userRoleLevel
   );
 
-
-  // 対象組織の選択状態
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [targetDivisionId, setTargetDivisionId] = useState('');
   const [targetDepartmentId, setTargetDepartmentId] = useState('');
   const [targetTeamId, setTargetTeamId] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // モーダルが開いたときに組織データを取得
   useEffect(() => {
@@ -86,16 +85,31 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     fetchOrgData();
   }, [isOpen]);
 
-  // スコープ変更時に対象をリセット
+  // スコープ変更時に対象とエラーをリセット
   useEffect(() => {
     setTargetDivisionId('');
     setTargetDepartmentId('');
     setTargetTeamId('');
+    setSubmitError(null);
   }, [selectedScope]);
 
   const onSubmit = async (data: FormValues) => {
+    setSubmitError(null);
+
+    if (data.accessScope === AccessScope.TEAM && !targetTeamId) {
+      setSubmitError('チームを選択してください。');
+      return;
+    }
+    if (data.accessScope === AccessScope.DEPARTMENT && !targetDepartmentId) {
+      setSubmitError('部署を選択してください。');
+      return;
+    }
+    if (data.accessScope === AccessScope.DIVISION && !targetDivisionId) {
+      setSubmitError('本部を選択してください。');
+      return;
+    }
+
     try {
-      const now = new Date().toISOString();
       let taskDivisionId = profile?.divisionId || 'NONE';
       let taskDepartmentId = profile?.departmentId || 'NONE';
       let taskTeamId = profile?.teamId || 'NONE';
@@ -114,25 +128,19 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
         taskTeamId = targetTeamId;
       }
 
-      const newTask: TaskDetail = {
-        id: crypto.randomUUID(),
-        companyId: profile?.companyId || 'NONE',
-        divisionId: taskDivisionId,
-        departmentId: taskDepartmentId,
-        teamId: taskTeamId,
-        creatorId: memberId,
-        memberId: memberId,
+      const input: CreateTaskInput = {
+        memberId,
         accessScope: data.accessScope,
         title: data.title,
         content: data.content,
-        status: TaskStatus.NOT_STARTED,
         level: data.level,
         limitDate: data.limitDate || 'NONE',
-        createdAt: now,
-        updatedAt: now,
+        divisionId: taskDivisionId,
+        departmentId: taskDepartmentId,
+        teamId: taskTeamId,
       };
 
-      await onSubmitTask(newTask);
+      await onSubmitTask(input);
       reset();
       setTargetDivisionId('');
       setTargetDepartmentId('');
@@ -141,6 +149,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
       onClose();
     } catch (error) {
       console.error("Failed to create task", error);
+      setSubmitError('タスクの作成に失敗しました。再度お試しください。');
     }
   };
 
@@ -162,6 +171,12 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              {submitError && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                  {submitError}
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-600 uppercase">タイトル</label>
                 <input
