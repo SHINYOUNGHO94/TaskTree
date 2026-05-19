@@ -77,7 +77,7 @@ export const OrgService = {
     }
   },
  
-  createDivision: async (name: string, companyId: string): Promise<{ divisionId: string }> => {
+  createDivision: async (name: string): Promise<{ divisionId: string }> => {
     try {
       const { tokens } = await fetchAuthSession();
       const divisionId = `DIV-${Date.now()}`;
@@ -86,7 +86,7 @@ export const OrgService = {
         path: "division",
         options: {
           headers: { Authorization: tokens?.idToken?.toString() || '' },
-          body: { name, companyId, divisionId }
+          body: { name, divisionId }
         }
       });
       const response = await restOperation.response;
@@ -117,7 +117,7 @@ export const OrgService = {
     }
   },
 
-  createDepartment: async (name: string, companyId: string, divisionId: string = "NONE"): Promise<{ departmentId: string }> => {
+  createDepartment: async (name: string, divisionId: string = "NONE"): Promise<{ departmentId: string }> => {
     try {
       const { tokens } = await fetchAuthSession();
       const departmentId = `DEPT-${Date.now()}`;
@@ -126,7 +126,7 @@ export const OrgService = {
         path: "department",
         options: {
           headers: { Authorization: tokens?.idToken?.toString() || '' },
-          body: { name, companyId, divisionId, departmentId }
+          body: { name, divisionId, departmentId }
         }
       });
       const response = await restOperation.response;
@@ -157,7 +157,7 @@ export const OrgService = {
     }
   },
 
-  createTeam: async (name: string, companyId: string, departmentId: string, divisionId: string = "NONE"): Promise<{ teamId: string }> => {
+  createTeam: async (name: string, departmentId: string, divisionId: string = "NONE"): Promise<{ teamId: string }> => {
     try {
       const { tokens } = await fetchAuthSession();
       const teamId = `TEAM-${Date.now()}`;
@@ -166,7 +166,7 @@ export const OrgService = {
         path: "team",
         options: {
           headers: { Authorization: tokens?.idToken?.toString() || '' },
-          body: { name, companyId, divisionId, departmentId, teamId }
+          body: { name, divisionId, departmentId, teamId }
         }
       });
       const response = await restOperation.response;
