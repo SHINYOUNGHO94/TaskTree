@@ -1,6 +1,6 @@
 import { get, post, put, del } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { TaskSummary, TaskDetail } from '../types/task';
+import { TaskSummary, TaskDetail, CreateTaskInput, UpdateTaskInput } from '../types/task';
 
 export const TaskService = {
   getTasks: async (): Promise<TaskSummary[]> => {
@@ -25,7 +25,7 @@ export const TaskService = {
     }
   },
 
-  createTask: async (task: TaskDetail): Promise<void> => {
+  createTask: async (input: CreateTaskInput): Promise<void> => {
     try {
       const { tokens } = await fetchAuthSession();
       const idToken = tokens?.idToken?.toString();
@@ -38,7 +38,7 @@ export const TaskService = {
             Authorization: idToken || ''
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          body: task as any,
+          body: input as any,
         }
       });
       await restOperation.response;
@@ -68,18 +68,23 @@ export const TaskService = {
     }
   },
 
-  updateTask: async (task: TaskDetail): Promise<void> => {
+  updateTask: async (input: UpdateTaskInput): Promise<void> => {
     try {
       const { tokens } = await fetchAuthSession();
       const idToken = tokens?.idToken?.toString();
 
+      const { id, ...fields } = input;
+      const body = Object.fromEntries(
+        Object.entries(fields).filter(([, v]) => v !== undefined)
+      );
+
       const restOperation = put({
         apiName: 'TaskApi',
-        path: `tasks/${task.id}`,
+        path: `tasks/${id}`,
         options: {
           headers: { Authorization: idToken || '' },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          body: task as any,
+          body: body as any,
         }
       });
       await restOperation.response;

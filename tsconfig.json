@@ -1,9 +1,8 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
-      "@task/core": ["packages/task-core/src/index.ts"]
+      "@task/core": ["./packages/task-core/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "packages/**/node_modules"]

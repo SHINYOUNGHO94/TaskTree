@@ -198,6 +198,15 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - Vitest による API テストを追加し、権限違反、組織範囲外アクセス、入力検証、正常系を継続的に確認できるようにした
 - Claude が主な実装を担当し、GPT/Codex がレビュー、追加指摘、IAM 権限の補完、検証を担当
 
+### Task 2: タスク作成・編集 UX と API リクエスト契約の整理
+
+- `CreateTaskInput` 型を追加し、クライアントが送るべきフィールドを明示。`id`・`companyId`・`creatorId`・`status`・`createdAt`・`updatedAt` などサーバー管理フィールドをクライアントから排除
+- `UpdateTaskInput` 型を追加し、更新可能なフィールド（`title`・`content`・`status`・`level`・`limitDate`）のみを送るように制限。`id` は path parameter としてのみ使用し、API body には含めない
+- `TaskService.createTask` / `updateTask` の引数を新しい型に変更。`updateTask` は undefined フィールドを除去してから送信することで、ステータス単体更新などの最小リクエストを実現
+- ダッシュボードのステータス変更を `getTask` → 全体更新の流れから `{ id, status }` のみの最小更新に変更し、不要な API 呼び出しを削減
+- `CreateTaskModal` で公開範囲（TEAM・DEPARTMENT・DIVISION）選択時に対象組織が未選択の場合、送信をブロックして日本語エラーメッセージをインライン表示
+- 作成・更新・削除・ステータス変更の失敗時に `alert()` ではなく、画面内に日本語エラーメッセージをインライン表示するよう改善
+
 ---
 
 ## 開発メモ

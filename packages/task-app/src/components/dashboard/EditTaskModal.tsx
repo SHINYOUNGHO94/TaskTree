@@ -1,15 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Flag } from 'lucide-react';
-import { TaskLevel, TaskDetail } from '@task/core';
+import { TaskLevel, TaskDetail, UpdateTaskInput } from '@task/core';
 
 interface EditTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   task: TaskDetail;
-  onUpdateTask: (task: TaskDetail) => Promise<void>;
+  onUpdateTask: (input: UpdateTaskInput) => Promise<void>;
 }
 
 interface FormValues {
@@ -19,10 +19,11 @@ interface FormValues {
   limitDate: string;
 }
 
-export const EditTaskModal: React.FC<EditTaskModalProps> = ({ 
-  isOpen, onClose, onSuccess, task, onUpdateTask 
+export const EditTaskModal: React.FC<EditTaskModalProps> = ({
+  isOpen, onClose, onSuccess, task, onUpdateTask
 }) => {
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormValues>();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && task) {
@@ -32,25 +33,27 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
         level: task.level,
         limitDate: task.limitDate
       });
+      setSubmitError(null);
     }
   }, [isOpen, task, reset]);
 
   const onSubmit = async (data: FormValues) => {
+    setSubmitError(null);
     try {
-      const updatedTask: TaskDetail = {
-        ...task,
+      const input: UpdateTaskInput = {
+        id: task.id,
         title: data.title,
         content: data.content,
         level: data.level,
         limitDate: data.limitDate,
-        updatedAt: new Date().toISOString(),
       };
 
-      await onUpdateTask(updatedTask);
+      await onUpdateTask(input);
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Failed to update task", error);
+      setSubmitError('タスクの更新に失敗しました。再度お試しください。');
     }
   };
 
@@ -72,9 +75,15 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+              {submitError && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                  {submitError}
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-600 uppercase">タイトル</label>
-                <input 
+                <input
                   {...register('title', { required: true })}
                   placeholder="タスクのタイトル"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none"
@@ -83,7 +92,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-600 uppercase">内容</label>
-                <textarea 
+                <textarea
                   {...register('content')}
                   placeholder="詳細内容..."
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none h-40"
@@ -95,7 +104,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   <label className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1">
                     <Flag size={12} /> 優先度
                   </label>
-                  <select 
+                  <select
                     {...register('level')}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none bg-white"
                   >
@@ -109,7 +118,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   <label className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1">
                     <Calendar size={12} /> 完了予定日
                   </label>
-                  <input 
+                  <input
                     type="date"
                     {...register('limitDate')}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none"
@@ -118,15 +127,15 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
               </div>
 
               <div className="flex gap-2 pt-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={onClose}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   キャンセル
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={isSubmitting}
                   className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors shadow-sm"
                 >

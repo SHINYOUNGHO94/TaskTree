@@ -45,3 +45,24 @@ export interface TaskDetail extends TaskSummary {
 }
 
 export type Task = TaskDetail;
+
+export interface CreateTaskInput {
+  title: string;
+  content: string;
+  accessScope: AccessScope;
+  level: TaskLevel;
+  limitDate: string;
+  memberId: string;
+  divisionId: string;
+  departmentId: string;
+  teamId: string;
+}
+
+export interface UpdateTaskInput {
+  id: string;
+  title?: string;
+  content?: string;
+  status?: TaskStatus;
+  level?: TaskLevel;
+  limitDate?: string;
+}
