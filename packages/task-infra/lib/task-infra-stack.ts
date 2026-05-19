@@ -248,6 +248,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
+    grantTableRead(createTaskFn);
     grantTableCreate(createTaskFn);
 
     const getTaskFn = new NodejsFunction(this, 'GetTaskFunction', {
