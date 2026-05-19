@@ -25,5 +25,9 @@ Thumbs.db
 # Private Memory (Internal Use)
 .memo/
 .vscode/
+
+# AI analysis artifacts
+repomix-output.xml
+
 # Lock file (Yarn v4 standard)
 # yarn.lock should NOT be ignored.
