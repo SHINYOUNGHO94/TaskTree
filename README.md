@@ -226,6 +226,17 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `targetScope` と `requiredRole` による案件公開範囲、承認フロー、コメント、History、状態管理の方針を整理
 - DynamoDB シングルテーブルの主要 GSI 検索パターンと、`自分の案件`、`公開案件`、`組織案件`、`プロジェクト` の UI 方針を整理
 
+### Task 5: v2 Case 実装基盤の追加
+
+- `AGENTS.md` に Repomix 使用規則と v2 Case 開発基準を追加し、AI エージェントが `case-collaboration-model.md` を基準に作業できるようにした
+- `@task/core` に `CaseStatus`、`CaseDeliveryType`、`CaseType`、`CaseOwnerType`、`CaseTargetScope` と `CaseSummary` / `CaseDetail` / `CreateCaseInput` / `UpdateCaseInput` を追加
+- DynamoDB に case 用の GSI として `byCase`、`byAssignee`、`byVisibility` を追加し、既存の `company`、`division`、`department`、`team`、`user` GSI は変更しない方針を維持
+- 既存テーブルへの GSI 追加は 1 回のデプロイで 1 つずつ行う必要があるため、実際の適用順序を分ける運用方針を明確化
+- `task-api` に `CaseRecord` と `CaseRepository` を追加し、`CaseDetail` と DynamoDB record の相互変換、保存、ID 検索の基盤を整備
+- `createCase` handler を追加し、作成者情報をサーバー側で確定した上で `WAITING` 状態、`USER` owner、`targetScope`、`requiredRole` を検証して case を作成できるようにした
+- Vitest による `CaseRecord` 変換テストと `createCase` の入力検証・権限検証テストを追加し、case 基盤の安全性を確認できるようにした
+- 次の作業方針は `docs/workflow/task-6-case-api-plan.md` に整理
+
 ---
 
 ## 開発メモ

@@ -12,6 +12,7 @@
 - `docs/core/package-boundaries.md`
 - `docs/core/coding-rules.md`
 - `docs/workflow/ai-team-workflow.md`
+- `docs/core/case-collaboration-model.md`
 
 ## モデル別エントリーポイント
 
@@ -31,6 +32,22 @@
 - インフラ変更を行う前に、必ずデプロイ影響を説明する。
 - 判断が必要なアーキテクチャ変更は、すぐに実装せず、必ず先に提案する。
 - 可能な場合は、関連する type-check、lint、test を必ず実行する。
+
+## Repomix 使用規則
+
+- `repomix-output.xml` がある場合、まず全体構造の把握に使う。
+- `repomix-output.xml` は分析用の圧縮ファイルである。直接修正してはならない。
+- 実際の修正は必ず原本ファイルに対して行う。
+- 修正前に対象の原本ファイルを必ず再読する。
+- `repomix-output.xml` はコミット対象に含めてはならない。
+
+## v2 Case 開発基準
+
+- v2 の新機能は `docs/core/case-collaboration-model.md` を基準とする。
+- `docs/core/case-collaboration-model_kr.md` は韓国語の企画参考文書であり、実装基準ではない。
+- 既存の `task` を v2 の最上位案件として拡張してはならない。
+- 新規設計は `case` 中心で進める。
+- GSI 追加・変更はインフラ変更であり、実装前にデプロイ影響を必ず確認する。
 
 ## 出力スタイル
 

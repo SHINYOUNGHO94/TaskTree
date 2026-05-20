@@ -11,6 +11,9 @@ export * from "./auth/AuthService";
 export * from "./types/task";
 export * from "./task/TaskService";
 
+// ケース関連のエクスポート
+export * from "./types/case";
+
 // ユーザー関連のエクスポート
 export * from "./types/user";
 export * from "./user/UserService";
