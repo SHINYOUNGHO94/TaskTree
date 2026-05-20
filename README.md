@@ -218,6 +218,14 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - 組織階層の基本方針に合わせ、部署作成時は所属する事業部を必須とし、フロントエンドの「本部なし」選択を送信できないように調整
 - Vitest による権限テストを 4 ファイル追加。未認証 401、権限不足 403、他 division/department への不正アクセス、権限昇格試行、組織 ID の存在・親子関係検証、正常系をカバー
 
+### Task 4: 案件協業モデルの設計整理
+
+- `docs/core/case-collaboration-model.md` を追加し、v2 の案件協業モデルを定義
+- 既存の `company -> division -> department -> team -> user` 構造を維持しつつ、`project -> case -> child case -> task -> subtask` の案件階層を整理
+- `REQUEST`、`STANDARD`、`PROJECT` の案件作成モードと、`DIRECT` / `OPEN` による案件伝達方式を定義
+- `targetScope` と `requiredRole` による案件公開範囲、承認フロー、コメント、History、状態管理の方針を整理
+- DynamoDB シングルテーブルの主要 GSI 検索パターンと、`自分の案件`、`公開案件`、`組織案件`、`プロジェクト` の UI 方針を整理
+
 ---
 
 ## 開発メモ
