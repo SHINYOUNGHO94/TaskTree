@@ -3496,6 +3496,7 @@ __metadata:
     "@aws-sdk/lib-dynamodb": "npm:^3.1043.0"
     "@task/core": "workspace:*"
     "@types/aws-lambda": "npm:^8.10.161"
+    "@types/node": "npm:20"
     eslint: "npm:^9.9.0"
     typescript: "npm:~5.7.3"
   languageName: unknown
@@ -3741,6 +3742,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~7.19.0"
   checksum: 10c0/d2d2015630ff098a201407f55f5077a20270ae4f465c739b40865cd9933b91b9c5d2b85568eadaf3db0801b91e267333ca7eb39f007428b173d1cdab4b339ac5
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:20":
+  version: 20.19.41
+  resolution: "@types/node@npm:20.19.41"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/aa2a07317bbd700bea68d5784b403a738dbcebadbe2d8ef05649f7953065120d5d37f7edfdd7881df3a3bd15328c8a4dc46fdd69732ab540d552c505378c585b
   languageName: node
   linkType: hard
 

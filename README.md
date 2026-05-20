@@ -207,6 +207,17 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `CreateTaskModal` で公開範囲（TEAM・DEPARTMENT・DIVISION）選択時に対象組織が未選択の場合、送信をブロックして日本語エラーメッセージをインライン表示
 - 作成・更新・削除・ステータス変更の失敗時に `alert()` ではなく、画面内に日本語エラーメッセージをインライン表示するよう改善
 
+### Task 3: 組織管理・招待 API の権限検証強化
+
+- `createDivision`、`createDepartment`、`createTeam` に認証チェックを追加し、サーバー側で `companyId` を決定するよう変更。クライアントから渡された `companyId` を信頼しない構造に修正
+- `createDivision`: `COMPANY_ADMIN` のみ作成可能。`divisionId` と `name` の入力検証を追加
+- `createDepartment`: `COMPANY_ADMIN` または `DIVISION_ADMIN` が作成可能。`DIVISION_ADMIN` は自分の division 配下にのみ作成可能。`divisionId` の存在と会社所属を DB で検証
+- `createTeam`: `COMPANY_ADMIN`、`DIVISION_ADMIN`、`DEPT_ADMIN` が作成可能。`DEPT_ADMIN` は自分の department 配下のみ、`DIVISION_ADMIN` は自分の division 配下の department のみに制限。各ロールで department の存在と会社所属を DB で検証
+- `inviteUser`: 招待者より上位のロールを付与できないよう権限昇格を防止。ロール別の組織スコープ制限を追加（`TEAM_ADMIN` は自チームのみ、`DEPT_ADMIN` は自部署のみ、`DIVISION_ADMIN` は自事業部のみ招待可能）。division / department / team の存在、会社所属、親子関係も DB で検証
+- `OrgService` の `createDivision`、`createDepartment`、`createTeam` から不要な `companyId` の送信を除去し、API 契約をサーバー側の設計と整合させた
+- 組織階層の基本方針に合わせ、部署作成時は所属する事業部を必須とし、フロントエンドの「本部なし」選択を送信できないように調整
+- Vitest による権限テストを 4 ファイル追加。未認証 401、権限不足 403、他 division/department への不正アクセス、権限昇格試行、組織 ID の存在・親子関係検証、正常系をカバー
+
 ---
 
 ## 開発メモ

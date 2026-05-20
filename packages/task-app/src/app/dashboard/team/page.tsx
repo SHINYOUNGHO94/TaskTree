@@ -95,7 +95,7 @@ export default function TeamPage() {
     if (!newDivName || !profile?.companyId) return;
     try {
       setIsCreatingOrg(true);
-      await OrgService.createDivision(newDivName, profile.companyId);
+      await OrgService.createDivision(newDivName);
       setIsDivModalOpen(false);
       setNewDivName("");
       fetchData();
@@ -108,10 +108,10 @@ export default function TeamPage() {
 
   const handleCreateDepartment = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (!newDeptName || !profile?.companyId) return;
+    if (!newDeptName || !selectedDivForDept || !profile?.companyId) return;
     try {
       setIsCreatingOrg(true);
-      await OrgService.createDepartment(newDeptName, profile.companyId, selectedDivForDept || "NONE");
+      await OrgService.createDepartment(newDeptName, selectedDivForDept);
       setIsDeptModalOpen(false);
       setNewDeptName("");
       setSelectedDivForDept("");
@@ -128,7 +128,7 @@ export default function TeamPage() {
     if (!newTeamName || !selectedDeptForTeam || !profile?.companyId) return;
     try {
       setIsCreatingOrg(true);
-      await OrgService.createTeam(newTeamName, profile.companyId, selectedDeptForTeam);
+      await OrgService.createTeam(newTeamName, selectedDeptForTeam);
       setIsTeamModalOpen(false);
       setNewTeamName("");
       setSelectedDeptForTeam("");
@@ -536,11 +536,12 @@ export default function TeamPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1.5">上位の本部</label>
                 <select
+                  required
                   value={selectedDivForDept}
                   onChange={(e) => setSelectedDivForDept(e.target.value)}
                   className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white"
                 >
-                  <option value="">本部なし（直속）</option>
+                  <option value="" disabled>本部を選択してください</option>
                   {divisions.map(d => (
                     <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
                   ))}
