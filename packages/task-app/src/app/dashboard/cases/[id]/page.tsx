@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, Clock, FileText, Shield, Tag, User } from "lucide-react";
+import { fetchAuthSession } from "aws-amplify/auth";
 import {
+  CaseClaimRequest,
+  CaseClaimRequestStatus,
   CaseComment,
   CaseDeliveryType,
   CaseDetail,
@@ -23,6 +26,9 @@ const HISTORY_ACTION_LABELS: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.CASE_CREATED]: "案件作成",
   [CaseHistoryAction.STATUS_CHANGED]: "ステータス変更",
   [CaseHistoryAction.TASK_CREATED]: "作業追加",
+  [CaseHistoryAction.CLAIM_REQUESTED]: "担当希望",
+  [CaseHistoryAction.CLAIM_APPROVED]: "担当承認",
+  [CaseHistoryAction.CLAIM_REJECTED]: "担当却下",
 };
 
 const TASK_STATUS_LABELS: Record<CaseTaskStatus, string> = {
@@ -154,6 +160,16 @@ const CaseDetailPage = () => {
   const [newCommentContent, setNewCommentContent] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentSubmitError, setCommentSubmitError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [claimRequests, setClaimRequests] = useState<CaseClaimRequest[]>([]);
+  const [isClaimsLoading, setIsClaimsLoading] = useState(false);
+  const [claimsError, setClaimsError] = useState<string | null>(null);
+  const [claimsAccessDenied, setClaimsAccessDenied] = useState(false);
+  const [claimMessage, setClaimMessage] = useState("");
+  const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
+  const [claimSubmitError, setClaimSubmitError] = useState<string | null>(null);
+  const [isProcessingClaimAction, setIsProcessingClaimAction] = useState(false);
+  const [claimActionError, setClaimActionError] = useState<string | null>(null);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -199,6 +215,67 @@ const CaseDetailPage = () => {
       setIsTasksLoading(false);
     }
   }, [id]);
+
+  const fetchCaseClaimRequests = useCallback(async () => {
+    setIsClaimsLoading(true);
+    setClaimsError(null);
+    setClaimsAccessDenied(false);
+    try {
+      const data = await CaseService.getCaseClaimRequests(id as string);
+      setClaimRequests(data);
+    } catch (error) {
+      const e = error as Record<string, unknown>;
+      const statusCode =
+        typeof e.response === "object" && e.response !== null
+          ? (e.response as Record<string, unknown>).statusCode
+          : null;
+      if (statusCode === 403) {
+        setClaimsAccessDenied(true);
+      } else {
+        setClaimsError("担当希望の取得に失敗しました。");
+      }
+    } finally {
+      setIsClaimsLoading(false);
+    }
+  }, [id]);
+
+  const handleSubmitClaim = async () => {
+    setIsSubmittingClaim(true);
+    setClaimSubmitError(null);
+    try {
+      await CaseService.createCaseClaimRequest(id as string, {
+        ...(claimMessage.trim() ? { message: claimMessage.trim() } : {}),
+      });
+      setClaimMessage("");
+      await Promise.all([fetchCase(), fetchCaseClaimRequests(), fetchCaseHistory()]);
+    } catch (error) {
+      console.error("Failed to submit claim request", error);
+      setClaimSubmitError("担当希望の送信に失敗しました。再度お試しください。");
+    } finally {
+      setIsSubmittingClaim(false);
+    }
+  };
+
+  const handleClaimAction = async (
+    claimRequestId: string,
+    action: "APPROVED" | "REJECTED",
+    rejectReason?: string,
+  ) => {
+    setIsProcessingClaimAction(true);
+    setClaimActionError(null);
+    try {
+      await CaseService.updateCaseClaimRequest(id as string, claimRequestId, {
+        status: action === "APPROVED" ? CaseClaimRequestStatus.APPROVED : CaseClaimRequestStatus.REJECTED,
+        ...(rejectReason ? { rejectReason } : {}),
+      });
+      await Promise.all([fetchCase(), fetchCaseClaimRequests(), fetchCaseHistory()]);
+    } catch (error) {
+      console.error("Failed to process claim action", error);
+      setClaimActionError("処理に失敗しました。再度お試しください。");
+    } finally {
+      setIsProcessingClaimAction(false);
+    }
+  };
 
   const fetchCaseHistory = useCallback(async () => {
     setIsHistoryLoading(true);
@@ -274,13 +351,23 @@ const CaseDetailPage = () => {
   };
 
   useEffect(() => {
+    fetchAuthSession()
+      .then(({ tokens }) => {
+        const sub = tokens?.idToken?.payload?.sub;
+        if (typeof sub === "string") setCurrentUserId(sub);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     if (id) {
       fetchCase();
       fetchCaseTasks();
       fetchCaseHistory();
       fetchCaseComments();
+      fetchCaseClaimRequests();
     }
-  }, [id, fetchCase, fetchCaseTasks, fetchCaseHistory, fetchCaseComments]);
+  }, [id, fetchCase, fetchCaseTasks, fetchCaseHistory, fetchCaseComments, fetchCaseClaimRequests]);
 
   if (isLoading) {
     return (
@@ -603,6 +690,128 @@ const CaseDetailPage = () => {
           )}
         </div>
       </div>
+
+      {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
+          <div className="p-6 border-b border-gray-100">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">担当希望</h3>
+          </div>
+          <div className="p-6">
+            {isClaimsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
+              </div>
+            ) : claimsError ? (
+              <p className="text-sm text-red-600 text-center py-4">{claimsError}</p>
+            ) : (
+              <>
+                {claimActionError && (
+                  <p className="text-sm text-red-600 font-medium mb-4">{claimActionError}</p>
+                )}
+                {claimRequests.length > 0 && (
+                  <ul className="space-y-3 mb-6">
+                    {claimRequests.map((req) => (
+                      <li
+                        key={req.claimRequestId}
+                        className="border border-gray-100 rounded-xl p-4"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-gray-400 font-mono">{req.requesterId}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                              req.status === CaseClaimRequestStatus.PENDING
+                                ? "bg-yellow-100 text-yellow-700"
+                                : req.status === CaseClaimRequestStatus.APPROVED
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {req.status === CaseClaimRequestStatus.PENDING
+                              ? "申請中"
+                              : req.status === CaseClaimRequestStatus.APPROVED
+                                ? "承認済"
+                                : "却下"}
+                          </span>
+                        </div>
+                        {req.message && (
+                          <p className="text-sm text-gray-700 mb-2">{req.message}</p>
+                        )}
+                        {req.rejectReason && (
+                          <p className="text-xs text-red-500 mb-2">却下理由: {req.rejectReason}</p>
+                        )}
+                        {req.status === CaseClaimRequestStatus.PENDING &&
+                          currentUserId &&
+                          (caseDetail.creatorId === currentUserId ||
+                            (caseDetail.ownerType === CaseOwnerType.USER &&
+                              caseDetail.ownerId === currentUserId)) && (
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                onClick={() => handleClaimAction(req.claimRequestId, "APPROVED")}
+                                disabled={isProcessingClaimAction}
+                                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                              >
+                                承認
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const reason = window.prompt("却下理由を入力してください");
+                                  if (reason && reason.trim()) {
+                                    void handleClaimAction(req.claimRequestId, "REJECTED", reason.trim());
+                                  }
+                                }}
+                                disabled={isProcessingClaimAction}
+                                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                              >
+                                却下
+                              </button>
+                            </div>
+                          )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {currentUserId &&
+                  caseDetail.creatorId !== currentUserId &&
+                  !(
+                    caseDetail.ownerType === CaseOwnerType.USER &&
+                    caseDetail.ownerId === currentUserId
+                  ) &&
+                  (claimsAccessDenied ||
+                    !claimRequests.some(
+                      (r) =>
+                        r.requesterId === currentUserId &&
+                        r.status === CaseClaimRequestStatus.PENDING,
+                    )) && (
+                    <div className="space-y-3">
+                      {claimSubmitError && (
+                        <p className="text-sm text-red-600 font-medium">{claimSubmitError}</p>
+                      )}
+                      <textarea
+                        value={claimMessage}
+                        onChange={(e) => setClaimMessage(e.target.value)}
+                        placeholder="担当したい理由（任意）..."
+                        rows={2}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      />
+                      <button
+                        onClick={handleSubmitClaim}
+                        disabled={isSubmittingClaim}
+                        className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isSubmittingClaim ? "送信中..." : "担当を希望する"}
+                      </button>
+                    </div>
+                  )}
+                {claimRequests.length === 0 && !claimsAccessDenied && (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    担当希望はまだありません。
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
         <div className="p-6 border-b border-gray-100">

@@ -134,6 +134,38 @@ export enum CaseHistoryAction {
   CASE_CREATED = "CASE_CREATED",
   STATUS_CHANGED = "STATUS_CHANGED",
   TASK_CREATED = "TASK_CREATED",
+  CLAIM_REQUESTED = "CLAIM_REQUESTED",
+  CLAIM_APPROVED = "CLAIM_APPROVED",
+  CLAIM_REJECTED = "CLAIM_REJECTED",
+}
+
+export enum CaseClaimRequestStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+}
+
+export interface CaseClaimRequest {
+  claimRequestId: string;
+  caseId: string;
+  companyId: string;
+  requesterId: string;
+  status: CaseClaimRequestStatus;
+  message: string | null;
+  rejectReason: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCaseClaimRequestInput {
+  message?: string;
+}
+
+export interface UpdateCaseClaimRequestInput {
+  status: CaseClaimRequestStatus.APPROVED | CaseClaimRequestStatus.REJECTED;
+  rejectReason?: string;
 }
 
 export interface CaseHistoryEntry {

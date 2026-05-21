@@ -1,13 +1,16 @@
 import { get, post, put } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import {
+  CaseClaimRequest,
   CaseComment,
   CaseDetail,
   CaseHistoryEntry,
   CaseTaskDetail,
+  CreateCaseClaimRequestInput,
   CreateCaseCommentInput,
   CreateCaseTaskInput,
   CreateRootCaseInput,
+  UpdateCaseClaimRequestInput,
   UpdateCaseStatusInput,
 } from '../types/case';
 
@@ -218,6 +221,84 @@ export const CaseService = {
       return await response.body.json() as unknown as { commentId: string };
     } catch (error) {
       console.error('Error creating case comment:', error);
+      throw error;
+    }
+  },
+
+  getCaseClaimRequests: async (caseId: string): Promise<CaseClaimRequest[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/claim-requests`,
+        options: {
+          headers: {
+            Authorization: idToken || '',
+          },
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as CaseClaimRequest[];
+    } catch (error) {
+      console.error('Error fetching case claim requests:', error);
+      throw error;
+    }
+  },
+
+  createCaseClaimRequest: async (caseId: string, input: CreateCaseClaimRequestInput): Promise<{ claimRequestId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const body: Record<string, string> = {};
+      if (input.message) body.message = input.message;
+
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/claim-requests`,
+        options: {
+          headers: {
+            Authorization: idToken || '',
+          },
+          body,
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { claimRequestId: string };
+    } catch (error) {
+      console.error('Error creating case claim request:', error);
+      throw error;
+    }
+  },
+
+  updateCaseClaimRequest: async (
+    caseId: string,
+    claimRequestId: string,
+    input: UpdateCaseClaimRequestInput,
+  ): Promise<{ claimRequestId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const body: Record<string, string> = { status: input.status };
+      if (input.rejectReason) body.rejectReason = input.rejectReason;
+
+      const restOperation = put({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/claim-requests/${claimRequestId}`,
+        options: {
+          headers: {
+            Authorization: idToken || '',
+          },
+          body,
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { claimRequestId: string };
+    } catch (error) {
+      console.error('Error updating case claim request:', error);
       throw error;
     }
   },

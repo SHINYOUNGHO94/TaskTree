@@ -313,6 +313,20 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - Comment 編集・削除、History の差分表示、Approval flow、Claim request は後続 Task に分離
 - `type-check:core`、`type-check:api`、`@task/app` build、`@task/infra` build、API テストで検証
 
+### Task 13: Case 担当希望と承認フローの追加
+
+- `OPEN` Case に対して担当希望を申請し、Case 作成者または現在の USER owner が承認・却下できる基本フローを追加
+- `GET /cases/{id}/claim-requests`、`POST /cases/{id}/claim-requests`、`PUT /cases/{id}/claim-requests/{claimRequestId}` API と対応する Lambda を追加
+- `@task/core` に Claim Request 用の型と `CaseService.getCaseClaimRequests` / `createCaseClaimRequest` / `updateCaseClaimRequest` を追加
+- DynamoDB では既存 `byCase` GSI を使い、`ClaimRequest#{status}#{createdAt}#{claimRequestId}` の `caseSortKey` で Case ごとの担当希望を取得する構成にした
+- 担当希望の作成は `OPEN` Case に限定し、creator / 現在の USER owner / 重複 PENDING 申請を拒否するようにした
+- 承認時は Claim Request、Case owner、他の PENDING Claim Request を transaction で更新し、中途半端な状態が残らないようにした
+- 一般 requester は自分の Claim Request のみ取得できるようにし、他ユーザーの申請内容を見せないようにした
+- Case 詳細画面に担当希望セクションを追加し、申請、承認、却下、loading、empty、error、submitting 状態を扱えるようにした
+- Claim 申請、承認、却下を History に自動記録するようにした
+- 外部会社参加、チーム・会社単位 claim、OPEN case 探索ページ、STANDARD / PROJECT 作成 UI、task 承認 flow は後続 Task に分離
+- `type-check:core`、`type-check:api`、`@task/app` lint / build、`@task/infra` build、API テストで検証
+
 ---
 
 ## 開発メモ

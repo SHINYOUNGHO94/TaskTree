@@ -439,6 +439,43 @@ export class TaskInfraStack extends cdk.Stack {
     caseCommentsResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseCommentsFn), { authorizer });
     caseCommentsResource.addMethod('POST', new apigateway.LambdaIntegration(createCaseCommentFn), { authorizer });
 
+    const getCaseClaimRequestsFn = new NodejsFunction(this, 'GetCaseClaimRequestsFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getCaseClaimRequests.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getCaseClaimRequestsFn);
+
+    const createCaseClaimRequestFn = new NodejsFunction(this, 'CreateCaseClaimRequestFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/createCaseClaimRequest.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(createCaseClaimRequestFn, ['dynamodb:PutItem']);
+
+    const updateCaseClaimRequestFn = new NodejsFunction(this, 'UpdateCaseClaimRequestFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/updateCaseClaimRequest.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(updateCaseClaimRequestFn, ['dynamodb:PutItem']);
+
+    const caseClaimRequestsResource = caseIdResource.addResource('claim-requests');
+    caseClaimRequestsResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseClaimRequestsFn), { authorizer });
+    caseClaimRequestsResource.addMethod('POST', new apigateway.LambdaIntegration(createCaseClaimRequestFn), { authorizer });
+
+    const caseClaimRequestIdResource = caseClaimRequestsResource.addResource('{claimRequestId}');
+    caseClaimRequestIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateCaseClaimRequestFn), { authorizer });
+
     const tasksResource = api.root.addResource('tasks');
     tasksResource.addMethod('GET', new apigateway.LambdaIntegration(getTasksFn), { authorizer });
     tasksResource.addMethod('POST', new apigateway.LambdaIntegration(createTaskFn), { authorizer });
