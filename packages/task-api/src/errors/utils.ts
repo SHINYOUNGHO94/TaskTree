@@ -63,3 +63,12 @@ export const notFound = (message: string = "Resource not found"): TaskApiError =
     message: message,
   })
 });
+
+export const badRequest = (message: string = "Bad request"): TaskApiError => ({
+  statusCode: 400,
+  headers: COMMON_HEADERS,
+  body: JSON.stringify({
+    code: "BAD_REQUEST",
+    message,
+  }),
+});

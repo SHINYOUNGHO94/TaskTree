@@ -237,6 +237,17 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - Vitest による `CaseRecord` 変換テストと `createCase` の入力検証・権限検証テストを追加し、case 基盤の安全性を確認できるようにした
 - 次の作業方針は `docs/workflow/task-6-case-api-plan.md` に整理
 
+### Task 6: v2 Case API 経路とサービス層の追加
+
+- `createCase` handler を `POST /cases` の API Gateway ルートと `CreateCaseFunction` Lambda に接続
+- `@task/core` に `CaseService.createCase` を追加し、フロントエンドから Lambda や DynamoDB を直接呼ばずに case 作成 API を利用できる基盤を整備
+- Task 6 では Project / Child case API をまだ実装しないため、`projectId` / `parentCaseId` は一時的に受け付けず 400 を返すように調整
+- `CreateRootCaseInput` を追加し、現在の `POST /cases` が受け付ける入力契約を root case 作成用に限定
+- `task-core` の API サービス層から `any` 型の回避コードを削除し、`CaseService` と `TaskService` の request body を型安全に送信するよう改善
+- `task-infra` の Node.js 型定義を明示し、CDK コードで Node builtin を扱う際の型診断を安定化
+- `createCase` の未対応フィールド拒否テストを追加し、関連する type-check、infra build、API テストで検証
+- 既存 DynamoDB テーブルへ Case 用 GSI を追加適用する場合は 1 つずつ追加する必要があるが、開発環境では既存スタックを削除して再作成する前提のため初回作成時は同時定義可能
+
 ---
 
 ## 開発メモ

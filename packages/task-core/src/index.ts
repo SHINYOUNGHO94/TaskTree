@@ -13,6 +13,7 @@ export * from "./task/TaskService";
 
 // ケース関連のエクスポート
 export * from "./types/case";
+export * from "./case/CaseService";
 
 // ユーザー関連のエクスポート
 export * from "./types/user";

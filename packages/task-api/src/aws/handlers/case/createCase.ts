@@ -6,6 +6,7 @@ import { DivisionRepository } from "@/repositories/divisionRepository";
 import { DepartmentRepository } from "@/repositories/departmentRepository";
 import { TeamRepository } from "@/repositories/teamRepository";
 import {
+  badRequest,
   forbidden,
   internalServerError,
   invalidRequestBody,
@@ -94,6 +95,10 @@ export const createHandler =
         body = JSON.parse(event.body) as CreateCaseBody;
       } catch {
         return invalidRequestBody();
+      }
+
+      if (body.projectId != null || body.parentCaseId != null) {
+        return badRequest("projectId and parentCaseId are not supported in this version");
       }
 
       const { title, description, caseType, deliveryType, targetScope, targetScopeId, requiredRole } = body;
@@ -229,8 +234,8 @@ export const createHandler =
         departmentId: creatorProfile.departmentId,
         teamId: creatorProfile.teamId,
         creatorId,
-        projectId: isNonEmptyString(body.projectId) ? body.projectId : null,
-        parentCaseId: isNonEmptyString(body.parentCaseId) ? body.parentCaseId : null,
+        projectId: null,
+        parentCaseId: null,
         dueDate: isNonEmptyString(body.dueDate) ? body.dueDate : null,
         createdAt: now,
         updatedAt: now,

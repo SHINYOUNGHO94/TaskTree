@@ -281,6 +281,17 @@ export class TaskInfraStack extends cdk.Stack {
     });
     grantTaskMutation(deleteTaskFn, ['dynamodb:DeleteItem']);
 
+    const createCaseFn = new NodejsFunction(this, 'CreateCaseFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/createCase.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(createCaseFn);
+    grantTableCreate(createCaseFn);
+
     const api = new apigateway.RestApi(this, 'TaskApi', {
       restApiName: 'Task Tree API',
       description: 'API for TaskTree management - v2',
@@ -320,6 +331,9 @@ export class TaskInfraStack extends cdk.Stack {
 
     const companyUsersResource = userResource.addResource('company-users');
     companyUsersResource.addMethod('GET', new apigateway.LambdaIntegration(getCompanyUsersFn), { authorizer });
+
+    const casesResource = api.root.addResource('cases');
+    casesResource.addMethod('POST', new apigateway.LambdaIntegration(createCaseFn), { authorizer });
 
     const tasksResource = api.root.addResource('tasks');
     tasksResource.addMethod('GET', new apigateway.LambdaIntegration(getTasksFn), { authorizer });
