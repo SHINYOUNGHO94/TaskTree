@@ -137,6 +137,7 @@ export enum CaseHistoryAction {
   CLAIM_REQUESTED = "CLAIM_REQUESTED",
   CLAIM_APPROVED = "CLAIM_APPROVED",
   CLAIM_REJECTED = "CLAIM_REJECTED",
+  CHILD_CASE_CREATED = "CHILD_CASE_CREATED",
 }
 
 export enum CaseClaimRequestStatus {
@@ -190,4 +191,14 @@ export interface CaseComment {
 
 export interface CreateCaseCommentInput {
   content: string;
+}
+
+export interface CreateChildCaseInput {
+  title: string;
+  description: string;
+  deliveryType: CaseDeliveryType;
+  targetScope: CaseTargetScope;
+  targetScopeId: string;
+  requiredRole: UserRole;
+  dueDate: string | null;
 }

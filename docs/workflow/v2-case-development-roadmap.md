@@ -38,11 +38,17 @@
 
 案件の大きさに応じて、REQUEST、STANDARD、PROJECT を使い分けられる状態にする。
 
-- Task 13: `STANDARD case 業務フロー`
+- Task 13: `Case Claim / Approval flow`
+  - OPEN case への担当希望
+  - Claim request
+  - Claim 承認 / 却下
+  - 申請中・申請可能 UI
+  - 承認時の USER owner 確定
+- Task 14: `STANDARD case 業務フロー`
   - STANDARD case 作成 UI
   - STANDARD から REQUEST または task へ分解する流れ
   - STANDARD 詳細で下位 case / task を確認する
-- Task 14: `PROJECT 階層フロー`
+- Task 15: `PROJECT 階層フロー`
   - PROJECT 作成 UI
   - PROJECT -> STANDARD -> REQUEST 階層表示
   - project 詳細で下位 case 構造を確認する
@@ -51,12 +57,8 @@
 
 案件を特定組織へ直接渡すだけではなく、公開し、担当希望、承認、会社間協業へ広げる。
 
-- Task 15: `OPEN case と Claim flow`
-  - OPEN case 公開
-  - Claim request
-  - Claim 承認 / 却下
-  - 申請中・申請可能 UI
 - Task 16: `外部会社参加フロー`
+  - OPEN case 探索画面
   - 外部会社の招待
   - participant company 表示
   - 会社間ロールの初期整理
@@ -93,9 +95,9 @@ Task 11 以降は、API 1 本ごとに PR を分けすぎないようにしま�
 
 ## 現在位置
 
-Task 10 までで、`REQUEST` case の作成、一覧、詳細、状態変更まで確認できる入口を作りました。
+Task 13 までで、`REQUEST` case の作成、一覧、詳細、状態変更、作業実行、協業ログ、コメント、担当希望、承認 / 却下まで確認できる入口を作りました。
 
-Task 11 からは、Case 詳細から実作業 task を作成・確認できる状態へ広げます。
+Task 14 からは、STANDARD case を作成し、REQUEST または task へ分解する業務フローへ広げます。
 
 ## 注意
 

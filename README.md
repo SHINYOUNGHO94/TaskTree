@@ -327,6 +327,24 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - 外部会社参加、チーム・会社単位 claim、OPEN case 探索ページ、STANDARD / PROJECT 作成 UI、task 承認 flow は後続 Task に分離
 - `type-check:core`、`type-check:api`、`@task/app` lint / build、`@task/infra` build、API テストで検証
 
+### Task 14: STANDARD Case 業務フローの追加
+
+- Dashboard から `REQUEST` / `STANDARD` Case を選択して作成できるようにした
+- `GET /cases/{id}/children`、`POST /cases/{id}/children` API と対応する Lambda を追加
+- `@task/core` に `CreateChildCaseInput` と `CaseService.getChildCases` / `createChildCase` を追加し、フロントエンドから型付き service 経由で子案件 API を利用する構成を維持
+- `CaseHistoryAction.CHILD_CASE_CREATED` を追加し、子案件作成時に親案件の History へ自動記録するようにした
+- DynamoDB では既存 `byCase` GSI を使い、`ChildCase#{status}#{updatedAt}#{childCaseId}` の `caseSortKey` で親案件配下の子案件を取得する構成にした
+- 子案件作成時に `caseId (GSI PK) = parentCaseId` をセットし、`toDetail` では `record.sk` から entity 固有の caseId を復元するよう `CaseRecord` を修正した
+- 子案件は `STANDARD` Case 配下のみ作成可能とし、親案件の creator または USER owner だけが作成できるように制限した
+- 子案件の `targetScope = TEAM` は caller 自身のチーム ID のみ許可し、`targetScope = USER` は同じ会社・同じチームの実在ユーザーだけを許可するようにした
+- Task 14 では root case の作成対象を `REQUEST` / `STANDARD` に限定し、`PROJECT` は API からも作成できないようにした
+- 子案件の `requiredRole` は `USER` または `TEAM_ADMIN` に限定し、`dueDate` は `string | null` のみ受け付けるようにした
+- 子案件は親案件の `projectId` を継承し、子案件から子案件を作成できないようにした
+- Case 詳細画面に子案件セクションを追加し、`STANDARD` Case の creator / USER owner には子案件作成フォームを表示した
+- loading、empty、error state を画面内で扱い、子案件作成後に子案件一覧と History を再取得するようにした
+- PROJECT 作成 UI、PROJECT -> STANDARD -> REQUEST 階層、外部会社参加、子案件ステータス集約は後続 Task に分離
+- `type-check:core`、`type-check:api`、`@task/app` lint / build、`@task/infra` build、API テストで検証
+
 ---
 
 ## 開発メモ

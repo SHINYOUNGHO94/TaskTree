@@ -27,6 +27,7 @@ interface FormValues {
   description: string;
   dueDate: string;
   targetScope: CaseTargetScope;
+  caseType: CaseType;
 }
 
 const ROLE_RANK: Record<UserRole, number> = {
@@ -60,13 +61,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { targetScope: defaultScope, title: '', description: '', dueDate: '' },
+    defaultValues: { targetScope: defaultScope, title: '', description: '', dueDate: '', caseType: CaseType.REQUEST },
   });
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [succeeded, setSucceeded] = useState(false);
 
   const selectedScope = watch('targetScope');
+  const selectedCaseType = watch('caseType');
 
   useEffect(() => {
     if (isOpen) {
@@ -75,7 +77,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   }, [defaultScope, isOpen, setValue]);
 
   const handleClose = () => {
-    reset({ targetScope: defaultScope, title: '', description: '', dueDate: '' });
+    reset({ targetScope: defaultScope, title: '', description: '', dueDate: '', caseType: CaseType.REQUEST });
     setSubmitError(null);
     setSucceeded(false);
     onClose();
@@ -95,7 +97,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     const input: CreateRootCaseInput = {
       title: data.title.trim(),
       description: data.description.trim(),
-      caseType: CaseType.REQUEST,
+      caseType: data.caseType,
       deliveryType: CaseDeliveryType.DIRECT,
       targetScope: data.targetScope,
       targetScopeId,
@@ -125,8 +127,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
           >
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">REQUEST 案件作成</h2>
-                <p className="text-xs text-gray-400 mt-0.5">チームまたは自分への直接依頼</p>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {selectedCaseType === CaseType.STANDARD ? "STANDARD 案件作成" : "REQUEST 案件作成"}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {selectedCaseType === CaseType.STANDARD
+                    ? "複数の REQUEST に分解できる社内案件"
+                    : "チームまたは自分への直接依頼"}
+                </p>
               </div>
               <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
@@ -154,6 +162,42 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {submitError}
                   </div>
                 )}
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-600 uppercase">案件タイプ</label>
+                  <div className="flex gap-2">
+                    <label
+                      className={`flex-1 flex items-center justify-center p-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${
+                        selectedCaseType === CaseType.REQUEST
+                          ? 'border-gray-900 bg-gray-900 text-white'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        {...register('caseType')}
+                        value={CaseType.REQUEST}
+                        className="sr-only"
+                      />
+                      REQUEST
+                    </label>
+                    <label
+                      className={`flex-1 flex items-center justify-center p-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${
+                        selectedCaseType === CaseType.STANDARD
+                          ? 'border-gray-900 bg-gray-900 text-white'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        {...register('caseType')}
+                        value={CaseType.STANDARD}
+                        className="sr-only"
+                      />
+                      STANDARD
+                    </label>
+                  </div>
+                </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-gray-600 uppercase">タイトル</label>

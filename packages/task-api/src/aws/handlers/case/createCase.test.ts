@@ -104,6 +104,17 @@ describe("createCase", () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it("PROJECT caseType の場合は 400", async () => {
+    const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
+    const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
+    const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
+    const response = await handler(
+      eventWithAuth("creator-1", { ...validBody, caseType: CaseType.PROJECT }),
+    );
+    expect(response.statusCode).toBe(400);
+    expect(caseRepo.save).not.toHaveBeenCalled();
+  });
+
   it("不正な deliveryType の場合は 400", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;

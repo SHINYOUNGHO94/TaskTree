@@ -62,6 +62,8 @@ const ALLOWED_TARGET_SCOPES_BY_ROLE: Record<UserRole, CaseTargetScope[]> = {
 const isNonEmptyString = (v: unknown): v is string =>
   typeof v === "string" && v.trim().length > 0;
 
+const ALLOWED_ROOT_CASE_TYPES: string[] = [CaseType.REQUEST, CaseType.STANDARD];
+
 export interface CreateCaseDeps {
   caseRepo: CaseRepository;
   caseHistoryRepo: CaseHistoryRepository;
@@ -110,7 +112,7 @@ export const createHandler =
         !isNonEmptyString(title) ||
         !isNonEmptyString(description) ||
         !isNonEmptyString(caseType) ||
-        !(Object.values(CaseType) as string[]).includes(caseType) ||
+        !ALLOWED_ROOT_CASE_TYPES.includes(caseType) ||
         !isNonEmptyString(deliveryType) ||
         !(Object.values(CaseDeliveryType) as string[]).includes(deliveryType) ||
         !isNonEmptyString(targetScope) ||

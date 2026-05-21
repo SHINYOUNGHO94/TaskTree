@@ -51,6 +51,8 @@ const ROLE_RANK: Record<UserRole, number> = {
 const makePk = () => ENTITY_NAME;
 const makeSk = (caseId: string) => `Case#${caseId}`;
 const makeCaseSortKey = (caseId: string) => `Meta#Case#${caseId}`;
+const makeChildCaseSortKey = (status: CaseStatus, updatedAt: string, childCaseId: string) =>
+  `ChildCase#${status}#${updatedAt}#${childCaseId}`;
 const makeAssigneeKey = (ownerType: CaseOwnerType, ownerId: string) => `${ownerType}#${ownerId}`;
 const makeAssigneeSortKey = (detail: CaseDetail) =>
   `Case#${detail.status}#${detail.dueDate ?? "NONE"}#${detail.caseId}`;
@@ -60,11 +62,14 @@ const makeVisibilitySortKey = (detail: CaseDetail) =>
   `Role#${ROLE_RANK[detail.requiredRole]}#Case#${detail.status}#${detail.updatedAt}#${detail.caseId}`;
 
 const fromDetail = (detail: CaseDetail): CaseRecordType => {
+  const isChild = detail.parentCaseId !== null;
   const record: CaseRecordType = {
     pk: makePk(),
     sk: makeSk(detail.caseId),
-    caseId: detail.caseId,
-    caseSortKey: makeCaseSortKey(detail.caseId),
+    caseId: isChild ? (detail.parentCaseId as string) : detail.caseId,
+    caseSortKey: isChild
+      ? makeChildCaseSortKey(detail.status, detail.updatedAt, detail.caseId)
+      : makeCaseSortKey(detail.caseId),
     assigneeKey: makeAssigneeKey(detail.ownerType, detail.ownerId),
     assigneeSortKey: makeAssigneeSortKey(detail),
     visibilityKey: makeVisibilityKey(detail.targetScope, detail.targetScopeId),
@@ -96,7 +101,7 @@ const fromDetail = (detail: CaseDetail): CaseRecordType => {
 };
 
 const toDetail = (record: CaseRecordType): CaseDetail => ({
-  caseId: record.caseId,
+  caseId: record.sk.replace(/^Case#/, ""),
   title: record.name,
   description: record.description,
   caseType: record.caseType,
@@ -124,6 +129,7 @@ export const CaseRecord = {
   makePk,
   makeSk,
   makeCaseSortKey,
+  makeChildCaseSortKey,
   makeAssigneeKey,
   makeVisibilityKey,
   fromDetail,
