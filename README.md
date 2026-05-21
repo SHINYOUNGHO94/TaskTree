@@ -269,6 +269,17 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - loading、empty、error state を画面内で扱い、Case 一覧が 0 件または取得失敗時でも状態が分かるようにした
 - `type-check:core`、`type-check:api`、`@task/app` lint / build、API テスト、CDK deploy で検証
 
+### Task 9: Case 詳細 API と詳細画面の追加
+
+- `GET /cases/{id}` API と `GetCaseFunction` Lambda を追加し、Dashboard の Case 一覧から個別 Case を確認できるようにした
+- `@task/core` に `CaseService.getCase` を追加し、フロントエンドから API を型付き service 経由で呼び出す構成を維持
+- `/dashboard/cases/[id]` 詳細画面を追加し、Case のタイトル、説明、状態、種別、公開範囲、担当、期限、作成日時、更新日時を表示できるようにした
+- `getCase` では認証済みユーザーの profile と case record をサーバー側で取得し、作成者、USER owner、USER target、TEAM target の最小範囲だけ閲覧を許可
+- 会社境界を先に検証し、同じ teamId でも別会社の case を閲覧できないようにした
+- 詳細画面では loading、not found、access denied、error state を画面内で扱い、CaseCard からキーボード操作でも詳細画面へ遷移できるようにした
+- Case 編集、削除、状態変更、History、Comment、Claim request、Case 配下 task 作成は後続 Task に分離
+- `type-check:core`、`type-check:api`、`@task/app` lint / build、API テストで検証
+
 ---
 
 ## 開発メモ
