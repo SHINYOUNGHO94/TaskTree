@@ -10,7 +10,11 @@ import {
 } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { UserRepository } from "@/repositories/userRepository";
+import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { createHandler } from "./getCase";
+
+const makeParticipantCompanyRepo = () =>
+  ({ findByCaseAndCompany: vi.fn().mockResolvedValue(undefined) }) as unknown as CaseParticipantCompanyRepository;
 
 const eventWithAuth = (sub: string, id?: string): APIGatewayProxyEvent =>
   ({
@@ -70,7 +74,7 @@ describe("getCase", () => {
   it("JWT がない場合は 401", async () => {
     const caseRepo = { findById: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithoutAuth());
     expect(response.statusCode).toBe(401);
     expect(caseRepo.findById).not.toHaveBeenCalled();
@@ -79,7 +83,7 @@ describe("getCase", () => {
   it("path parameter がない場合は 404", async () => {
     const caseRepo = { findById: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", undefined));
     expect(response.statusCode).toBe(404);
   });
@@ -87,7 +91,7 @@ describe("getCase", () => {
   it("user profile が存在しない場合は 500", async () => {
     const caseRepo = { findById: vi.fn().mockResolvedValue(baseCase) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(undefined) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-1"));
     expect(response.statusCode).toBe(500);
   });
@@ -95,7 +99,7 @@ describe("getCase", () => {
   it("case が存在しない場合は 404", async () => {
     const caseRepo = { findById: vi.fn().mockResolvedValue(undefined) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(mockProfile) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-NONEXISTENT"));
     expect(response.statusCode).toBe(404);
   });
@@ -110,7 +114,7 @@ describe("getCase", () => {
     };
     const caseRepo = { findById: vi.fn().mockResolvedValue(otherCase) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(mockProfile) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-1"));
     expect(response.statusCode).toBe(403);
   });
@@ -119,7 +123,7 @@ describe("getCase", () => {
     const creatorCase = { ...baseCase, creatorId: "user-1", ownerId: "other", targetScopeId: "other" };
     const caseRepo = { findById: vi.fn().mockResolvedValue(creatorCase) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(mockProfile) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-1"));
     expect(response.statusCode).toBe(200);
     const body = parseBody<typeof baseCase>(response.body);
@@ -130,7 +134,7 @@ describe("getCase", () => {
     const ownerCase = { ...baseCase, creatorId: "other", ownerType: CaseOwnerType.USER, ownerId: "user-1", targetScopeId: "other" };
     const caseRepo = { findById: vi.fn().mockResolvedValue(ownerCase) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(mockProfile) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-1"));
     expect(response.statusCode).toBe(200);
   });
@@ -145,7 +149,7 @@ describe("getCase", () => {
     };
     const caseRepo = { findById: vi.fn().mockResolvedValue(targetCase) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(mockProfile) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-1"));
     expect(response.statusCode).toBe(200);
   });
@@ -160,7 +164,7 @@ describe("getCase", () => {
     };
     const caseRepo = { findById: vi.fn().mockResolvedValue(teamCase) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(mockProfile) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-1"));
     expect(response.statusCode).toBe(200);
   });
@@ -175,7 +179,7 @@ describe("getCase", () => {
     };
     const caseRepo = { findById: vi.fn().mockResolvedValue(otherTeamCase) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(mockProfile) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-1"));
     expect(response.statusCode).toBe(403);
   });
@@ -191,7 +195,7 @@ describe("getCase", () => {
     };
     const caseRepo = { findById: vi.fn().mockResolvedValue(otherCompanyCase) } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(mockProfile) } as unknown as UserRepository;
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(eventWithAuth("user-1", "CASE-1"));
     expect(response.statusCode).toBe(403);
   });

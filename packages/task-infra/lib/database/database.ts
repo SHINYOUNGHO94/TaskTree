@@ -74,6 +74,12 @@ export class TaskDatabase extends Construct {
             sortKey: { name: "visibilitySortKey", type: AttributeType.STRING },
         });
 
+        entities.addGlobalSecondaryIndex({
+            indexName: "byParticipantCompany",
+            partitionKey: { name: "participantCompanyId", type: AttributeType.STRING },
+            sortKey: { name: "participantCompanySortKey", type: AttributeType.STRING },
+        });
+
         this.entities = entities;
 
         new CfnOutput(this, "DynamoDBEntitiesConfiguration", {

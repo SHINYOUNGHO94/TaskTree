@@ -111,9 +111,9 @@ Task 11 以降は、API 1 本ごとに PR を分けすぎないようにしま�
 
 ## 現在位置
 
-Task 14 までで、`REQUEST` / `STANDARD` case の作成、一覧、詳細、状態変更、作業実行、協業ログ、コメント、担当希望、承認 / 却下、STANDARD から REQUEST への分解まで確認できる入口を作りました。
+Task 15 までで、`REQUEST` / `STANDARD` / `PROJECT` case の作成、一覧、詳細、状態変更、作業実行、協業ログ、コメント、担当希望、承認 / 却下、STANDARD から REQUEST への分解、PROJECT -> STANDARD -> REQUEST の階層確認までできる入口を作りました。
 
-Task 15 からは、PROJECT case を作成し、PROJECT -> STANDARD -> REQUEST の階層を確認できる業務フローへ広げます。
+Task 16 からは、OPEN case を外部会社参加 flow へ広げます。
 
 ## 注意
 

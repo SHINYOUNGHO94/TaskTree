@@ -1,7 +1,15 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseDetail, CaseOwnerType, CaseTargetScope } from "@task/core";
+import {
+  CaseDeliveryType,
+  CaseDetail,
+  CaseOwnerType,
+  CaseParticipantCompanyStatus,
+  CaseTargetScope,
+  UserProfile,
+} from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseTaskRepository } from "@/repositories/caseTaskRepository";
+import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import {
   forbidden,
@@ -10,21 +18,34 @@ import {
   unauthorized,
 } from "@/errors/utils";
 
-const isAccessAllowed = (
+const isInternalAccessAllowed = (
   caseDetail: CaseDetail,
   userId: string,
-  teamId: string,
+  profile: UserProfile,
 ): boolean => {
   if (caseDetail.creatorId === userId) return true;
   if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
-  if (caseDetail.targetScope === CaseTargetScope.USER && caseDetail.targetScopeId === userId) return true;
-  if (caseDetail.targetScope === CaseTargetScope.TEAM && caseDetail.targetScopeId === teamId) return true;
+
+  switch (caseDetail.targetScope) {
+    case CaseTargetScope.COMPANY:
+      return caseDetail.targetScopeId === profile.companyId;
+    case CaseTargetScope.DIVISION:
+      return caseDetail.targetScopeId === profile.divisionId;
+    case CaseTargetScope.DEPARTMENT:
+      return caseDetail.targetScopeId === profile.departmentId;
+    case CaseTargetScope.TEAM:
+      return caseDetail.targetScopeId === profile.teamId;
+    case CaseTargetScope.USER:
+      return caseDetail.targetScopeId === userId;
+  }
+
   return false;
 };
 
 export interface GetCaseTasksDeps {
   caseRepo: CaseRepository;
   caseTaskRepo: CaseTaskRepository;
+  participantCompanyRepo: CaseParticipantCompanyRepository;
   userRepo: UserRepository;
 }
 
@@ -46,12 +67,24 @@ export const createHandler =
       if (!profile) return internalServerError("User profile not found");
       if (!existingCase) return notFound("Case not found");
 
-      if (existingCase.companyId !== profile.companyId) {
-        return forbidden("You do not have access to this case");
-      }
+      const isSameCompany = existingCase.companyId === profile.companyId;
 
-      if (!isAccessAllowed(existingCase, userId, profile.teamId)) {
-        return forbidden("You do not have access to this case");
+      if (isSameCompany) {
+        if (!isInternalAccessAllowed(existingCase, userId, profile)) {
+          return forbidden("You do not have access to this case");
+        }
+      } else {
+        if (existingCase.deliveryType !== CaseDeliveryType.OPEN) {
+          return forbidden("You do not have access to this case");
+        }
+
+        const participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
+          caseId,
+          profile.companyId,
+        );
+        if (!participantRecord || participantRecord.status !== CaseParticipantCompanyStatus.ACTIVE) {
+          return forbidden("You do not have access to this case");
+        }
       }
 
       const tasks = await deps.caseTaskRepo.findByCaseId(caseId);
@@ -71,5 +104,6 @@ const tableName = process.env.TABLE_NAME || "";
 export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
   caseTaskRepo: new CaseTaskRepository(tableName),
+  participantCompanyRepo: new CaseParticipantCompanyRepository(tableName),
   userRepo: new UserRepository(tableName),
 });

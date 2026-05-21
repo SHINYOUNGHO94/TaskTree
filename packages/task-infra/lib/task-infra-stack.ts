@@ -500,6 +500,56 @@ export class TaskInfraStack extends cdk.Stack {
     caseChildrenResource.addMethod('GET', new apigateway.LambdaIntegration(getChildCasesFn), { authorizer });
     caseChildrenResource.addMethod('POST', new apigateway.LambdaIntegration(createChildCaseFn), { authorizer });
 
+    const inviteParticipantCompanyFn = new NodejsFunction(this, 'InviteParticipantCompanyFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/inviteParticipantCompany.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(inviteParticipantCompanyFn, ['dynamodb:PutItem']);
+
+    const getParticipantCompaniesFn = new NodejsFunction(this, 'GetParticipantCompaniesFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getParticipantCompanies.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getParticipantCompaniesFn);
+
+    const getParticipantCompanyInvitationsFn = new NodejsFunction(this, 'GetParticipantCompanyInvitationsFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getParticipantCompanyInvitations.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getParticipantCompanyInvitationsFn);
+
+    const updateParticipantCompanyStatusFn = new NodejsFunction(this, 'UpdateParticipantCompanyStatusFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/updateParticipantCompanyStatus.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(updateParticipantCompanyStatusFn, ['dynamodb:PutItem']);
+
+    const caseParticipantCompaniesResource = caseIdResource.addResource('participant-companies');
+    caseParticipantCompaniesResource.addMethod('GET', new apigateway.LambdaIntegration(getParticipantCompaniesFn), { authorizer });
+    caseParticipantCompaniesResource.addMethod('POST', new apigateway.LambdaIntegration(inviteParticipantCompanyFn), { authorizer });
+
+    const caseParticipantCompanyIdResource = caseParticipantCompaniesResource.addResource('{participantCompanyId}');
+    caseParticipantCompanyIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateParticipantCompanyStatusFn), { authorizer });
+
+    const participantCompanyInvitationsResource = casesResource.addResource('participant-company-invitations');
+    participantCompanyInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getParticipantCompanyInvitationsFn), { authorizer });
+
     const tasksResource = api.root.addResource('tasks');
     tasksResource.addMethod('GET', new apigateway.LambdaIntegration(getTasksFn), { authorizer });
     tasksResource.addMethod('POST', new apigateway.LambdaIntegration(createTaskFn), { authorizer });

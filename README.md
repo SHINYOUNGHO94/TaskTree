@@ -360,6 +360,42 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `UpdateCaseClaimRequestFunction` に `dynamodb:TransactWriteItems` 権限を追加し、claim 承認 transaction の IAM 不足を修正した
 - 新しい DynamoDB GSI / table / Lambda / route は追加せず、既存 `byCase` GSI を再利用した
 - PROJECT root 作成、PROJECT → STANDARD child 作成、REQUEST への child 作成不可の API テストを追加した
+
+### Task 16: 外部会社参加フローの追加
+
+- `OPEN` Case に外部会社を participant company として招待する最初の社外協業フローを実装した
+- `CaseParticipantCompanyStatus` / `CaseParticipantCompany` 型を `@task/core` に追加した
+- `byParticipantCompany` GSI を DynamoDB に追加した（`participantCompanyId` pk / `participantCompanySortKey` sk）
+- 以下の API を追加した
+  - `POST /cases/{id}/participant-companies` — OPEN Case の creator または USER owner が外部会社を招待する
+  - `GET /cases/{id}/participant-companies` — Case の参加会社一覧を取得する
+  - `GET /cases/participant-company-invitations` — caller 会社に届いた招待一覧を取得する（`Scan` 不使用、GSI による Query）
+  - `PUT /cases/{id}/participant-companies/{participantCompanyId}` — invited company の COMPANY_ADMIN / DIVISION_ADMIN が accept / reject する
+- 既存の `GET /cases/{id}` / `GET /cases/{id}/history` / `GET /cases/{id}/comments` / `GET /cases/{id}/tasks` に ACTIVE participant company user の読み取り権限を追加した
+  - INVITED のみでは detail / history / comments / tasks を読めない
+  - 無関係の company user は読めない
+  - owner company 内の既存認可ルールは維持した
+- Case 詳細画面に参加会社セクションと招待フォーム（owner 側）を追加した
+- Dashboard に外部案件招待セクション（accept / reject ボタン付き）を追加した
+- loading / empty / error / partial-error state を各 UI に実装した
+
+**Deployment Impact:**
+- new Lambda: yes（4 functions）
+- new API route: yes（4 routes）
+- new DynamoDB table: no
+- new DynamoDB GSI: yes（`byParticipantCompany`）
+- IAM permission change: yes（新 Lambda に GetItem / Query / PutItem 付与）
+- deployment required: yes
+
+**Verification:**
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+- `yarn.cmd workspace @task/infra build` — pass
+- `yarn.cmd workspace @task/infra cdk synth` — pass（GSI 追加確認）
+- `yarn.cmd test:api` — 294 tests pass
+
 ---
 
 ## 開発メモ

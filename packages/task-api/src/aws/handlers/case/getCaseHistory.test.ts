@@ -12,7 +12,11 @@ import {
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { UserRepository } from "@/repositories/userRepository";
+import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { createHandler } from "./getCaseHistory";
+
+const makeParticipantCompanyRepo = () =>
+  ({ findByCaseAndCompany: vi.fn().mockResolvedValue(undefined) }) as unknown as CaseParticipantCompanyRepository;
 
 const makeEvent = (params: { sub?: string; id?: string }): APIGatewayProxyEvent =>
   ({
@@ -85,13 +89,13 @@ const makeMockRepos = (overrides: {
   const userRepo = {
     findByUserId: vi.fn().mockResolvedValue(overrides.profileResult),
   } as unknown as UserRepository;
-  return { caseRepo, caseHistoryRepo, userRepo };
+  return { caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() };
 };
 
 describe("getCaseHistory", () => {
   it("JWT がない場合は 401", async () => {
     const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ id: "CASE-1" }));
     expect(response.statusCode).toBe(401);
   });
@@ -101,7 +105,7 @@ describe("getCaseHistory", () => {
       caseResult: baseCase,
       profileResult: undefined,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(500);
   });
@@ -111,7 +115,7 @@ describe("getCaseHistory", () => {
       caseResult: undefined,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-NONEXISTENT" }));
     expect(response.statusCode).toBe(404);
   });
@@ -122,7 +126,7 @@ describe("getCaseHistory", () => {
       caseResult: otherCompanyCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(403);
   });
@@ -139,7 +143,7 @@ describe("getCaseHistory", () => {
       caseResult: inaccessibleCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(403);
   });
@@ -150,7 +154,7 @@ describe("getCaseHistory", () => {
       profileResult: mockProfile,
       entries: [mockEntry],
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as unknown[];
@@ -170,7 +174,7 @@ describe("getCaseHistory", () => {
       profileResult: mockProfile,
       entries: [],
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as unknown[];
@@ -183,7 +187,7 @@ describe("getCaseHistory", () => {
       profileResult: mockProfile,
       entries: [],
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as unknown[];

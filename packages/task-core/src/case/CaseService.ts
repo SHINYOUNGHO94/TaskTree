@@ -5,14 +5,18 @@ import {
   CaseComment,
   CaseDetail,
   CaseHistoryEntry,
+  CaseParticipantCompany,
   CaseTaskDetail,
   CreateCaseClaimRequestInput,
   CreateCaseCommentInput,
   CreateCaseTaskInput,
   CreateChildCaseInput,
   CreateRootCaseInput,
+  InviteParticipantCompanyInput,
+  ParticipantCompanyInvitation,
   UpdateCaseClaimRequestInput,
   UpdateCaseStatusInput,
+  UpdateParticipantCompanyStatusInput,
 } from '../types/case';
 
 export const CaseService = {
@@ -355,6 +359,95 @@ export const CaseService = {
       return await response.body.json() as unknown as { claimRequestId: string };
     } catch (error) {
       console.error('Error updating case claim request:', error);
+      throw error;
+    }
+  },
+
+  getParticipantCompanies: async (caseId: string): Promise<CaseParticipantCompany[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/participant-companies`,
+        options: {
+          headers: { Authorization: idToken || '' },
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as CaseParticipantCompany[];
+    } catch (error) {
+      console.error('Error fetching participant companies:', error);
+      throw error;
+    }
+  },
+
+  inviteParticipantCompany: async (
+    caseId: string,
+    input: InviteParticipantCompanyInput,
+  ): Promise<{ participantCompanyId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/participant-companies`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body: { companyId: input.companyId },
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { participantCompanyId: string };
+    } catch (error) {
+      console.error('Error inviting participant company:', error);
+      throw error;
+    }
+  },
+
+  getParticipantCompanyInvitations: async (): Promise<ParticipantCompanyInvitation[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: 'cases/participant-company-invitations',
+        options: {
+          headers: { Authorization: idToken || '' },
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as ParticipantCompanyInvitation[];
+    } catch (error) {
+      console.error('Error fetching participant company invitations:', error);
+      throw error;
+    }
+  },
+
+  updateParticipantCompanyStatus: async (
+    caseId: string,
+    participantCompanyId: string,
+    input: UpdateParticipantCompanyStatusInput,
+  ): Promise<{ participantCompanyId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = put({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/participant-companies/${participantCompanyId}`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body: { status: input.status },
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { participantCompanyId: string };
+    } catch (error) {
+      console.error('Error updating participant company status:', error);
       throw error;
     }
   },
