@@ -350,6 +350,36 @@ export class TaskInfraStack extends cdk.Stack {
     grantTableRead(createCaseTaskFn);
     grantTableCreate(createCaseTaskFn);
 
+    const getCaseHistoryFn = new NodejsFunction(this, 'GetCaseHistoryFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getCaseHistory.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getCaseHistoryFn);
+
+    const getCaseCommentsFn = new NodejsFunction(this, 'GetCaseCommentsFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getCaseComments.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getCaseCommentsFn);
+
+    const createCaseCommentFn = new NodejsFunction(this, 'CreateCaseCommentFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/createCaseComment.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(createCaseCommentFn, ['dynamodb:PutItem']);
+
     const api = new apigateway.RestApi(this, 'TaskApi', {
       restApiName: 'Task Tree API',
       description: 'API for TaskTree management - v2',
@@ -401,6 +431,13 @@ export class TaskInfraStack extends cdk.Stack {
     const caseTasksResource = caseIdResource.addResource('tasks');
     caseTasksResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseTasksFn), { authorizer });
     caseTasksResource.addMethod('POST', new apigateway.LambdaIntegration(createCaseTaskFn), { authorizer });
+
+    const caseHistoryResource = caseIdResource.addResource('history');
+    caseHistoryResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseHistoryFn), { authorizer });
+
+    const caseCommentsResource = caseIdResource.addResource('comments');
+    caseCommentsResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseCommentsFn), { authorizer });
+    caseCommentsResource.addMethod('POST', new apigateway.LambdaIntegration(createCaseCommentFn), { authorizer });
 
     const tasksResource = api.root.addResource('tasks');
     tasksResource.addMethod('GET', new apigateway.LambdaIntegration(getTasksFn), { authorizer });

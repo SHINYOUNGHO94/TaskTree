@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { CaseRepository } from "@/repositories/caseRepository";
+import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { DivisionRepository } from "@/repositories/divisionRepository";
 import { DepartmentRepository } from "@/repositories/departmentRepository";
@@ -17,6 +18,7 @@ import {
 import {
   CaseDetail,
   CaseDeliveryType,
+  CaseHistoryAction,
   CaseOwnerType,
   CaseStatus,
   CaseTargetScope,
@@ -62,6 +64,7 @@ const isNonEmptyString = (v: unknown): v is string =>
 
 export interface CreateCaseDeps {
   caseRepo: CaseRepository;
+  caseHistoryRepo: CaseHistoryRepository;
   userRepo: UserRepository;
   divisionRepo: DivisionRepository;
   deptRepo: DepartmentRepository;
@@ -243,6 +246,20 @@ export const createHandler =
 
       await deps.caseRepo.save(caseDetail);
 
+      try {
+        await deps.caseHistoryRepo.save({
+          historyId: randomUUID(),
+          caseId: caseDetail.caseId,
+          companyId: caseDetail.companyId,
+          actorId: creatorId,
+          action: CaseHistoryAction.CASE_CREATED,
+          detail: "Case created",
+          createdAt: now,
+        });
+      } catch (historyError) {
+        console.error("Failed to write case history", historyError);
+      }
+
       return {
         statusCode: 201,
         headers: { "Access-Control-Allow-Origin": "*" },
@@ -257,6 +274,7 @@ export const createHandler =
 const tableName = process.env.TABLE_NAME || "";
 export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
+  caseHistoryRepo: new CaseHistoryRepository(tableName),
   userRepo: new UserRepository(tableName),
   divisionRepo: new DivisionRepository(tableName),
   deptRepo: new DepartmentRepository(tableName),

@@ -4,8 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, Clock, FileText, Shield, Tag, User } from "lucide-react";
 import {
+  CaseComment,
   CaseDeliveryType,
   CaseDetail,
+  CaseHistoryAction,
+  CaseHistoryEntry,
   CaseOwnerType,
   CaseService,
   CaseStatus,
@@ -15,6 +18,12 @@ import {
   CaseType,
   UserRole,
 } from "@task/core";
+
+const HISTORY_ACTION_LABELS: Record<CaseHistoryAction, string> = {
+  [CaseHistoryAction.CASE_CREATED]: "案件作成",
+  [CaseHistoryAction.STATUS_CHANGED]: "ステータス変更",
+  [CaseHistoryAction.TASK_CREATED]: "作業追加",
+};
 
 const TASK_STATUS_LABELS: Record<CaseTaskStatus, string> = {
   [CaseTaskStatus.TODO]: "未対応",
@@ -136,6 +145,15 @@ const CaseDetailPage = () => {
   const [newTaskDueDate, setNewTaskDueDate] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [taskCreateError, setTaskCreateError] = useState<string | null>(null);
+  const [caseHistory, setCaseHistory] = useState<CaseHistoryEntry[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [caseComments, setCaseComments] = useState<CaseComment[]>([]);
+  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [newCommentContent, setNewCommentContent] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentSubmitError, setCommentSubmitError] = useState<string | null>(null);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -158,7 +176,7 @@ const CaseDetailPage = () => {
     setUpdateError(null);
     try {
       await CaseService.updateCaseStatus(id as string, { status: selectedStatus });
-      await fetchCase();
+      await Promise.all([fetchCase(), fetchCaseHistory()]);
     } catch (error) {
       console.error("Failed to update case status", error);
       setUpdateError("ステータスの更新に失敗しました。再度お試しください。");
@@ -182,6 +200,53 @@ const CaseDetailPage = () => {
     }
   }, [id]);
 
+  const fetchCaseHistory = useCallback(async () => {
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const data = await CaseService.getCaseHistory(id as string);
+      setCaseHistory(data);
+    } catch (error) {
+      console.error("Failed to fetch case history", error);
+      setHistoryError("履歴の取得に失敗しました。");
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, [id]);
+
+  const fetchCaseComments = useCallback(async () => {
+    setIsCommentsLoading(true);
+    setCommentsError(null);
+    try {
+      const data = await CaseService.getCaseComments(id as string);
+      setCaseComments(data);
+    } catch (error) {
+      console.error("Failed to fetch case comments", error);
+      setCommentsError("コメントの取得に失敗しました。");
+    } finally {
+      setIsCommentsLoading(false);
+    }
+  }, [id]);
+
+  const handleSubmitComment = async () => {
+    if (!newCommentContent.trim()) {
+      setCommentSubmitError("コメント内容を入力してください。");
+      return;
+    }
+    setIsSubmittingComment(true);
+    setCommentSubmitError(null);
+    try {
+      await CaseService.createCaseComment(id as string, { content: newCommentContent.trim() });
+      setNewCommentContent("");
+      await fetchCaseComments();
+    } catch (error) {
+      console.error("Failed to submit comment", error);
+      setCommentSubmitError("コメントの送信に失敗しました。再度お試しください。");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
   const handleCreateTask = async () => {
     if (!newTaskTitle.trim()) {
       setTaskCreateError("タイトルを入力してください。");
@@ -199,7 +264,7 @@ const CaseDetailPage = () => {
       setNewTaskDescription("");
       setNewTaskDueDate("");
       setShowTaskForm(false);
-      await fetchCaseTasks();
+      await Promise.all([fetchCaseTasks(), fetchCaseHistory()]);
     } catch (error) {
       console.error("Failed to create case task", error);
       setTaskCreateError("作業の作成に失敗しました。再度お試しください。");
@@ -212,8 +277,10 @@ const CaseDetailPage = () => {
     if (id) {
       fetchCase();
       fetchCaseTasks();
+      fetchCaseHistory();
+      fetchCaseComments();
     }
-  }, [id, fetchCase, fetchCaseTasks]);
+  }, [id, fetchCase, fetchCaseTasks, fetchCaseHistory, fetchCaseComments]);
 
   if (isLoading) {
     return (
@@ -530,6 +597,94 @@ const CaseDetailPage = () => {
                       {task.dueDate}
                     </span>
                   )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
+        <div className="p-6 border-b border-gray-100">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">コメント</h3>
+        </div>
+
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+          <div className="space-y-3">
+            {commentSubmitError && (
+              <p className="text-sm text-red-600 font-medium">{commentSubmitError}</p>
+            )}
+            <textarea
+              value={newCommentContent}
+              onChange={(e) => setNewCommentContent(e.target.value)}
+              placeholder="コメントを入力..."
+              rows={3}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+            <button
+              onClick={handleSubmitComment}
+              disabled={isSubmittingComment || !newCommentContent.trim()}
+              className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSubmittingComment ? "送信中..." : "コメントを送信"}
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {isCommentsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
+            </div>
+          ) : commentsError ? (
+            <p className="text-sm text-red-600 text-center py-6">{commentsError}</p>
+          ) : caseComments.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">コメントはまだありません。</p>
+          ) : (
+            <ul className="space-y-4">
+              {caseComments.map((comment) => (
+                <li key={comment.commentId} className="border border-gray-100 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-400 font-mono">{comment.authorId}</span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(comment.createdAt).toLocaleString("ja-JP")}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{comment.content}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
+        <div className="p-6 border-b border-gray-100">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">履歴</h3>
+        </div>
+        <div className="p-6">
+          {isHistoryLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
+            </div>
+          ) : historyError ? (
+            <p className="text-sm text-red-600 text-center py-6">{historyError}</p>
+          ) : caseHistory.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">履歴はまだありません。</p>
+          ) : (
+            <ul className="space-y-2">
+              {caseHistory.map((entry) => (
+                <li
+                  key={entry.historyId}
+                  className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0"
+                >
+                  <span className="text-xs text-gray-400 whitespace-nowrap pt-0.5">
+                    {new Date(entry.createdAt).toLocaleString("ja-JP")}
+                  </span>
+                  <span className="text-xs font-bold text-gray-600 whitespace-nowrap">
+                    {HISTORY_ACTION_LABELS[entry.action]}
+                  </span>
+                  <span className="text-xs text-gray-500 flex-1">{entry.detail}</span>
                 </li>
               ))}
             </ul>

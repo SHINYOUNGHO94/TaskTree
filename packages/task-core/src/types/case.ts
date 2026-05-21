@@ -129,3 +129,33 @@ export interface CreateCaseTaskInput {
   description: string;
   dueDate: string | null;
 }
+
+export enum CaseHistoryAction {
+  CASE_CREATED = "CASE_CREATED",
+  STATUS_CHANGED = "STATUS_CHANGED",
+  TASK_CREATED = "TASK_CREATED",
+}
+
+export interface CaseHistoryEntry {
+  historyId: string;
+  caseId: string;
+  companyId: string;
+  actorId: string;
+  action: CaseHistoryAction;
+  detail: string;
+  createdAt: string;
+}
+
+export interface CaseComment {
+  commentId: string;
+  caseId: string;
+  companyId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCaseCommentInput {
+  content: string;
+}

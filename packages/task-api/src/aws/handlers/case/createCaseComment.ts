@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseHistoryAction, CaseOwnerType, CaseStatus } from "@task/core";
+import { CaseComment, CaseDetail, CaseOwnerType, CaseTargetScope } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
-import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
+import { CaseCommentRepository } from "@/repositories/caseCommentRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import {
   badRequest,
@@ -13,14 +13,26 @@ import {
   unauthorized,
 } from "@/errors/utils";
 
-export interface UpdateCaseDeps {
+const isAccessAllowed = (
+  caseDetail: CaseDetail,
+  userId: string,
+  teamId: string,
+): boolean => {
+  if (caseDetail.creatorId === userId) return true;
+  if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
+  if (caseDetail.targetScope === CaseTargetScope.USER && caseDetail.targetScopeId === userId) return true;
+  if (caseDetail.targetScope === CaseTargetScope.TEAM && caseDetail.targetScopeId === teamId) return true;
+  return false;
+};
+
+export interface CreateCaseCommentDeps {
   caseRepo: CaseRepository;
-  caseHistoryRepo: CaseHistoryRepository;
+  caseCommentRepo: CaseCommentRepository;
   userRepo: UserRepository;
 }
 
 export const createHandler =
-  (deps: UpdateCaseDeps) =>
+  (deps: CreateCaseCommentDeps) =>
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
       const userId = event.requestContext.authorizer?.claims.sub;
@@ -29,9 +41,7 @@ export const createHandler =
       const caseId = event.pathParameters?.id;
       if (!caseId) return notFound("Case not found");
 
-      if (!event.body) {
-        return badRequest("Request body is required");
-      }
+      if (!event.body) return badRequest("Request body is required");
 
       let body: Record<string, unknown>;
       try {
@@ -44,14 +54,15 @@ export const createHandler =
         return invalidRequestBody();
       }
 
-      const allowedFields = new Set(["status"]);
-      if (Object.keys(body).some((key) => !allowedFields.has(key))) {
-        return badRequest("Only status can be updated");
+      const allowedFields = new Set(["content"]);
+      const hasUnexpectedField = Object.keys(body).some((field) => !allowedFields.has(field));
+      if (hasUnexpectedField) {
+        return badRequest("Unexpected field in request body");
       }
 
-      const { status } = body;
-      if (!status || !(Object.values(CaseStatus) as string[]).includes(status as string)) {
-        return badRequest("Invalid or missing status value");
+      const { content } = body;
+      if (typeof content !== "string" || !content.trim()) {
+        return badRequest("content is required and must not be empty");
       }
 
       const [profile, existingCase] = await Promise.all([
@@ -66,40 +77,27 @@ export const createHandler =
         return forbidden("You do not have access to this case");
       }
 
-      const isCreator = existingCase.creatorId === userId;
-      const isUserOwner =
-        existingCase.ownerType === CaseOwnerType.USER && existingCase.ownerId === userId;
-
-      if (!isCreator && !isUserOwner) {
-        return forbidden("You do not have permission to update this case");
+      if (!isAccessAllowed(existingCase, userId, profile.teamId)) {
+        return forbidden("You do not have access to this case");
       }
 
-      const updatedCase = {
-        ...existingCase,
-        status: status as CaseStatus,
-        updatedAt: new Date().toISOString(),
+      const now = new Date().toISOString();
+      const comment: CaseComment = {
+        commentId: randomUUID(),
+        caseId,
+        companyId: profile.companyId,
+        authorId: userId,
+        content: content.trim(),
+        createdAt: now,
+        updatedAt: now,
       };
 
-      await deps.caseRepo.save(updatedCase);
-
-      try {
-        await deps.caseHistoryRepo.save({
-          historyId: randomUUID(),
-          caseId,
-          companyId: profile.companyId,
-          actorId: userId,
-          action: CaseHistoryAction.STATUS_CHANGED,
-          detail: `Status changed from ${existingCase.status} to ${status as string}`,
-          createdAt: updatedCase.updatedAt,
-        });
-      } catch (historyError) {
-        console.error("Failed to write case history", historyError);
-      }
+      await deps.caseCommentRepo.save(comment);
 
       return {
-        statusCode: 200,
+        statusCode: 201,
         headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ caseId }),
+        body: JSON.stringify({ commentId: comment.commentId }),
       };
     } catch (error) {
       console.error(error);
@@ -110,6 +108,6 @@ export const createHandler =
 const tableName = process.env.TABLE_NAME || "";
 export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
-  caseHistoryRepo: new CaseHistoryRepository(tableName),
+  caseCommentRepo: new CaseCommentRepository(tableName),
   userRepo: new UserRepository(tableName),
 });
