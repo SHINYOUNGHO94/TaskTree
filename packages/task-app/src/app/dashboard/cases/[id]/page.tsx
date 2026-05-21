@@ -29,6 +29,7 @@ const HISTORY_ACTION_LABELS: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.CLAIM_REQUESTED]: "担当希望",
   [CaseHistoryAction.CLAIM_APPROVED]: "担当承認",
   [CaseHistoryAction.CLAIM_REJECTED]: "担当却下",
+  [CaseHistoryAction.CHILD_CASE_CREATED]: "子案件追加",
 };
 
 const TASK_STATUS_LABELS: Record<CaseTaskStatus, string> = {
@@ -170,6 +171,19 @@ const CaseDetailPage = () => {
   const [claimSubmitError, setClaimSubmitError] = useState<string | null>(null);
   const [isProcessingClaimAction, setIsProcessingClaimAction] = useState(false);
   const [claimActionError, setClaimActionError] = useState<string | null>(null);
+  const [childCases, setChildCases] = useState<CaseDetail[]>([]);
+  const [isChildCasesLoading, setIsChildCasesLoading] = useState(false);
+  const [childCasesError, setChildCasesError] = useState<string | null>(null);
+  const [showChildCaseForm, setShowChildCaseForm] = useState(false);
+  const [childCaseTitle, setChildCaseTitle] = useState("");
+  const [childCaseDescription, setChildCaseDescription] = useState("");
+  const [childCaseDeliveryType, setChildCaseDeliveryType] = useState<CaseDeliveryType>(CaseDeliveryType.DIRECT);
+  const [childCaseTargetScope, setChildCaseTargetScope] = useState<CaseTargetScope>(CaseTargetScope.TEAM);
+  const [childCaseTargetScopeId, setChildCaseTargetScopeId] = useState("");
+  const [childCaseRequiredRole, setChildCaseRequiredRole] = useState<UserRole>(UserRole.USER);
+  const [childCaseDueDate, setChildCaseDueDate] = useState("");
+  const [isCreatingChildCase, setIsCreatingChildCase] = useState(false);
+  const [childCaseCreateError, setChildCaseCreateError] = useState<string | null>(null);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -277,6 +291,59 @@ const CaseDetailPage = () => {
     }
   };
 
+  const fetchChildCases = useCallback(async () => {
+    setIsChildCasesLoading(true);
+    setChildCasesError(null);
+    try {
+      const data = await CaseService.getChildCases(id as string);
+      setChildCases(data);
+    } catch (error) {
+      console.error("Failed to fetch child cases", error);
+      setChildCasesError("子案件の取得に失敗しました。");
+    } finally {
+      setIsChildCasesLoading(false);
+    }
+  }, [id]);
+
+  const handleCreateChildCase = async () => {
+    if (!childCaseTitle.trim()) {
+      setChildCaseCreateError("タイトルを入力してください。");
+      return;
+    }
+    if (!childCaseDescription.trim()) {
+      setChildCaseCreateError("内容を入力してください。");
+      return;
+    }
+    if (!childCaseTargetScopeId.trim()) {
+      setChildCaseCreateError("送信先IDを入力してください。");
+      return;
+    }
+    setIsCreatingChildCase(true);
+    setChildCaseCreateError(null);
+    try {
+      await CaseService.createChildCase(id as string, {
+        title: childCaseTitle.trim(),
+        description: childCaseDescription.trim(),
+        deliveryType: childCaseDeliveryType,
+        targetScope: childCaseTargetScope,
+        targetScopeId: childCaseTargetScopeId.trim(),
+        requiredRole: childCaseRequiredRole,
+        dueDate: childCaseDueDate || null,
+      });
+      setChildCaseTitle("");
+      setChildCaseDescription("");
+      setChildCaseTargetScopeId("");
+      setChildCaseDueDate("");
+      setShowChildCaseForm(false);
+      await Promise.all([fetchChildCases(), fetchCaseHistory()]);
+    } catch (error) {
+      console.error("Failed to create child case", error);
+      setChildCaseCreateError("子案件の作成に失敗しました。再度お試しください。");
+    } finally {
+      setIsCreatingChildCase(false);
+    }
+  };
+
   const fetchCaseHistory = useCallback(async () => {
     setIsHistoryLoading(true);
     setHistoryError(null);
@@ -366,8 +433,9 @@ const CaseDetailPage = () => {
       fetchCaseHistory();
       fetchCaseComments();
       fetchCaseClaimRequests();
+      fetchChildCases();
     }
-  }, [id, fetchCase, fetchCaseTasks, fetchCaseHistory, fetchCaseComments, fetchCaseClaimRequests]);
+  }, [id, fetchCase, fetchCaseTasks, fetchCaseHistory, fetchCaseComments, fetchCaseClaimRequests, fetchChildCases]);
 
   if (isLoading) {
     return (
@@ -683,6 +751,150 @@ const CaseDetailPage = () => {
                     <span className="text-xs text-gray-400 whitespace-nowrap">
                       {task.dueDate}
                     </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">子案件</h3>
+          {caseDetail.caseType === CaseType.STANDARD &&
+            currentUserId &&
+            (caseDetail.creatorId === currentUserId ||
+              (caseDetail.ownerType === CaseOwnerType.USER &&
+                caseDetail.ownerId === currentUserId)) && (
+              <button
+                onClick={() => {
+                  setShowChildCaseForm(!showChildCaseForm);
+                  setChildCaseCreateError(null);
+                }}
+                className="text-sm font-bold px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+              >
+                {showChildCaseForm ? "キャンセル" : "+ 子案件を追加"}
+              </button>
+            )}
+        </div>
+
+        {showChildCaseForm && (
+          <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+            <div className="space-y-4">
+              {childCaseCreateError && (
+                <p className="text-sm text-red-600 font-medium">{childCaseCreateError}</p>
+              )}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">タイトル</label>
+                <input
+                  value={childCaseTitle}
+                  onChange={(e) => setChildCaseTitle(e.target.value)}
+                  placeholder="子案件のタイトルを入力"
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">内容</label>
+                <textarea
+                  value={childCaseDescription}
+                  onChange={(e) => setChildCaseDescription(e.target.value)}
+                  placeholder="子案件の詳細を入力..."
+                  rows={3}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">配信タイプ</label>
+                  <select
+                    value={childCaseDeliveryType}
+                    onChange={(e) => setChildCaseDeliveryType(e.target.value as CaseDeliveryType)}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={CaseDeliveryType.DIRECT}>直接依頼</option>
+                    <option value={CaseDeliveryType.OPEN}>公開</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">送信先</label>
+                  <select
+                    value={childCaseTargetScope}
+                    onChange={(e) => setChildCaseTargetScope(e.target.value as CaseTargetScope)}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={CaseTargetScope.TEAM}>チーム</option>
+                    <option value={CaseTargetScope.USER}>個人</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  {childCaseTargetScope === CaseTargetScope.TEAM ? "チームID" : "ユーザーID"}
+                </label>
+                <input
+                  value={childCaseTargetScopeId}
+                  onChange={(e) => setChildCaseTargetScopeId(e.target.value)}
+                  placeholder={childCaseTargetScope === CaseTargetScope.TEAM ? "チームIDを入力" : "ユーザーIDを入力"}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">最低権限</label>
+                  <select
+                    value={childCaseRequiredRole}
+                    onChange={(e) => setChildCaseRequiredRole(e.target.value as UserRole)}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={UserRole.USER}>ユーザー</option>
+                    <option value={UserRole.TEAM_ADMIN}>チームリーダー</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">期限（任意）</label>
+                  <input
+                    type="date"
+                    value={childCaseDueDate}
+                    onChange={(e) => setChildCaseDueDate(e.target.value)}
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleCreateChildCase}
+                disabled={isCreatingChildCase}
+                className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isCreatingChildCase ? "作成中..." : "子案件を作成"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="p-6">
+          {isChildCasesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
+            </div>
+          ) : childCasesError ? (
+            <p className="text-sm text-red-600 text-center py-6">{childCasesError}</p>
+          ) : childCases.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">子案件はまだありません。</p>
+          ) : (
+            <ul className="space-y-3">
+              {childCases.map((child) => (
+                <li
+                  key={child.caseId}
+                  onClick={() => router.push(`/dashboard/cases/${child.caseId}`)}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_STYLES[child.status]}`}>
+                    {STATUS_LABELS[child.status]}
+                  </span>
+                  <span className="text-sm font-bold text-gray-800 flex-1 truncate">{child.title}</span>
+                  {child.dueDate && (
+                    <span className="text-xs text-gray-400 whitespace-nowrap">{child.dueDate}</span>
                   )}
                 </li>
               ))}

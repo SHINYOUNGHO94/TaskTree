@@ -9,6 +9,7 @@ import {
   CreateCaseClaimRequestInput,
   CreateCaseCommentInput,
   CreateCaseTaskInput,
+  CreateChildCaseInput,
   CreateRootCaseInput,
   UpdateCaseClaimRequestInput,
   UpdateCaseStatusInput,
@@ -269,6 +270,61 @@ export const CaseService = {
       return await response.body.json() as unknown as { claimRequestId: string };
     } catch (error) {
       console.error('Error creating case claim request:', error);
+      throw error;
+    }
+  },
+
+  getChildCases: async (caseId: string): Promise<CaseDetail[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/children`,
+        options: {
+          headers: {
+            Authorization: idToken || '',
+          },
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as CaseDetail[];
+    } catch (error) {
+      console.error('Error fetching child cases:', error);
+      throw error;
+    }
+  },
+
+  createChildCase: async (caseId: string, input: CreateChildCaseInput): Promise<{ caseId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const body: Record<string, string | null> = {
+        title: input.title,
+        description: input.description,
+        deliveryType: input.deliveryType,
+        targetScope: input.targetScope,
+        targetScopeId: input.targetScopeId,
+        requiredRole: input.requiredRole,
+        dueDate: input.dueDate,
+      };
+
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/children`,
+        options: {
+          headers: {
+            Authorization: idToken || '',
+          },
+          body,
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { caseId: string };
+    } catch (error) {
+      console.error('Error creating child case:', error);
       throw error;
     }
   },

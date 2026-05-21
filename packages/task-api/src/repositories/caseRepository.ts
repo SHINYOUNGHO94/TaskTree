@@ -20,6 +20,21 @@ export class CaseRepository extends BaseRepository<CaseRecordType> {
     return record ? CaseRecord.toDetail(record) : undefined;
   }
 
+  async findChildrenByParentCaseId(parentCaseId: string): Promise<CaseDetail[]> {
+    const response = await this.docClient.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        IndexName: "byCase",
+        KeyConditionExpression: "caseId = :caseId AND begins_with(caseSortKey, :prefix)",
+        ExpressionAttributeValues: {
+          ":caseId": parentCaseId,
+          ":prefix": "ChildCase#",
+        },
+      }),
+    );
+    return ((response.Items ?? []) as CaseRecordType[]).map(CaseRecord.toDetail);
+  }
+
   async findByUser(params: {
     companyId: string;
     userId: string;

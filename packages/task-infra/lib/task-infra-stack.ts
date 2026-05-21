@@ -476,6 +476,30 @@ export class TaskInfraStack extends cdk.Stack {
     const caseClaimRequestIdResource = caseClaimRequestsResource.addResource('{claimRequestId}');
     caseClaimRequestIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateCaseClaimRequestFn), { authorizer });
 
+    const getChildCasesFn = new NodejsFunction(this, 'GetChildCasesFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getChildCases.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getChildCasesFn);
+
+    const createChildCaseFn = new NodejsFunction(this, 'CreateChildCaseFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/createChildCase.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(createChildCaseFn, ['dynamodb:PutItem']);
+
+    const caseChildrenResource = caseIdResource.addResource('children');
+    caseChildrenResource.addMethod('GET', new apigateway.LambdaIntegration(getChildCasesFn), { authorizer });
+    caseChildrenResource.addMethod('POST', new apigateway.LambdaIntegration(createChildCaseFn), { authorizer });
+
     const tasksResource = api.root.addResource('tasks');
     tasksResource.addMethod('GET', new apigateway.LambdaIntegration(getTasksFn), { authorizer });
     tasksResource.addMethod('POST', new apigateway.LambdaIntegration(createTaskFn), { authorizer });
