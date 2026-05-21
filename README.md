@@ -248,6 +248,16 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `createCase` の未対応フィールド拒否テストを追加し、関連する type-check、infra build、API テストで検証
 - 既存 DynamoDB テーブルへ Case 用 GSI を追加適用する場合は 1 つずつ追加する必要があるが、開発環境では既存スタックを削除して再作成する前提のため初回作成時は同時定義可能
 
+### Task 7: REQUEST Case 作成 UI の追加
+
+- ダッシュボードから `REQUEST` case 作成モーダルを開ける導線を追加
+- `CaseService.createCase` を利用し、フロントエンドから Lambda や DynamoDB を直接呼ばずに case を作成する構成を維持
+- Task 7 では `REQUEST` / `DIRECT` / `USER` を固定し、チームリーダーが自チームまたは自分宛てに小さな案件を作成できる最小 UI を実装
+- 入力必須、空白のみの入力、送信中、作成成功、作成失敗を画面内で扱い、`alert()` に依存しない UX に改善
+- ユーザープロファイルの読み込み後に送信先の初期値が正しく反映されるように調整
+- `STANDARD` / `PROJECT` 作成 UI、Case 一覧、Case 詳細、History、Comment、Claim request は後続 Task に分離
+- `type-check:core`、`@task/app` の lint / build、およびソースコード内の `any`・lint 回避コードの混入チェックで検証
+
 ---
 
 ## 開発メモ
