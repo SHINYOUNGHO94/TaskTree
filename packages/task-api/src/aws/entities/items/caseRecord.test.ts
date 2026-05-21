@@ -48,6 +48,14 @@ describe("CaseRecord", () => {
       expect(record.caseSortKey).toBe("Meta#Case#CASE-1");
     });
 
+    it("sets assignee and visibility keys for GSI queries", () => {
+      const record = CaseRecord.fromDetail(baseDetail);
+      expect(record.assigneeKey).toBe("USER#USER-1");
+      expect(record.assigneeSortKey).toBe("Case#WAITING#NONE#CASE-1");
+      expect(record.visibilityKey).toBe("TEAM#TEAM-1");
+      expect(record.visibilitySortKey).toBe("Role#2#Case#WAITING#2026-05-21T00:00:00.000Z#CASE-1");
+    });
+
     it("maps title to name and timestamps", () => {
       const record = CaseRecord.fromDetail(baseDetail);
       expect(record.name).toBe("Test Case");

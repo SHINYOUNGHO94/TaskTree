@@ -13,6 +13,7 @@
 - `docs/core/coding-rules.md`
 - `docs/workflow/ai-team-workflow.md`
 - `docs/core/case-collaboration-model.md`
+- `docs/workflow/v2-case-development-roadmap.md`
 
 ## モデル別エントリーポイント
 
@@ -44,7 +45,9 @@
 ## v2 Case 開発基準
 
 - v2 の新機能は `docs/core/case-collaboration-model.md` を基準とする。
+- v2 Case の中長期的な作業順序は `docs/workflow/v2-case-development-roadmap.md` を参照する。
 - `docs/core/case-collaboration-model_kr.md` は韓国語の企画参考文書であり、実装基準ではない。
+- `docs/workflow/v2-case-development-roadmap_kr.md` は韓国語の参考文書であり、実装基準ではない。
 - 既存の `task` を v2 の最上位案件として拡張してはならない。
 - 新規設計は `case` 中心で進める。
 - GSI 追加・変更はインフラ変更であり、実装前にデプロイ影響を必ず確認する。

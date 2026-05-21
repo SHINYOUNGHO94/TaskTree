@@ -17,7 +17,10 @@
     "type-check:ui": "yarn workspace @task/ui type-check",
     "type-check:core": "yarn workspace @task/core type-check",
     "type-check:api": "yarn workspace @task/api type-check",
-    "deploy:infra": "yarn workspace @task/infra deploy",
+    "cdk:bootstrap": "yarn workspace @task/infra cdk bootstrap",
+    "cdk:deploy": "yarn workspace @task/infra cdk deploy",
+    "cdk:destroy": "yarn workspace @task/infra cdk destroy",
+    "cdk:diff": "yarn workspace @task/infra cdk diff",
     "esbuild": "esbuild"
   },
   "devDependencies": {

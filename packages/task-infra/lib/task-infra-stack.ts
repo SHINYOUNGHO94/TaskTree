@@ -292,6 +292,16 @@ export class TaskInfraStack extends cdk.Stack {
     grantTableRead(createCaseFn);
     grantTableCreate(createCaseFn);
 
+    const getCasesFn = new NodejsFunction(this, 'GetCasesFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getCases.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getCasesFn);
+
     const api = new apigateway.RestApi(this, 'TaskApi', {
       restApiName: 'Task Tree API',
       description: 'API for TaskTree management - v2',
@@ -333,6 +343,7 @@ export class TaskInfraStack extends cdk.Stack {
     companyUsersResource.addMethod('GET', new apigateway.LambdaIntegration(getCompanyUsersFn), { authorizer });
 
     const casesResource = api.root.addResource('cases');
+    casesResource.addMethod('GET', new apigateway.LambdaIntegration(getCasesFn), { authorizer });
     casesResource.addMethod('POST', new apigateway.LambdaIntegration(createCaseFn), { authorizer });
 
     const tasksResource = api.root.addResource('tasks');
