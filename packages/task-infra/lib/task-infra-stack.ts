@@ -467,7 +467,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    grantCaseMutation(updateCaseClaimRequestFn, ['dynamodb:PutItem']);
+    grantCaseMutation(updateCaseClaimRequestFn, ['dynamodb:PutItem', 'dynamodb:TransactWriteItems']);
 
     const caseClaimRequestsResource = caseIdResource.addResource('claim-requests');
     caseClaimRequestsResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseClaimRequestsFn), { authorizer });

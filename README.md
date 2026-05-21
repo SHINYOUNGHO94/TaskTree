@@ -345,6 +345,21 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - PROJECT 作成 UI、PROJECT -> STANDARD -> REQUEST 階層、外部会社参加、子案件ステータス集約は後続 Task に分離
 - `type-check:core`、`type-check:api`、`@task/app` lint / build、`@task/infra` build、API テストで検証
 
+### Task 15: PROJECT 階層フローの追加
+
+- Dashboard から `REQUEST` / `STANDARD` / `PROJECT` Case を選択して作成できるようにした
+- `POST /cases` で `caseType = PROJECT` の root Case を作成できるように拡張した
+- `POST /cases/{id}/children` を拡張し、親 Case の種別に応じて子 Case 種別を決定するようにした
+  - PROJECT 親 → STANDARD 子（`projectId = 親 PROJECT の caseId` を設定）
+  - STANDARD 親 → REQUEST 子（既存の動作を維持し、`projectId` を継承）
+  - REQUEST 親 → `400` を返す
+- `/dashboard/cases/[id]` 詳細画面で PROJECT 階層を表示できるようにした
+  - PROJECT 詳細では child STANDARD Cases を表示し、各 STANDARD の child REQUEST Cases をネスト表示する
+  - PROJECT creator または USER owner は STANDARD child Case を作成できる
+  - REQUEST Case 詳細では child 作成フォームを表示しない
+- `UpdateCaseClaimRequestFunction` に `dynamodb:TransactWriteItems` 権限を追加し、claim 承認 transaction の IAM 不足を修正した
+- 新しい DynamoDB GSI / table / Lambda / route は追加せず、既存 `byCase` GSI を再利用した
+- PROJECT root 作成、PROJECT → STANDARD child 作成、REQUEST への child 作成不可の API テストを追加した
 ---
 
 ## 開発メモ

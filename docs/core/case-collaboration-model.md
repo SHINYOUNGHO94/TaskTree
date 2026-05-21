@@ -1,5 +1,11 @@
 # Case Collaboration Model
 
+## 運用品質基準
+
+Case 実装作業は、この model と `docs/core/operational-quality-baseline.md` の両方に従います。
+
+認可と tenant 分離は Case model の一部であり、任意の実装 detail ではありません。
+
 このドキュメントは、TaskTree v2 における案件ベースの協業モデルを定義する基準文書です。
 
 本ドキュメントの「確定事項」は、今後の実装・レビュー・テストで必ず従う必要があります。

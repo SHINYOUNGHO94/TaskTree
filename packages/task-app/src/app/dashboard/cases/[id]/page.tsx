@@ -184,6 +184,9 @@ const CaseDetailPage = () => {
   const [childCaseDueDate, setChildCaseDueDate] = useState("");
   const [isCreatingChildCase, setIsCreatingChildCase] = useState(false);
   const [childCaseCreateError, setChildCaseCreateError] = useState<string | null>(null);
+  const [requestChildrenByStandard, setRequestChildrenByStandard] = useState<Record<string, CaseDetail[]>>({});
+  const [isNestedLoading, setIsNestedLoading] = useState(false);
+  const [nestedChildCasesError, setNestedChildCasesError] = useState<string | null>(null);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -294,6 +297,7 @@ const CaseDetailPage = () => {
   const fetchChildCases = useCallback(async () => {
     setIsChildCasesLoading(true);
     setChildCasesError(null);
+    setNestedChildCasesError(null);
     try {
       const data = await CaseService.getChildCases(id as string);
       setChildCases(data);
@@ -304,6 +308,34 @@ const CaseDetailPage = () => {
       setIsChildCasesLoading(false);
     }
   }, [id]);
+
+  const fetchNestedRequestChildren = useCallback(async (standardChildren: CaseDetail[]) => {
+    if (standardChildren.length === 0) {
+      setRequestChildrenByStandard({});
+      setNestedChildCasesError(null);
+      return;
+    }
+
+    setIsNestedLoading(true);
+    setNestedChildCasesError(null);
+    try {
+      const results = await Promise.allSettled(
+        standardChildren.map(async (standardChild) => {
+          const requests = await CaseService.getChildCases(standardChild.caseId);
+          return [standardChild.caseId, requests] as [string, CaseDetail[]];
+        }),
+      );
+      const entries = results
+        .filter((result): result is PromiseFulfilledResult<[string, CaseDetail[]]> => result.status === "fulfilled")
+        .map((result) => result.value);
+      setRequestChildrenByStandard(Object.fromEntries(entries));
+      if (results.some((result) => result.status === "rejected")) {
+        setNestedChildCasesError("Some REQUEST child cases could not be loaded.");
+      }
+    } finally {
+      setIsNestedLoading(false);
+    }
+  }, []);
 
   const handleCreateChildCase = async () => {
     if (!childCaseTitle.trim()) {
@@ -436,6 +468,18 @@ const CaseDetailPage = () => {
       fetchChildCases();
     }
   }, [id, fetchCase, fetchCaseTasks, fetchCaseHistory, fetchCaseComments, fetchCaseClaimRequests, fetchChildCases]);
+
+  useEffect(() => {
+    if (!caseDetail || caseDetail.caseId !== id) return;
+    if (caseDetail.caseType !== CaseType.PROJECT) {
+      setRequestChildrenByStandard({});
+      setNestedChildCasesError(null);
+      setIsNestedLoading(false);
+      return;
+    }
+
+    void fetchNestedRequestChildren(childCases);
+  }, [id, caseDetail, childCases, fetchNestedRequestChildren]);
 
   if (isLoading) {
     return (
@@ -762,7 +806,8 @@ const CaseDetailPage = () => {
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">子案件</h3>
-          {caseDetail.caseType === CaseType.STANDARD &&
+          {(caseDetail.caseType === CaseType.STANDARD ||
+            caseDetail.caseType === CaseType.PROJECT) &&
             currentUserId &&
             (caseDetail.creatorId === currentUserId ||
               (caseDetail.ownerType === CaseOwnerType.USER &&
@@ -774,7 +819,11 @@ const CaseDetailPage = () => {
                 }}
                 className="text-sm font-bold px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
               >
-                {showChildCaseForm ? "キャンセル" : "+ 子案件を追加"}
+                {showChildCaseForm
+                  ? "キャンセル"
+                  : caseDetail.caseType === CaseType.PROJECT
+                    ? "+ STANDARD を追加"
+                    : "+ 子案件を追加"}
               </button>
             )}
         </div>
@@ -881,6 +930,62 @@ const CaseDetailPage = () => {
             <p className="text-sm text-red-600 text-center py-6">{childCasesError}</p>
           ) : childCases.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">子案件はまだありません。</p>
+          ) : caseDetail.caseType === CaseType.PROJECT ? (
+            <>
+              {nestedChildCasesError && (
+                <p className="mb-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                  {nestedChildCasesError}
+                </p>
+              )}
+              <ul className="space-y-4">
+              {childCases.map((standardChild) => (
+                <li key={standardChild.caseId} className="border border-blue-100 rounded-xl overflow-hidden">
+                  <div
+                    onClick={() => router.push(`/dashboard/cases/${standardChild.caseId}`)}
+                    className="flex items-center gap-3 p-3 bg-blue-50/40 hover:bg-blue-50 transition-colors cursor-pointer"
+                  >
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_STYLES[standardChild.status]}`}>
+                      {STATUS_LABELS[standardChild.status]}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap bg-blue-50 text-blue-600 border border-blue-100">
+                      STANDARD
+                    </span>
+                    <span className="text-sm font-bold text-gray-800 flex-1 truncate">{standardChild.title}</span>
+                    {standardChild.dueDate && (
+                      <span className="text-xs text-gray-400 whitespace-nowrap">{standardChild.dueDate}</span>
+                    )}
+                  </div>
+                  {isNestedLoading ? (
+                    <div className="px-6 py-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
+                    </div>
+                  ) : (requestChildrenByStandard[standardChild.caseId] ?? []).length > 0 ? (
+                    <ul className="divide-y divide-gray-50">
+                      {(requestChildrenByStandard[standardChild.caseId] ?? []).map((requestChild) => (
+                        <li
+                          key={requestChild.caseId}
+                          onClick={() => router.push(`/dashboard/cases/${requestChild.caseId}`)}
+                          className="flex items-center gap-3 p-3 pl-8 hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <span className="text-gray-300 text-xs">{"└"}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_STYLES[requestChild.status]}`}>
+                            {STATUS_LABELS[requestChild.status]}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap bg-orange-50 text-orange-600 border border-orange-100">
+                            REQUEST
+                          </span>
+                          <span className="text-sm text-gray-700 flex-1 truncate">{requestChild.title}</span>
+                          {requestChild.dueDate && (
+                            <span className="text-xs text-gray-400 whitespace-nowrap">{requestChild.dueDate}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              ))}
+              </ul>
+            </>
           ) : (
             <ul className="space-y-3">
               {childCases.map((child) => (

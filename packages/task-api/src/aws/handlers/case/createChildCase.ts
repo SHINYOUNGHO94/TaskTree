@@ -109,8 +109,12 @@ export const createHandler =
         return forbidden("You do not have access to this case");
       }
 
-      if (parentCase.caseType !== CaseType.STANDARD) {
-        return badRequest("Child cases can only be created under a STANDARD case");
+      if (parentCase.caseType === CaseType.REQUEST) {
+        return badRequest("Cannot create child cases under a REQUEST case");
+      }
+
+      if (parentCase.caseType !== CaseType.STANDARD && parentCase.caseType !== CaseType.PROJECT) {
+        return badRequest("Child cases can only be created under a STANDARD or PROJECT case");
       }
 
       const isCreator = parentCase.creatorId === userId;
@@ -139,12 +143,17 @@ export const createHandler =
         }
       }
 
+      const childCaseType =
+        parentCase.caseType === CaseType.PROJECT ? CaseType.STANDARD : CaseType.REQUEST;
+      const childProjectId =
+        parentCase.caseType === CaseType.PROJECT ? parentCaseId : parentCase.projectId;
+
       const now = new Date().toISOString();
       const childCase: CaseDetail = {
         caseId: randomUUID(),
         title: title.trim(),
         description: description.trim(),
-        caseType: CaseType.REQUEST,
+        caseType: childCaseType,
         status: CaseStatus.WAITING,
         deliveryType: deliveryType as CaseDeliveryType,
         ownerType: CaseOwnerType.USER,
@@ -157,7 +166,7 @@ export const createHandler =
         departmentId: profile.departmentId,
         teamId: profile.teamId,
         creatorId: userId,
-        projectId: parentCase.projectId,
+        projectId: childProjectId,
         parentCaseId,
         dueDate,
         createdAt: now,

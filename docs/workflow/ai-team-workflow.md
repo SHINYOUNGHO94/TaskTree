@@ -1,5 +1,19 @@
 # AI Team Workflow
 
+## 運用品質 Review
+
+Task 16、Task 17、Task 18 では、すべての AI agent が `docs/core/operational-quality-baseline.md` を適用します。
+
+reviewer agent は次を確認します。
+
+- 認可と tenant 分離
+- API contract と request validation
+- DynamoDB access pattern と GSI 影響
+- least-privilege IAM
+- UI の visible error / partial-error state
+- deployment impact report
+- verification command
+
 このドキュメントは、TaskTree v2.0.0 改善のための AI エージェントチーム運用方法を定義します。
 
 ## 基本フロー

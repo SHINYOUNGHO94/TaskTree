@@ -1,5 +1,11 @@
 # GEMINI.md
 
+## 運用品質基準
+
+- Task 16、Task 17、Task 18 の review 前に `docs/core/operational-quality-baseline.md` を読む。
+- 認可、tenant 分離、IAM、DynamoDB access pattern、UI error state、deployment impact を必須 risk area として review する。
+- 過去の実務運用経験は、一般化された engineering principle としてのみ扱う。勤務先の固有 code や data をコピーしてはならない。
+
 Gemini 用の TaskTree 作業エントリーポイントです。
 
 作業前に必ず `AGENTS.md` を読み、そこに記載された共通ドキュメントに必ず従ってください。
