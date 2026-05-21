@@ -11,7 +11,11 @@ import {
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseCommentRepository } from "@/repositories/caseCommentRepository";
 import { UserRepository } from "@/repositories/userRepository";
+import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { createHandler } from "./getCaseComments";
+
+const makeParticipantCompanyRepo = () =>
+  ({ findByCaseAndCompany: vi.fn().mockResolvedValue(undefined) }) as unknown as CaseParticipantCompanyRepository;
 
 const makeEvent = (params: { sub?: string; id?: string }): APIGatewayProxyEvent =>
   ({
@@ -84,13 +88,13 @@ const makeMockRepos = (overrides: {
   const userRepo = {
     findByUserId: vi.fn().mockResolvedValue(overrides.profileResult),
   } as unknown as UserRepository;
-  return { caseRepo, caseCommentRepo, userRepo };
+  return { caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() };
 };
 
 describe("getCaseComments", () => {
   it("JWT がない場合は 401", async () => {
     const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ id: "CASE-1" }));
     expect(response.statusCode).toBe(401);
   });
@@ -100,7 +104,7 @@ describe("getCaseComments", () => {
       caseResult: baseCase,
       profileResult: undefined,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(500);
   });
@@ -110,7 +114,7 @@ describe("getCaseComments", () => {
       caseResult: undefined,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-NONEXISTENT" }));
     expect(response.statusCode).toBe(404);
   });
@@ -121,7 +125,7 @@ describe("getCaseComments", () => {
       caseResult: otherCompanyCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(403);
   });
@@ -138,7 +142,7 @@ describe("getCaseComments", () => {
       caseResult: inaccessibleCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(403);
   });
@@ -149,7 +153,7 @@ describe("getCaseComments", () => {
       profileResult: mockProfile,
       comments: [mockComment],
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as unknown[];
@@ -169,7 +173,7 @@ describe("getCaseComments", () => {
       profileResult: mockProfile,
       comments: [],
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
   });
@@ -180,7 +184,7 @@ describe("getCaseComments", () => {
       profileResult: mockProfile,
       comments: [],
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo, participantCompanyRepo: makeParticipantCompanyRepo() });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as unknown[];

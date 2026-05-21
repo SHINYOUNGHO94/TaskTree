@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Plus, RefreshCw } from "lucide-react";
-import { CaseDetail, CaseService, TaskService, TaskSummary, TaskStatus } from "@task/core";
+import {
+  CaseDetail,
+  CaseParticipantCompanyStatus,
+  CaseService,
+  ParticipantCompanyInvitation,
+  TaskService,
+  TaskSummary,
+  TaskStatus,
+} from "@task/core";
 import { useUser } from "../../components/providers/UserProvider";
 import { CaseCard } from "../../components/dashboard/CaseCard";
 import { TaskCard } from "../../components/dashboard/TaskCard";
@@ -22,11 +30,17 @@ const DashboardPage = () => {
   const [cases, setCases] = useState<CaseDetail[]>([]);
   const [casesLoading, setCasesLoading] = useState(true);
   const [casesError, setCasesError] = useState<string | null>(null);
+  const [invitations, setInvitations] = useState<ParticipantCompanyInvitation[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(false);
+  const [invitationsError, setInvitationsError] = useState<string | null>(null);
+  const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
+  const [invitationActionErrors, setInvitationActionErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (user) {
       fetchTasks();
       fetchCases();
+      fetchInvitations();
     }
   }, [user]);
 
@@ -54,6 +68,45 @@ const DashboardPage = () => {
       setCasesError('案件の取得に失敗しました。再度お試しください。');
     } finally {
       setCasesLoading(false);
+    }
+  };
+
+  const fetchInvitations = async () => {
+    setInvitationsLoading(true);
+    setInvitationsError(null);
+    try {
+      const data = await CaseService.getParticipantCompanyInvitations();
+      setInvitations(data);
+    } catch (error) {
+      console.error("Failed to fetch invitations", error);
+      setInvitationsError('招待の取得に失敗しました。');
+    } finally {
+      setInvitationsLoading(false);
+    }
+  };
+
+  const handleInvitationAction = async (
+    inv: ParticipantCompanyInvitation,
+    status: CaseParticipantCompanyStatus.ACTIVE | CaseParticipantCompanyStatus.REJECTED,
+  ) => {
+    const key = `${inv.participantCompany.caseId}-${inv.participantCompany.companyId}`;
+    setProcessingInvitation(key);
+    setInvitationActionErrors((prev) => ({ ...prev, [key]: "" }));
+    try {
+      await CaseService.updateParticipantCompanyStatus(
+        inv.participantCompany.caseId,
+        inv.participantCompany.companyId,
+        { status },
+      );
+      await fetchInvitations();
+    } catch (error) {
+      console.error("Failed to process invitation action", error);
+      setInvitationActionErrors((prev) => ({
+        ...prev,
+        [key]: "処理に失敗しました。再度お試しください。",
+      }));
+    } finally {
+      setProcessingInvitation(null);
     }
   };
 
@@ -213,6 +266,98 @@ const DashboardPage = () => {
         profile={profile}
         userId={user.id}
       />
+
+      <div className="mt-12">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">外部案件招待</h2>
+            <p className="text-gray-500 text-sm mt-1">他社から受け取った案件参加招待</p>
+          </div>
+        </div>
+
+        {invitationsError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+            {invitationsError}
+          </div>
+        )}
+
+        {invitationsLoading ? (
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-20 bg-white border border-gray-100 animate-pulse rounded-2xl" />
+            ))}
+          </div>
+        ) : invitations.length === 0 ? (
+          <div className="py-10 text-center text-gray-400 border border-gray-100 rounded-2xl bg-white">
+            <p className="text-sm">外部案件の招待はありません</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {invitations.map((inv) => {
+              const key = `${inv.participantCompany.caseId}-${inv.participantCompany.companyId}`;
+              const isProcessing = processingInvitation === key;
+              const actionError = invitationActionErrors[key];
+              return (
+                <li key={key} className="bg-white border border-gray-200 rounded-2xl p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${
+                            inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED
+                            ? "招待中"
+                            : "参加中"}
+                        </span>
+                        <span className="text-xs text-gray-400 font-mono truncate">
+                          {inv.caseSummary.caseType} / {inv.caseSummary.status}
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-gray-900 truncate">{inv.caseSummary.title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        招待者: {inv.participantCompany.invitedBy}
+                      </p>
+                      {actionError && (
+                        <p className="text-xs text-red-600 mt-1">{actionError}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => router.push(`/dashboard/cases/${inv.caseSummary.caseId}`)}
+                        className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        詳細を見る
+                      </button>
+                      {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED && (
+                        <>
+                          <button
+                            onClick={() => handleInvitationAction(inv, CaseParticipantCompanyStatus.ACTIVE)}
+                            disabled={isProcessing}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {isProcessing ? "処理中..." : "承認"}
+                          </button>
+                          <button
+                            onClick={() => handleInvitationAction(inv, CaseParticipantCompanyStatus.REJECTED)}
+                            disabled={isProcessing}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {isProcessing ? "処理中..." : "拒否"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </section>
   );
 };

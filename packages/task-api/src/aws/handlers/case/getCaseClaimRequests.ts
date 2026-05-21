@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseClaimRequest, CaseOwnerType } from "@task/core";
+import { CaseOwnerType } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseClaimRequestRepository } from "@/repositories/caseClaimRequestRepository";
 import { UserRepository } from "@/repositories/userRepository";

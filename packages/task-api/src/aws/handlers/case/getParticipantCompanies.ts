@@ -8,23 +8,18 @@ import {
 } from "@task/core";
 import type { UserEntity } from "@/aws/entities/items/userRecord";
 import { CaseRepository } from "@/repositories/caseRepository";
-import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
-import {
-  forbidden,
-  internalServerError,
-  notFound,
-  unauthorized,
-} from "@/errors/utils";
+import { forbidden, internalServerError, notFound, unauthorized } from "@/errors/utils";
 
-const isInternalAccessAllowed = (
-  caseDetail: CaseDetail,
-  userId: string,
-  profile: UserEntity,
-): boolean => {
+const isOwnerAllowed = (caseDetail: CaseDetail, userId: string): boolean => {
   if (caseDetail.creatorId === userId) return true;
   if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
+  return false;
+};
+
+const isInternalAccessAllowed = (caseDetail: CaseDetail, userId: string, profile: UserEntity): boolean => {
+  if (isOwnerAllowed(caseDetail, userId)) return true;
 
   switch (caseDetail.targetScope) {
     case CaseTargetScope.COMPANY:
@@ -42,15 +37,14 @@ const isInternalAccessAllowed = (
   return false;
 };
 
-export interface GetCaseHistoryDeps {
+export interface GetParticipantCompaniesDeps {
   caseRepo: CaseRepository;
-  caseHistoryRepo: CaseHistoryRepository;
   participantCompanyRepo: CaseParticipantCompanyRepository;
   userRepo: UserRepository;
 }
 
 export const createHandler =
-  (deps: GetCaseHistoryDeps) =>
+  (deps: GetParticipantCompaniesDeps) =>
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
       const userId = event.requestContext.authorizer?.claims.sub;
@@ -59,22 +53,22 @@ export const createHandler =
       const caseId = event.pathParameters?.id;
       if (!caseId) return notFound("Case not found");
 
-      const [profile, existingCase] = await Promise.all([
+      const [profile, caseDetail] = await Promise.all([
         deps.userRepo.findByUserId(userId),
         deps.caseRepo.findById(caseId),
       ]);
 
       if (!profile) return internalServerError("User profile not found");
-      if (!existingCase) return notFound("Case not found");
+      if (!caseDetail) return notFound("Case not found");
 
-      const isSameCompany = existingCase.companyId === profile.companyId;
+      const isSameCompany = caseDetail.companyId === profile.companyId;
 
       if (isSameCompany) {
-        if (!isInternalAccessAllowed(existingCase, userId, profile)) {
+        if (!isInternalAccessAllowed(caseDetail, userId, profile)) {
           return forbidden("You do not have access to this case");
         }
       } else {
-        if (existingCase.deliveryType !== CaseDeliveryType.OPEN) {
+        if (caseDetail.deliveryType !== CaseDeliveryType.OPEN) {
           return forbidden("You do not have access to this case");
         }
 
@@ -87,12 +81,12 @@ export const createHandler =
         }
       }
 
-      const entries = await deps.caseHistoryRepo.findByCaseId(caseId);
+      const participants = await deps.participantCompanyRepo.findByCaseId(caseId);
 
       return {
         statusCode: 200,
         headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify(entries),
+        body: JSON.stringify(participants),
       };
     } catch (error) {
       console.error(error);
@@ -103,7 +97,6 @@ export const createHandler =
 const tableName = process.env.TABLE_NAME || "";
 export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
-  caseHistoryRepo: new CaseHistoryRepository(tableName),
   participantCompanyRepo: new CaseParticipantCompanyRepository(tableName),
   userRepo: new UserRepository(tableName),
 });

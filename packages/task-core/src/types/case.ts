@@ -138,6 +138,53 @@ export enum CaseHistoryAction {
   CLAIM_APPROVED = "CLAIM_APPROVED",
   CLAIM_REJECTED = "CLAIM_REJECTED",
   CHILD_CASE_CREATED = "CHILD_CASE_CREATED",
+  PARTICIPANT_COMPANY_INVITED = "PARTICIPANT_COMPANY_INVITED",
+  PARTICIPANT_COMPANY_ACCEPTED = "PARTICIPANT_COMPANY_ACCEPTED",
+  PARTICIPANT_COMPANY_REJECTED = "PARTICIPANT_COMPANY_REJECTED",
+}
+
+export enum CaseParticipantCompanyStatus {
+  INVITED = "INVITED",
+  ACTIVE = "ACTIVE",
+  REJECTED = "REJECTED",
+  REMOVED = "REMOVED",
+}
+
+export interface CaseParticipantCompany {
+  participantCompanyId: string;
+  caseId: string;
+  ownerCompanyId: string;
+  companyId: string;
+  companyName: string | null;
+  status: CaseParticipantCompanyStatus;
+  invitedBy: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CaseInvitationSummary {
+  caseId: string;
+  title: string;
+  caseType: CaseType;
+  status: CaseStatus;
+  deliveryType: CaseDeliveryType;
+  ownerCompanyId: string;
+  createdAt: string;
+}
+
+export interface ParticipantCompanyInvitation {
+  participantCompany: CaseParticipantCompany;
+  caseSummary: CaseInvitationSummary;
+}
+
+export interface InviteParticipantCompanyInput {
+  companyId: string;
+}
+
+export interface UpdateParticipantCompanyStatusInput {
+  status: CaseParticipantCompanyStatus.ACTIVE | CaseParticipantCompanyStatus.REJECTED;
 }
 
 export enum CaseClaimRequestStatus {

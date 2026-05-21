@@ -13,6 +13,8 @@ import {
   CaseHistoryAction,
   CaseHistoryEntry,
   CaseOwnerType,
+  CaseParticipantCompany,
+  CaseParticipantCompanyStatus,
   CaseService,
   CaseStatus,
   CaseTargetScope,
@@ -30,6 +32,23 @@ const HISTORY_ACTION_LABELS: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.CLAIM_APPROVED]: "担当承認",
   [CaseHistoryAction.CLAIM_REJECTED]: "担当却下",
   [CaseHistoryAction.CHILD_CASE_CREATED]: "子案件追加",
+  [CaseHistoryAction.PARTICIPANT_COMPANY_INVITED]: "外部会社招待",
+  [CaseHistoryAction.PARTICIPANT_COMPANY_ACCEPTED]: "外部会社参加承認",
+  [CaseHistoryAction.PARTICIPANT_COMPANY_REJECTED]: "外部会社参加拒否",
+};
+
+const PARTICIPANT_STATUS_STYLES: Record<CaseParticipantCompanyStatus, string> = {
+  [CaseParticipantCompanyStatus.INVITED]: "bg-yellow-100 text-yellow-700",
+  [CaseParticipantCompanyStatus.ACTIVE]: "bg-green-100 text-green-700",
+  [CaseParticipantCompanyStatus.REJECTED]: "bg-red-100 text-red-700",
+  [CaseParticipantCompanyStatus.REMOVED]: "bg-gray-100 text-gray-500",
+};
+
+const PARTICIPANT_STATUS_LABELS: Record<CaseParticipantCompanyStatus, string> = {
+  [CaseParticipantCompanyStatus.INVITED]: "招待中",
+  [CaseParticipantCompanyStatus.ACTIVE]: "参加中",
+  [CaseParticipantCompanyStatus.REJECTED]: "拒否",
+  [CaseParticipantCompanyStatus.REMOVED]: "削除",
 };
 
 const TASK_STATUS_LABELS: Record<CaseTaskStatus, string> = {
@@ -187,6 +206,13 @@ const CaseDetailPage = () => {
   const [requestChildrenByStandard, setRequestChildrenByStandard] = useState<Record<string, CaseDetail[]>>({});
   const [isNestedLoading, setIsNestedLoading] = useState(false);
   const [nestedChildCasesError, setNestedChildCasesError] = useState<string | null>(null);
+  const [participantCompanies, setParticipantCompanies] = useState<CaseParticipantCompany[]>([]);
+  const [isParticipantsLoading, setIsParticipantsLoading] = useState(false);
+  const [participantsError, setParticipantsError] = useState<string | null>(null);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteCompanyId, setInviteCompanyId] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -404,6 +430,40 @@ const CaseDetailPage = () => {
     }
   }, [id]);
 
+  const fetchParticipantCompanies = useCallback(async () => {
+    setIsParticipantsLoading(true);
+    setParticipantsError(null);
+    try {
+      const data = await CaseService.getParticipantCompanies(id as string);
+      setParticipantCompanies(data);
+    } catch (error) {
+      console.error("Failed to fetch participant companies", error);
+      setParticipantsError("参加会社の取得に失敗しました。");
+    } finally {
+      setIsParticipantsLoading(false);
+    }
+  }, [id]);
+
+  const handleInviteCompany = async () => {
+    if (!inviteCompanyId.trim()) {
+      setInviteError("会社IDを入力してください。");
+      return;
+    }
+    setIsInviting(true);
+    setInviteError(null);
+    try {
+      await CaseService.inviteParticipantCompany(id as string, { companyId: inviteCompanyId.trim() });
+      setInviteCompanyId("");
+      setShowInviteForm(false);
+      await Promise.all([fetchParticipantCompanies(), fetchCaseHistory()]);
+    } catch (error) {
+      console.error("Failed to invite company", error);
+      setInviteError("招待に失敗しました。会社IDを確認してください。");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   const handleSubmitComment = async () => {
     if (!newCommentContent.trim()) {
       setCommentSubmitError("コメント内容を入力してください。");
@@ -466,8 +526,9 @@ const CaseDetailPage = () => {
       fetchCaseComments();
       fetchCaseClaimRequests();
       fetchChildCases();
+      fetchParticipantCompanies();
     }
-  }, [id, fetchCase, fetchCaseTasks, fetchCaseHistory, fetchCaseComments, fetchCaseClaimRequests, fetchChildCases]);
+  }, [id, fetchCase, fetchCaseTasks, fetchCaseHistory, fetchCaseComments, fetchCaseClaimRequests, fetchChildCases, fetchParticipantCompanies]);
 
   useEffect(() => {
     if (!caseDetail || caseDetail.caseId !== id) return;
@@ -1007,6 +1068,73 @@ const CaseDetailPage = () => {
           )}
         </div>
       </div>
+
+      {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">参加会社</h3>
+            {currentUserId &&
+              (caseDetail.creatorId === currentUserId ||
+                (caseDetail.ownerType === CaseOwnerType.USER &&
+                  caseDetail.ownerId === currentUserId)) && (
+                <button
+                  onClick={() => setShowInviteForm((v) => !v)}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"
+                >
+                  {showInviteForm ? "キャンセル" : "会社を招待"}
+                </button>
+              )}
+          </div>
+          {showInviteForm && (
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+              <div className="space-y-3">
+                {inviteError && (
+                  <p className="text-sm text-red-600 font-medium">{inviteError}</p>
+                )}
+                <input
+                  type="text"
+                  value={inviteCompanyId}
+                  onChange={(e) => setInviteCompanyId(e.target.value)}
+                  placeholder="招待する会社のID..."
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleInviteCompany}
+                  disabled={isInviting || !inviteCompanyId.trim()}
+                  className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isInviting ? "招待中..." : "招待する"}
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="p-6">
+            {isParticipantsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
+              </div>
+            ) : participantsError ? (
+              <p className="text-sm text-red-600 text-center py-4">{participantsError}</p>
+            ) : participantCompanies.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">参加会社はまだありません。</p>
+            ) : (
+              <ul className="space-y-3">
+                {participantCompanies.map((p) => (
+                  <li key={p.companyId} className="flex items-center justify-between border border-gray-100 rounded-xl p-4">
+                    <div>
+                      <span className="text-sm font-bold text-gray-800">{p.companyName ?? p.companyId}</span>
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">{p.companyId}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${PARTICIPANT_STATUS_STYLES[p.status]}`}>
+                      {PARTICIPANT_STATUS_LABELS[p.status]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
 
       {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
