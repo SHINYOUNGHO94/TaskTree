@@ -16,6 +16,16 @@ import {
 
 type ErrorType = "notFound" | "forbidden" | "error";
 
+const UPDATABLE_STATUSES: CaseStatus[] = [
+  CaseStatus.WAITING,
+  CaseStatus.IN_PROGRESS,
+  CaseStatus.REVIEW_REQUESTED,
+  CaseStatus.COMPLETED,
+  CaseStatus.ON_HOLD,
+  CaseStatus.CANCELED,
+  CaseStatus.REOPENED,
+];
+
 const STATUS_LABELS: Record<CaseStatus, string> = {
   [CaseStatus.WAITING]: "待機中",
   [CaseStatus.IN_PROGRESS]: "対応中",
@@ -94,6 +104,9 @@ const CaseDetailPage = () => {
   const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorType, setErrorType] = useState<ErrorType | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<CaseStatus | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -101,6 +114,7 @@ const CaseDetailPage = () => {
     try {
       const data = await CaseService.getCase(id as string);
       setCaseDetail(data);
+      setSelectedStatus(data.status);
     } catch (error) {
       console.error("Failed to fetch case detail", error);
       setErrorType(resolveErrorType(error));
@@ -108,6 +122,22 @@ const CaseDetailPage = () => {
       setIsLoading(false);
     }
   }, [id]);
+
+  const handleStatusUpdate = async () => {
+    if (!selectedStatus || !caseDetail || selectedStatus === caseDetail.status) return;
+    setIsUpdating(true);
+    setUpdateError(null);
+    try {
+      await CaseService.updateCaseStatus(id as string, { status: selectedStatus });
+      await fetchCase();
+    } catch (error) {
+      console.error("Failed to update case status", error);
+      setUpdateError("ステータスの更新に失敗しました。再度お試しください。");
+      setSelectedStatus(caseDetail.status);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -188,6 +218,31 @@ const CaseDetailPage = () => {
           <h1 className="text-3xl font-black text-gray-900 mb-6 leading-tight">
             {caseDetail.title}
           </h1>
+
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <select
+              value={selectedStatus ?? caseDetail.status}
+              onChange={(e) => setSelectedStatus(e.target.value as CaseStatus)}
+              disabled={isUpdating}
+              className="text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {UPDATABLE_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleStatusUpdate}
+              disabled={isUpdating || selectedStatus === caseDetail.status}
+              className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {isUpdating ? "更新中..." : "ステータス更新"}
+            </button>
+            {updateError && (
+              <p className="text-sm text-red-600 font-medium">{updateError}</p>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center gap-3">

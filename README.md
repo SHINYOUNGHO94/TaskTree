@@ -280,6 +280,16 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - Case 編集、削除、状態変更、History、Comment、Claim request、Case 配下 task 作成は後続 Task に分離
 - `type-check:core`、`type-check:api`、`@task/app` lint / build、API テストで検証
 
+### Task 10: Case 状態変更の追加
+
+- `PUT /cases/{id}` API と `UpdateCaseFunction` Lambda を追加し、Case 詳細画面から status だけを変更できるようにした
+- `@task/core` に `CaseService.updateCaseStatus` と `UpdateCaseStatusInput` を追加し、フロントエンドから型付き service 経由で状態変更 API を呼び出す構成を維持
+- `updateCase` では認証済みユーザーの profile と case record をサーバー側で取得し、同一会社内の creator または USER owner のみ状態変更を許可
+- 不正 JSON、未対応 status、存在しない case、別会社 case、権限外ユーザーの更新を拒否する API テストを追加
+- Case 詳細画面に状態変更ボタンを追加し、更新中の disabled 表示、失敗時の画面内エラー、成功後の詳細再取得を実装
+- History 自動記録、Comment、Approval flow、Claim request、Case 配下 task 作成は後続 Task に分離
+- `type-check:core`、`type-check:api`、`@task/app` lint / build、API テストで検証
+
 ---
 
 ## 開発メモ

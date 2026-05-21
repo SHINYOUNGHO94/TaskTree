@@ -93,3 +93,7 @@ export interface UpdateCaseInput {
   status?: CaseStatus;
   dueDate?: string | null;
 }
+
+export interface UpdateCaseStatusInput {
+  status: CaseStatus;
+}
