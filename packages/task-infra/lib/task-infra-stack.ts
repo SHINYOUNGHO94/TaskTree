@@ -140,6 +140,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
+    grantTableRead(createDivisionFn);
     grantTableCreate(createDivisionFn);
 
     const getDivisionsFn = new NodejsFunction(this, 'GetDivisionsFunction', {
@@ -160,6 +161,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
+    grantTableRead(createDepartmentFn);
     grantTableCreate(createDepartmentFn);
 
     const getDepartmentsFn = new NodejsFunction(this, 'GetDepartmentsFunction', {
@@ -180,6 +182,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
+    grantTableRead(createTeamFn);
     grantTableCreate(createTeamFn);
 
     const getTeamsFn = new NodejsFunction(this, 'GetTeamsFunction', {
@@ -398,7 +401,7 @@ export class TaskInfraStack extends cdk.Stack {
     companyResource.addMethod('POST', new apigateway.LambdaIntegration(createCompanyFn));
 
     const divisionResource = api.root.addResource('division');
-    divisionResource.addMethod('POST', new apigateway.LambdaIntegration(createDivisionFn));
+    divisionResource.addMethod('POST', new apigateway.LambdaIntegration(createDivisionFn), { authorizer });
     divisionResource.addMethod('GET', new apigateway.LambdaIntegration(getDivisionsFn), { authorizer });
 
     const departmentResource = api.root.addResource('department');

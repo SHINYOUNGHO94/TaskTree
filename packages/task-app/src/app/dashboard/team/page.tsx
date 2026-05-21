@@ -155,7 +155,7 @@ export default function TeamPage() {
   const getTeamName = (id?: string) => id ? (teams.find(t => t.teamId === id)?.name || id) : "---";
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
@@ -264,16 +264,16 @@ export default function TeamPage() {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
                   <tr>
-                    <th className="px-6 py-4 font-semibold">メンバー</th>
-                    <th className="px-6 py-4 font-semibold">権限</th>
-                    <th className="px-6 py-4 font-semibold">所属</th>
-                    <th className="px-6 py-4 font-semibold">登録日</th>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[200px] w-[25%]">メンバー</th>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[100px] w-[15%]">権限</th>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[220px] w-[45%]">所属</th>
+                    <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[130px] w-[15%]">登録日</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-400 whitespace-nowrap">
                         <div className="flex justify-center mb-2">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                         </div>
@@ -282,46 +282,50 @@ export default function TeamPage() {
                     </tr>
                   ) : members.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-400 whitespace-nowrap">
                         メンバーがいません。
                       </td>
                     </tr>
                   ) : (
                     members.map((member) => (
                       <tr key={member.userId} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold uppercase">
+                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold uppercase flex-shrink-0">
                               {member.name.charAt(0)}
                             </div>
-                            <div>
-                              <div className="font-bold text-gray-900">{member.name}</div>
-                              <div className="text-gray-500 text-xs flex items-center gap-1 mt-0.5">
-                                <Mail size={12} /> {member.email}
+                            <div className="min-w-0">
+                              <div className="font-bold text-gray-900 truncate">{member.name}</div>
+                              <div className="text-gray-500 text-xs flex items-center gap-1 mt-0.5 truncate">
+                                <Mail size={12} className="flex-shrink-0" /> <span className="truncate">{member.email}</span>
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap min-w-[100px]">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-                            <Shield size={12} />
+                            <Shield size={12} className="flex-shrink-0" />
                             {member.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-gray-600">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                              <Building size={12} className="text-gray-400" />
-                              {member.divisionId && member.divisionId !== "NONE" && `${getDivName(member.divisionId)} / `}
-                              {!member.departmentId || member.departmentId === "NONE" ? "未配属" : getDeptName(member.departmentId)}
+                        <td className="px-6 py-4 text-gray-600 whitespace-nowrap min-w-[220px]">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-700 whitespace-nowrap flex-nowrap">
+                              <Building size={12} className="text-gray-400 flex-shrink-0" />
+                              <span className="truncate">
+                                {member.divisionId && member.divisionId !== "NONE" ? `${getDivName(member.divisionId)} / ` : ""}
+                                {!member.departmentId || member.departmentId === "NONE" ? "未配属" : getDeptName(member.departmentId)}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500 ml-4 border-l border-gray-200 pl-2">
-                              <Layers size={10} className="text-gray-400" />
-                              {!member.teamId || member.teamId === "NONE" ? "未配属" : getTeamName(member.teamId)}
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 ml-4 border-l border-gray-200 pl-2 whitespace-nowrap flex-nowrap">
+                              <Layers size={10} className="text-gray-400 flex-shrink-0" />
+                              <span className="truncate">
+                                {!member.teamId || member.teamId === "NONE" ? "未配属" : getTeamName(member.teamId)}
+                              </span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-gray-500">
+                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap min-w-[130px]">
                           {member.createdAt ? new Date(member.createdAt).toLocaleDateString() : "-"}
                         </td>
                       </tr>

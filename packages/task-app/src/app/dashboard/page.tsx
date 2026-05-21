@@ -386,22 +386,22 @@ const DashboardPage = () => {
         </div>
 
         {/* Search / Filter / Sort controls */}
-        <div className="flex flex-wrap gap-3 mb-5">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="bg-gray-50/60 border border-gray-200/80 p-3 rounded-2xl flex flex-wrap gap-3 mb-6 items-center shadow-sm">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="タイトル・説明・ID で検索"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-1"
+              className="w-full pl-9 pr-3.5 py-2 text-sm border border-gray-200/80 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all shadow-sm"
             />
           </div>
 
           <select
             value={caseTypeFilter}
             onChange={(e) => setCaseTypeFilter(e.target.value as CaseTypeFilter)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             <option value="ALL">種別: すべて</option>
             <option value={CaseType.REQUEST}>REQUEST</option>
@@ -412,7 +412,7 @@ const DashboardPage = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as CaseStatusFilter)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             <option value="ALL">状態: すべて</option>
             <option value={CaseStatus.WAITING}>待機中</option>
@@ -427,7 +427,7 @@ const DashboardPage = () => {
           <select
             value={deliveryTypeFilter}
             onChange={(e) => setDeliveryTypeFilter(e.target.value as DeliveryTypeFilter)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             <option value="ALL">配信: すべて</option>
             <option value={CaseDeliveryType.DIRECT}>直接依頼</option>
@@ -437,7 +437,7 @@ const DashboardPage = () => {
           <select
             value={ownershipFilter}
             onChange={(e) => setOwnershipFilter(e.target.value as OwnershipFilter)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             <option value="ALL">担当: すべて</option>
             <option value="CREATED_BY_ME">自分が作成</option>
@@ -447,7 +447,7 @@ const DashboardPage = () => {
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
               <option key={k} value={k}>
@@ -472,18 +472,34 @@ const DashboardPage = () => {
         {casesLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-40 bg-white border border-gray-100 animate-pulse rounded-2xl" />
+              <div key={i} className="w-full bg-white border border-gray-200/60 p-5 rounded-xl animate-pulse flex flex-col justify-between min-h-[170px] shadow-sm">
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="h-4 w-16 bg-gray-200 rounded" />
+                    <div className="h-4 w-16 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-4 w-3/4 bg-gray-200 rounded mb-2.5" />
+                  <div className="space-y-1.5 mb-4">
+                    <div className="h-3 w-full bg-gray-100 rounded" />
+                    <div className="h-3 w-5/6 bg-gray-100 rounded" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100 w-full mt-auto">
+                  <div className="h-3 w-20 bg-gray-100 rounded" />
+                  <div className="h-3 w-14 bg-gray-100 rounded" />
+                </div>
+              </div>
             ))}
           </div>
         ) : cases.length === 0 ? (
-          <div className="py-12 text-center text-gray-400">
-            <FileText size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">案件はありません</p>
+          <div className="py-16 text-center text-gray-400 bg-gray-50/30 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-6">
+            <FileText size={36} className="mx-auto mb-3 text-gray-300" />
+            <p className="text-sm font-medium text-gray-500">案件はありません</p>
           </div>
         ) : filteredCases.length === 0 ? (
-          <div className="py-12 text-center text-gray-400">
-            <Search size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">条件に一致する案件がありません</p>
+          <div className="py-16 text-center text-gray-400 bg-gray-50/30 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-6">
+            <Search size={36} className="mx-auto mb-3 text-gray-300" />
+            <p className="text-sm font-medium text-gray-500">条件に一致する案件がありません</p>
             <button
               onClick={() => {
                 setSearchQuery("");
@@ -492,7 +508,7 @@ const DashboardPage = () => {
                 setDeliveryTypeFilter("ALL");
                 setOwnershipFilter("ALL");
               }}
-              className="mt-3 text-xs font-bold underline text-gray-500 hover:text-gray-700"
+              className="mt-4 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl hover:bg-gray-50 shadow-sm transition-all text-xs font-bold"
             >
               フィルターをリセット
             </button>
@@ -517,7 +533,8 @@ const DashboardPage = () => {
       />
 
       {/* External invitations section */}
-      <div className="mt-12">
+      {/* External invitations section */}
+      <div className="mt-12 bg-gray-50/30 border border-gray-200/60 p-6 rounded-2xl shadow-sm mb-8">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">外部案件招待</h2>
@@ -544,7 +561,7 @@ const DashboardPage = () => {
             ))}
           </div>
         ) : invitations.length === 0 ? (
-          <div className="py-10 text-center text-gray-400 border border-gray-100 rounded-2xl bg-white">
+          <div className="py-10 text-center text-gray-400 border border-dashed border-gray-200 rounded-2xl bg-white">
             <p className="text-sm">外部案件の招待はありません</p>
           </div>
         ) : (
@@ -554,38 +571,38 @@ const DashboardPage = () => {
               const isProcessing = processingInvitation === key;
               const invActionError = invitationActionErrors[key];
               return (
-                <li key={key} className="bg-white border border-gray-200 rounded-2xl p-5">
-                  <div className="flex items-start justify-between gap-4">
+                <li key={key} className="bg-white border border-gray-200/80 hover:border-gray-300 transition-all rounded-xl p-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${
+                          className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap border ${
                             inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-green-100 text-green-700"
+                              ? "bg-amber-50 text-amber-700 border-amber-100"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-100"
                           }`}
                         >
                           {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED
                             ? "招待中"
                             : "参加中"}
                         </span>
-                        <span className="text-xs text-gray-400 font-mono truncate">
+                        <span className="text-[10px] text-gray-400 font-mono tracking-wide px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100">
                           {inv.caseSummary.caseType} / {inv.caseSummary.status}
                         </span>
                       </div>
-                      <p className="text-sm font-bold text-gray-900 truncate">{inv.caseSummary.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        招待者: {inv.participantCompany.invitedBy}
+                      <p className="text-sm font-bold text-gray-900 truncate mb-1">{inv.caseSummary.title}</p>
+                      <p className="text-xs text-gray-400">
+                        招待者: <span className="font-semibold text-gray-600">{inv.participantCompany.invitedBy}</span>
                       </p>
                       {invActionError && (
-                        <p className="text-xs text-red-600 mt-1">{invActionError}</p>
+                        <p className="text-xs text-red-600 mt-1.5 font-medium">{invActionError}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {inv.participantCompany.status !== CaseParticipantCompanyStatus.INVITED && (
                         <button
                           onClick={() => router.push(`/dashboard/cases/${inv.caseSummary.caseId}`)}
-                          className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                          className="text-xs font-bold px-3.5 py-2 rounded-xl border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all"
                         >
                           詳細を見る
                         </button>
@@ -597,7 +614,7 @@ const DashboardPage = () => {
                               handleInvitationAction(inv, CaseParticipantCompanyStatus.ACTIVE)
                             }
                             disabled={isProcessing}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="text-xs font-bold px-3.5 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm hover:shadow transition-all"
                           >
                             {isProcessing ? "処理中..." : "承認"}
                           </button>
@@ -606,7 +623,7 @@ const DashboardPage = () => {
                               handleInvitationAction(inv, CaseParticipantCompanyStatus.REJECTED)
                             }
                             disabled={isProcessing}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="text-xs font-bold px-3.5 py-2 rounded-xl bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm hover:shadow transition-all"
                           >
                             {isProcessing ? "処理中..." : "拒否"}
                           </button>

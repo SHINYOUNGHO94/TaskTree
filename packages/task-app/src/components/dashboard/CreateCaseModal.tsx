@@ -118,23 +118,24 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100"
           >
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100/80 bg-gray-50/50">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="text-base font-bold text-gray-900">
                   {selectedCaseType === CaseType.PROJECT
                     ? "PROJECT 案件作成"
                     : selectedCaseType === CaseType.STANDARD
                       ? "STANDARD 案件作成"
                       : "REQUEST 案件作成"}
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-[11px] text-gray-400 mt-0.5">
                   {selectedCaseType === CaseType.PROJECT
                     ? "複数の STANDARD に分解できる大型案件"
                     : selectedCaseType === CaseType.STANDARD
@@ -142,41 +143,53 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       : "チームまたは自分への直接依頼"}
                 </p>
               </div>
-              <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
+              <button 
+                onClick={handleClose} 
+                className="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-100 rounded-lg transition-all"
+              >
+                <X size={18} />
               </button>
             </div>
 
             {succeeded ? (
-              <div className="p-8 flex flex-col items-center gap-4">
-                <CheckCircle size={48} className="text-green-500" />
-                <p className="text-lg font-bold text-gray-900">案件を作成しました</p>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-10 flex flex-col items-center gap-4 text-center"
+              >
+                <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center border border-emerald-100 mb-2">
+                  <CheckCircle size={28} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-base font-bold text-gray-900">案件を作成しました</p>
+                  <p className="text-xs text-gray-400 mt-1">ダッシュボードの一覧に新しく追加されました。</p>
+                </div>
                 <button
                   onClick={handleClose}
-                  className="mt-2 px-6 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all"
+                  className="mt-4 px-6 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-all shadow-sm hover:shadow"
                 >
                   閉じる
                 </button>
-              </div>
+              </motion.div>
             ) : (
               <form
                 onSubmit={handleSubmit(onSubmit)}
                 className="p-6 space-y-5 max-h-[80vh] overflow-y-auto"
               >
                 {submitError && (
-                  <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                  <div className="p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 font-medium">
                     {submitError}
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-600 uppercase">案件タイプ</label>
-                  <div className="flex gap-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">案件タイプ</label>
+                  <div className="bg-gray-100 p-1 rounded-xl flex gap-1 border border-gray-200/20">
                     <label
-                      className={`flex-1 flex items-center justify-center p-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${
+                      className={`flex-1 flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-xs font-bold select-none ${
                         selectedCaseType === CaseType.REQUEST
-                          ? 'border-gray-900 bg-gray-900 text-white'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                          ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
+                          : 'hover:text-gray-900 text-gray-500 hover:bg-gray-50/50'
                       }`}
                     >
                       <input
@@ -188,10 +201,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       REQUEST
                     </label>
                     <label
-                      className={`flex-1 flex items-center justify-center p-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${
+                      className={`flex-1 flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-xs font-bold select-none ${
                         selectedCaseType === CaseType.STANDARD
-                          ? 'border-gray-900 bg-gray-900 text-white'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                          ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
+                          : 'hover:text-gray-900 text-gray-500 hover:bg-gray-50/50'
                       }`}
                     >
                       <input
@@ -203,10 +216,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       STANDARD
                     </label>
                     <label
-                      className={`flex-1 flex items-center justify-center p-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${
+                      className={`flex-1 flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-xs font-bold select-none ${
                         selectedCaseType === CaseType.PROJECT
-                          ? 'border-purple-600 bg-purple-600 text-white'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'hover:text-gray-900 text-gray-500 hover:bg-gray-50/50'
                       }`}
                     >
                       <input
@@ -220,8 +233,8 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-600 uppercase">タイトル</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">タイトル</label>
                   <input
                     {...register('title', {
                       required: 'タイトルを入力してください。',
@@ -229,15 +242,15 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                         value.trim().length > 0 || 'タイトルを入力してください。',
                     })}
                     placeholder="案件のタイトルを入力"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-gray-900 focus:ring-1 outline-none transition-all"
+                    className="w-full border border-gray-200/80 rounded-xl px-3.5 py-2.5 text-xs focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm bg-white"
                   />
                   {errors.title && (
-                    <p className="text-xs text-red-500">{errors.title.message}</p>
+                    <p className="text-[11px] text-red-500 font-medium">{errors.title.message}</p>
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-600 uppercase">内容</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">内容</label>
                   <textarea
                     {...register('description', {
                       required: '内容を入力してください。',
@@ -245,22 +258,22 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                         value.trim().length > 0 || '内容を入力してください。',
                     })}
                     placeholder="案件の詳細を入力..."
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-gray-900 focus:ring-1 outline-none transition-all h-24 resize-none"
+                    className="w-full border border-gray-200/80 rounded-xl px-3.5 py-2.5 text-xs focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all h-24 resize-none shadow-sm bg-white"
                   />
                   {errors.description && (
-                    <p className="text-xs text-red-500">{errors.description.message}</p>
+                    <p className="text-[11px] text-red-500 font-medium">{errors.description.message}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-600 uppercase">送信先</label>
-                  <div className="flex gap-2">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">送信先</label>
+                  <div className="bg-gray-100 p-1 rounded-xl flex gap-1 border border-gray-200/20">
                     {teamAvailable && (
                       <label
-                        className={`flex-1 flex items-center justify-center p-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${
+                        className={`flex-1 flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-xs font-bold select-none ${
                           selectedScope === CaseTargetScope.TEAM
-                            ? 'border-gray-900 bg-gray-900 text-white'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                            ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
+                            : 'hover:text-gray-900 text-gray-500 hover:bg-gray-50/50'
                         }`}
                       >
                         <input
@@ -273,10 +286,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       </label>
                     )}
                     <label
-                      className={`flex-1 flex items-center justify-center p-2.5 rounded-xl border cursor-pointer transition-all text-sm font-bold ${
+                      className={`flex-1 flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-xs font-bold select-none ${
                         selectedScope === CaseTargetScope.USER
-                          ? 'border-gray-900 bg-gray-900 text-white'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                          ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
+                          : 'hover:text-gray-900 text-gray-500 hover:bg-gray-50/50'
                       }`}
                     >
                       <input
@@ -290,29 +303,29 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1">
-                    <Calendar size={12} /> 期限（任意）
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                    <Calendar size={12} className="text-gray-400" /> 期限（任意）
                   </label>
                   <input
                     type="date"
                     {...register('dueDate')}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-gray-900 outline-none"
+                    className="w-full border border-gray-200/80 rounded-xl px-3.5 py-2.5 text-xs focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm bg-white"
                   />
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-3 pt-3 border-t border-gray-100">
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all"
+                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all"
                   >
                     キャンセル
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-all"
+                    className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800 disabled:opacity-50 transition-all shadow-sm hover:shadow"
                   >
                     {isSubmitting ? '送信中...' : '案件を作成する'}
                   </button>
