@@ -326,12 +326,14 @@ const DashboardPage = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => router.push(`/dashboard/cases/${inv.caseSummary.caseId}`)}
-                        className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-                      >
-                        詳細を見る
-                      </button>
+                      {inv.participantCompany.status !== CaseParticipantCompanyStatus.INVITED && (
+                        <button
+                          onClick={() => router.push(`/dashboard/cases/${inv.caseSummary.caseId}`)}
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          詳細を見る
+                        </button>
+                      )}
                       {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED && (
                         <>
                           <button

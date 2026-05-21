@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { CaseDeliveryType, CaseOwnerType, CaseStatus, CaseTargetScope, CaseType, UserRole } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
+import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
+import { CaseVisibilityRepository } from "@/repositories/caseVisibilityRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { DivisionRepository } from "@/repositories/divisionRepository";
 import { DepartmentRepository } from "@/repositories/departmentRepository";
@@ -61,6 +63,8 @@ const makeHistoryRepo = () =>
 
 const makeNeverCalledOrgRepos = () => ({
   caseHistoryRepo: makeHistoryRepo(),
+  assignmentRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseAssignmentRepository,
+  visibilityRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseVisibilityRepository,
   divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
   deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,
   teamRepo: { findByCompanyId: vi.fn().mockResolvedValue([mockTeam]) } as unknown as TeamRepository,
@@ -235,6 +239,8 @@ describe("createCase", () => {
     const handler = createHandler({
       caseRepo,
       caseHistoryRepo: makeHistoryRepo(),
+      assignmentRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseAssignmentRepository,
+      visibilityRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseVisibilityRepository,
       userRepo,
       divisionRepo,
       deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,
@@ -265,6 +271,8 @@ describe("createCase", () => {
     const handler = createHandler({
       caseRepo,
       caseHistoryRepo: makeHistoryRepo(),
+      assignmentRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseAssignmentRepository,
+      visibilityRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseVisibilityRepository,
       userRepo,
       divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
       deptRepo,
@@ -295,6 +303,8 @@ describe("createCase", () => {
     const handler = createHandler({
       caseRepo,
       caseHistoryRepo: makeHistoryRepo(),
+      assignmentRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseAssignmentRepository,
+      visibilityRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseVisibilityRepository,
       userRepo,
       divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
       deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,
@@ -343,6 +353,8 @@ describe("createCase", () => {
     const handler = createHandler({
       caseRepo,
       caseHistoryRepo: makeHistoryRepo(),
+      assignmentRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseAssignmentRepository,
+      visibilityRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseVisibilityRepository,
       userRepo,
       divisionRepo,
       deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,
@@ -371,6 +383,8 @@ describe("createCase", () => {
     const handler = createHandler({
       caseRepo,
       caseHistoryRepo: makeHistoryRepo(),
+      assignmentRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseAssignmentRepository,
+      visibilityRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseVisibilityRepository,
       userRepo,
       divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
       deptRepo,
@@ -399,6 +413,8 @@ describe("createCase", () => {
     const handler = createHandler({
       caseRepo,
       caseHistoryRepo: makeHistoryRepo(),
+      assignmentRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseAssignmentRepository,
+      visibilityRepo: { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseVisibilityRepository,
       userRepo,
       divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
       deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,

@@ -100,8 +100,11 @@ describe("getCases", () => {
     expect(body[0].caseId).toBe("CASE-1");
     expect(caseRepo.findByUser).toHaveBeenCalledWith({
       companyId: "COMP-1",
-      userId: "user-1",
+      divisionId: "DIV-1",
+      departmentId: "DEPT-1",
       teamId: "TEAM-1",
+      userId: "user-1",
+      userRoleRank: 3,
     });
   });
 

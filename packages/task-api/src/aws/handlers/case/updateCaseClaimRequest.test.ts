@@ -12,6 +12,8 @@ import {
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseClaimRequestRepository } from "@/repositories/caseClaimRequestRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
+import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
+import { CaseVisibilityRepository } from "@/repositories/caseVisibilityRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { createHandler } from "./updateCaseClaimRequest";
 
@@ -117,16 +119,23 @@ const makeMockRepos = (overrides: {
   const caseHistoryRepo = {
     save: vi.fn().mockResolvedValue(undefined),
   } as unknown as CaseHistoryRepository;
+  const assignmentRepo = {
+    save: vi.fn().mockResolvedValue(undefined),
+    deleteForOwner: vi.fn().mockResolvedValue(undefined),
+  } as unknown as CaseAssignmentRepository;
+  const visibilityRepo = {
+    save: vi.fn().mockResolvedValue(undefined),
+  } as unknown as CaseVisibilityRepository;
   const userRepo = {
     findByUserId: vi.fn().mockResolvedValue(overrides.profileResult),
   } as unknown as UserRepository;
-  return { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo };
+  return { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo };
 };
 
 describe("updateCaseClaimRequest", () => {
   it("JWT がない場合は 401", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ id: "CASE-1", claimRequestId: "CLAIM-1", body: { status: "APPROVED" } }),
     );
@@ -134,8 +143,8 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("body がない場合は 400", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", claimRequestId: "CLAIM-1" }),
     );
@@ -143,8 +152,8 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("不正な JSON の場合は 400", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", claimRequestId: "CLAIM-1", rawBody: "not-json" }),
     );
@@ -152,8 +161,8 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("予期しない field がある場合は 400", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -166,8 +175,8 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("status が無効な場合は 400", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -180,8 +189,8 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("REJECTED で rejectReason がない場合は 400", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -194,8 +203,8 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("APPROVED で rejectReason がある場合は 400", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -208,12 +217,12 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("user profile が存在しない場合は 500", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: undefined,
       claimResult: baseClaim,
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -226,12 +235,12 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("case が存在しない場合は 404", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: undefined,
       profileResult: mockProfile,
       claimResult: baseClaim,
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -244,12 +253,12 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("claim request が存在しない場合は 404", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
       claimResult: undefined,
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -263,12 +272,12 @@ describe("updateCaseClaimRequest", () => {
 
   it("別会社の case は 403", async () => {
     const otherCompanyCase = { ...baseCase, companyId: "COMP-OTHER" };
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: otherCompanyCase,
       profileResult: mockProfile,
       claimResult: baseClaim,
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -287,12 +296,12 @@ describe("updateCaseClaimRequest", () => {
       ownerType: CaseOwnerType.USER,
       ownerId: "other-user",
     };
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: restrictedCase,
       profileResult: mockProfile,
       claimResult: baseClaim,
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -306,12 +315,12 @@ describe("updateCaseClaimRequest", () => {
 
   it("PENDING でない claim は更新できない", async () => {
     const approvedClaim = { ...baseClaim, status: CaseClaimRequestStatus.APPROVED };
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
       claimResult: approvedClaim,
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -324,13 +333,13 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("APPROVED により claim が承認されて case owner が変わる", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
       claimResult: baseClaim,
       allClaimsResult: [baseClaim],
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -355,13 +364,13 @@ describe("updateCaseClaimRequest", () => {
 
   it("APPROVED により WAITING case は IN_PROGRESS になる", async () => {
     const waitingCase = { ...baseCase, status: CaseStatus.WAITING };
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: waitingCase,
       profileResult: mockProfile,
       claimResult: baseClaim,
       allClaimsResult: [baseClaim],
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     await handler(
       makeEvent({
         sub: "user-1",
@@ -383,13 +392,13 @@ describe("updateCaseClaimRequest", () => {
       claimRequestId: "CLAIM-2",
       requesterId: "requester-2",
     };
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
       claimResult: baseClaim,
       allClaimsResult: [baseClaim, otherClaim],
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     await handler(
       makeEvent({
         sub: "user-1",
@@ -404,12 +413,12 @@ describe("updateCaseClaimRequest", () => {
   });
 
   it("REJECTED により claim が拒否される", async () => {
-    const { caseRepo, claimRequestRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
       claimResult: baseClaim,
     });
-    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, claimRequestRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",

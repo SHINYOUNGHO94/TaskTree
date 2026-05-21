@@ -84,6 +84,7 @@ Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` に�
 協業が複雑になっても、安全に閲覧・更新・参加範囲を制御できる状態にします。
 
 - Task 17: `Case 権限・割当 record 正式化`
+  - 詳細計画: `docs/workflow/task-17-case-permission-assignment-visibility-plan.md`
   - 権限別 Case 公開範囲の整理
   - Assignment record の正式化
   - Visibility record の正式化
@@ -113,7 +114,9 @@ Task 11 以降は、API 1 本ごとに PR を分けすぎないようにしま�
 
 Task 15 までで、`REQUEST` / `STANDARD` / `PROJECT` case の作成、一覧、詳細、状態変更、作業実行、協業ログ、コメント、担当希望、承認 / 却下、STANDARD から REQUEST への分解、PROJECT -> STANDARD -> REQUEST の階層確認までできる入口を作りました。
 
-Task 16 からは、OPEN case を外部会社参加 flow へ広げます。
+Task 16 で、OPEN case を外部会社参加 flow へ広げました。
+
+Task 17 では、Task 16 までに増えた Case 権限判定を整理し、assignment record と visibility record を正式化します。
 
 ## 注意
 

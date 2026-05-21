@@ -1,46 +1,15 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import {
-  CaseDeliveryType,
-  CaseDetail,
-  CaseOwnerType,
-  CaseParticipantCompanyStatus,
-  CaseTargetScope,
-} from "@task/core";
-import type { UserEntity } from "@/aws/entities/items/userRecord";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
+import { canReadCase, canReadCaseAsParticipant } from "@/services/casePermissionService";
 import {
   forbidden,
   internalServerError,
   notFound,
   unauthorized,
 } from "@/errors/utils";
-
-const isInternalAccessAllowed = (
-  caseDetail: CaseDetail,
-  userId: string,
-  profile: UserEntity,
-): boolean => {
-  if (caseDetail.creatorId === userId) return true;
-  if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
-
-  switch (caseDetail.targetScope) {
-    case CaseTargetScope.COMPANY:
-      return caseDetail.targetScopeId === profile.companyId;
-    case CaseTargetScope.DIVISION:
-      return caseDetail.targetScopeId === profile.divisionId;
-    case CaseTargetScope.DEPARTMENT:
-      return caseDetail.targetScopeId === profile.departmentId;
-    case CaseTargetScope.TEAM:
-      return caseDetail.targetScopeId === profile.teamId;
-    case CaseTargetScope.USER:
-      return caseDetail.targetScopeId === userId;
-  }
-
-  return false;
-};
 
 export interface GetCaseHistoryDeps {
   caseRepo: CaseRepository;
@@ -70,19 +39,15 @@ export const createHandler =
       const isSameCompany = existingCase.companyId === profile.companyId;
 
       if (isSameCompany) {
-        if (!isInternalAccessAllowed(existingCase, userId, profile)) {
+        if (!canReadCase(existingCase, userId, profile)) {
           return forbidden("You do not have access to this case");
         }
       } else {
-        if (existingCase.deliveryType !== CaseDeliveryType.OPEN) {
-          return forbidden("You do not have access to this case");
-        }
-
         const participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
           caseId,
           profile.companyId,
         );
-        if (!participantRecord || participantRecord.status !== CaseParticipantCompanyStatus.ACTIVE) {
+        if (!canReadCaseAsParticipant(existingCase, participantRecord, profile.companyId)) {
           return forbidden("You do not have access to this case");
         }
       }

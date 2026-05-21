@@ -296,8 +296,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    grantTableRead(createCaseFn);
-    grantTableCreate(createCaseFn);
+    grantCaseMutation(createCaseFn, ['dynamodb:PutItem', 'dynamodb:TransactWriteItems']);
 
     const getCasesFn = new NodejsFunction(this, 'GetCasesFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -327,7 +326,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    grantCaseMutation(updateCaseFn, ['dynamodb:PutItem']);
+    grantCaseMutation(updateCaseFn, ['dynamodb:PutItem', 'dynamodb:TransactWriteItems']);
 
     const getCaseTasksFn = new NodejsFunction(this, 'GetCaseTasksFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -467,7 +466,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    grantCaseMutation(updateCaseClaimRequestFn, ['dynamodb:PutItem', 'dynamodb:TransactWriteItems']);
+    grantCaseMutation(updateCaseClaimRequestFn, ['dynamodb:PutItem', 'dynamodb:DeleteItem', 'dynamodb:TransactWriteItems']);
 
     const caseClaimRequestsResource = caseIdResource.addResource('claim-requests');
     caseClaimRequestsResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseClaimRequestsFn), { authorizer });
@@ -494,7 +493,7 @@ export class TaskInfraStack extends cdk.Stack {
         TABLE_NAME: database.entities.tableName,
       },
     });
-    grantCaseMutation(createChildCaseFn, ['dynamodb:PutItem']);
+    grantCaseMutation(createChildCaseFn, ['dynamodb:PutItem', 'dynamodb:TransactWriteItems']);
 
     const caseChildrenResource = caseIdResource.addResource('children');
     caseChildrenResource.addMethod('GET', new apigateway.LambdaIntegration(getChildCasesFn), { authorizer });

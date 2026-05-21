@@ -9,6 +9,8 @@ import {
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseClaimRequestRepository } from "@/repositories/caseClaimRequestRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
+import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
+import { CaseVisibilityRepository } from "@/repositories/caseVisibilityRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import {
   badRequest,
@@ -23,6 +25,8 @@ export interface UpdateCaseClaimRequestDeps {
   caseRepo: CaseRepository;
   claimRequestRepo: CaseClaimRequestRepository;
   caseHistoryRepo: CaseHistoryRepository;
+  assignmentRepo: CaseAssignmentRepository;
+  visibilityRepo: CaseVisibilityRepository;
   userRepo: UserRepository;
 }
 
@@ -140,6 +144,10 @@ export const createHandler =
           approvedClaimRequest: updatedClaimRequest,
           updatedCase,
           rejectedClaimRequests,
+          previousOwner: {
+            ownerType: existingCase.ownerType,
+            ownerId: existingCase.ownerId,
+          },
         });
 
         try {
@@ -197,5 +205,7 @@ export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
   claimRequestRepo: new CaseClaimRequestRepository(tableName),
   caseHistoryRepo: new CaseHistoryRepository(tableName),
+  assignmentRepo: new CaseAssignmentRepository(tableName),
+  visibilityRepo: new CaseVisibilityRepository(tableName),
   userRepo: new UserRepository(tableName),
 });
