@@ -95,6 +95,7 @@ Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` に�
 商用利用を意識し、検索、フィルター、UI 動線、テスト、運用安定性を高めます。
 
 - Task 18: `Case 検索・UI 導線・E2E 安定化`
+  - 詳細計画: `docs/workflow/task-18-case-search-ui-e2e-stabilization-plan.md`
   - Case 検索 / フィルター / ソート
   - Board / List / Detail 動線整理
   - E2E テスト
@@ -116,7 +117,9 @@ Task 15 までで、`REQUEST` / `STANDARD` / `PROJECT` case の作成、一覧�
 
 Task 16 で、OPEN case を外部会社参加 flow へ広げました。
 
-Task 17 では、Task 16 までに増えた Case 権限判定を整理し、assignment record と visibility record を正式化します。
+Task 17 で、Task 16 までに増えた Case 権限判定を整理し、assignment record と visibility record を正式化しました。
+
+Task 18 では、v2 Case roadmap の最終仕上げとして、検索、フィルター、UI 導線、E2E、運用上の error state を安定化します。
 
 ## 注意
 

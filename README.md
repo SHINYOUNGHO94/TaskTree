@@ -418,6 +418,43 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `yarn.cmd type-check:api` — pass
 - `git diff --check` — pass（CRLF warning only）
 
+### Task 18: Case 検索・UI 導線・E2E 安定化
+
+- Dashboard Case area に search / filter / sort を追加し、既存 `GET /cases` の結果を client-side で絞り込み・並び替えできるようにした
+- Search 対象: title / description / caseId / caseType / status（部分一致）
+- Filter: caseType（ALL/REQUEST/STANDARD/PROJECT）、status（ALL/全 CaseStatus）、deliveryType（ALL/DIRECT/OPEN）、ownership（ALL/自分が作成/自分が担当）
+- Sort: updatedAt desc / createdAt desc / dueDate asc / status / caseType
+- Case 一覧に List / Board view toggle を追加した
+  - Board view は全 CaseStatus（IN_PROGRESS / REVIEW_REQUESTED / WAITING / REOPENED / ON_HOLD / COMPLETED / CANCELED）ごとの column 表示
+  - `CaseBoardView` を新規コンポーネントとして追加した
+- Case 一覧 → Case 詳細 → Dashboard 戻りの導線を整理した
+  - 一覧クリック時に view state（caseView, caseType, status, deliveryType, ownership, sort, q）を URL query string に載せる
+  - 詳細画面の「戻る」ボタンが URL params を読んで filter / sort / view を復元した状態で Dashboard に戻る
+- casesError 発生時に「再試行」ボタン、invitationsError 発生時にも「再試行」ボタンを追加し `alert()` 非依存にした
+- フィルター結果 0 件時に「フィルターをリセット」ボタンを表示し、empty state を明確にした
+- Playwright E2E smoke tests を追加した（`tests/e2e/dashboard-smoke.spec.ts`）
+  - public routes: login page / signup page / unauthenticated dashboard redirect
+  - authenticated smoke: TEST_USER_EMAIL / TEST_USER_PASSWORD 環境変数がない場合は自動 skip
+  - authenticated smoke では search / filter / sort / board-list toggle の基本操作を確認する
+
+**Deployment Impact:**
+- new Lambda: no
+- new API route: no
+- new DynamoDB table: no
+- new DynamoDB GSI: no
+- IAM permission change: no
+- deployment required: no
+
+**Verification:**
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+- `yarn.cmd workspace @task/infra build` — pass
+- `yarn.cmd workspace @task/infra cdk synth` — pass
+- `yarn.cmd test:api` — 294 tests pass
+- `yarn.cmd test:e2e` — 5 passed, 3 skipped (authenticated tests skipped: TEST_USER_EMAIL/TEST_USER_PASSWORD not set)
+
 ---
 
 ## 開発メモ

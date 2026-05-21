@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Calendar, Clock, FileText, Shield, Tag, User } from "lucide-react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import {
@@ -156,6 +156,27 @@ const resolveErrorType = (error: unknown): ErrorType => {
 const CaseDetailPage = () => {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const buildBackUrl = () => {
+    const params = new URLSearchParams();
+    const caseView = searchParams.get("caseView");
+    const caseType = searchParams.get("caseType");
+    const status = searchParams.get("status");
+    const deliveryType = searchParams.get("deliveryType");
+    const ownership = searchParams.get("ownership");
+    const sort = searchParams.get("sort");
+    const q = searchParams.get("q");
+    if (caseView) params.set("caseView", caseView);
+    if (caseType) params.set("caseType", caseType);
+    if (status) params.set("status", status);
+    if (deliveryType) params.set("deliveryType", deliveryType);
+    if (ownership) params.set("ownership", ownership);
+    if (sort) params.set("sort", sort);
+    if (q) params.set("q", q);
+    const qs = params.toString();
+    return qs ? `/dashboard?${qs}` : "/dashboard";
+  };
   const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorType, setErrorType] = useState<ErrorType | null>(null);
@@ -569,7 +590,7 @@ const CaseDetailPage = () => {
     return (
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push(buildBackUrl())}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium mb-8"
         >
           <ArrowLeft size={18} />
@@ -590,7 +611,7 @@ const CaseDetailPage = () => {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center mb-8">
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push(buildBackUrl())}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
         >
           <ArrowLeft size={18} />
