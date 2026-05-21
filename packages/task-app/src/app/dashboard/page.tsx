@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Plus, RefreshCw } from "lucide-react";
-import { TaskService, TaskSummary, TaskStatus } from "@task/core";
+import { CaseDetail, CaseService, TaskService, TaskSummary, TaskStatus } from "@task/core";
 import { useUser } from "../../components/providers/UserProvider";
+import { CaseCard } from "../../components/dashboard/CaseCard";
 import { TaskCard } from "../../components/dashboard/TaskCard";
 import { CreateCaseModal } from "../../components/dashboard/CreateCaseModal";
 import { CreateTaskModal } from "../../components/dashboard/CreateTaskModal";
 import { EmptyTaskState } from "../../components/dashboard/EmptyTaskState";
 
-// ダッシュボードメインページ
 const DashboardPage = () => {
   const { user, profile } = useUser();
   const router = useRouter();
@@ -19,26 +19,41 @@ const DashboardPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [cases, setCases] = useState<CaseDetail[]>([]);
+  const [casesLoading, setCasesLoading] = useState(true);
+  const [casesError, setCasesError] = useState<string | null>(null);
 
-  // 初期データのロード
   useEffect(() => {
     if (user) {
       fetchTasks();
+      fetchCases();
     }
   }, [user]);
 
-  // タスク一覧の取得
   const fetchTasks = async () => {
     setIsLoading(true);
     try {
       const data = await TaskService.getTasks();
-      // IDの重複を排除（バックエンドの不整合データ対策）
       const uniqueTasks = Array.from(new Map(data.map(item => [item.id, item])).values());
       setTasks(uniqueTasks);
     } catch (error) {
       console.error("Failed to fetch tasks", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchCases = async () => {
+    setCasesLoading(true);
+    setCasesError(null);
+    try {
+      const data = await CaseService.getCases();
+      setCases(data);
+    } catch (error) {
+      console.error("Failed to fetch cases", error);
+      setCasesError('案件の取得に失敗しました。再度お試しください。');
+    } finally {
+      setCasesLoading(false);
     }
   };
 
@@ -148,10 +163,49 @@ const DashboardPage = () => {
         memberId={user.id}
         profile={profile}
       />
+      <div className="mt-12">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              案件一覧
+              <span className="text-sm font-normal bg-gray-100 px-2 py-1 rounded text-gray-500">
+                {cases.length}
+              </span>
+            </h2>
+            <p className="text-gray-500 text-sm mt-1">関連する案件</p>
+          </div>
+        </div>
+
+        {casesError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+            {casesError}
+          </div>
+        )}
+
+        {casesLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-40 bg-white border border-gray-100 animate-pulse rounded-2xl" />
+            ))}
+          </div>
+        ) : cases.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {cases.map((c) => (
+              <CaseCard key={c.caseId} caseDetail={c} />
+            ))}
+          </div>
+        ) : (
+          <div className="py-12 text-center text-gray-400">
+            <FileText size={32} className="mx-auto mb-3 opacity-30" />
+            <p className="text-sm">案件はありません</p>
+          </div>
+        )}
+      </div>
+
       <CreateCaseModal
         isOpen={isCaseModalOpen}
         onClose={() => setIsCaseModalOpen(false)}
-        onSuccess={() => {}}
+        onSuccess={fetchCases}
         profile={profile}
         userId={user.id}
       />

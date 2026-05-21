@@ -258,6 +258,17 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `STANDARD` / `PROJECT` 作成 UI、Case 一覧、Case 詳細、History、Comment、Claim request は後続 Task に分離
 - `type-check:core`、`@task/app` の lint / build、およびソースコード内の `any`・lint 回避コードの混入チェックで検証
 
+### Task 8: Case 一覧 API と Dashboard 表示の追加
+
+- `GET /cases` API と `GetCasesFunction` Lambda を追加し、認証済みユーザーに関係する case を取得できるようにした
+- `@task/core` に `CaseService.getCases` を追加し、フロントエンドから API を型付き service 経由で呼び出す構成を維持
+- Dashboard に Case 一覧セクションと `CaseCard` を追加し、作成済みの `REQUEST` case を画面で確認できるようにした
+- `REQUEST` case 作成成功後に Case 一覧を再取得し、作成結果が画面へ反映されるようにした
+- Case record に `assigneeKey` / `assigneeSortKey` / `visibilityKey` / `visibilitySortKey` を追加し、`byAssignee` / `byVisibility` GSI で検索できるようにした
+- `company` GSI と `FilterExpression` に依存した広範囲検索を避け、ユーザー・チーム単位の Query を中心にした取得方式へ改善
+- loading、empty、error state を画面内で扱い、Case 一覧が 0 件または取得失敗時でも状態が分かるようにした
+- `type-check:core`、`type-check:api`、`@task/app` lint / build、API テスト、CDK deploy で検証
+
 ---
 
 ## 開発メモ

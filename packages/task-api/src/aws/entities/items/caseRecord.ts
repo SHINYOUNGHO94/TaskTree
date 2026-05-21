@@ -12,6 +12,10 @@ import { DynamoDBRecord } from "./DynamoDBRecord";
 export interface CaseRecordType extends DynamoDBRecord {
   caseId: string;
   caseSortKey: string;
+  assigneeKey: string;
+  assigneeSortKey: string;
+  visibilityKey: string;
+  visibilitySortKey: string;
   name: string;
   description: string;
   caseType: CaseType;
@@ -35,10 +39,25 @@ export interface CaseRecordType extends DynamoDBRecord {
 }
 
 const ENTITY_NAME = "Case" as const;
+const ROLE_RANK: Record<UserRole, number> = {
+  [UserRole.GUEST]: 1,
+  [UserRole.USER]: 2,
+  [UserRole.TEAM_ADMIN]: 3,
+  [UserRole.DEPT_ADMIN]: 4,
+  [UserRole.DIVISION_ADMIN]: 5,
+  [UserRole.COMPANY_ADMIN]: 6,
+};
 
 const makePk = () => ENTITY_NAME;
 const makeSk = (caseId: string) => `Case#${caseId}`;
 const makeCaseSortKey = (caseId: string) => `Meta#Case#${caseId}`;
+const makeAssigneeKey = (ownerType: CaseOwnerType, ownerId: string) => `${ownerType}#${ownerId}`;
+const makeAssigneeSortKey = (detail: CaseDetail) =>
+  `Case#${detail.status}#${detail.dueDate ?? "NONE"}#${detail.caseId}`;
+const makeVisibilityKey = (targetScope: CaseTargetScope, targetScopeId: string) =>
+  `${targetScope}#${targetScopeId}`;
+const makeVisibilitySortKey = (detail: CaseDetail) =>
+  `Role#${ROLE_RANK[detail.requiredRole]}#Case#${detail.status}#${detail.updatedAt}#${detail.caseId}`;
 
 const fromDetail = (detail: CaseDetail): CaseRecordType => {
   const record: CaseRecordType = {
@@ -46,6 +65,10 @@ const fromDetail = (detail: CaseDetail): CaseRecordType => {
     sk: makeSk(detail.caseId),
     caseId: detail.caseId,
     caseSortKey: makeCaseSortKey(detail.caseId),
+    assigneeKey: makeAssigneeKey(detail.ownerType, detail.ownerId),
+    assigneeSortKey: makeAssigneeSortKey(detail),
+    visibilityKey: makeVisibilityKey(detail.targetScope, detail.targetScopeId),
+    visibilitySortKey: makeVisibilitySortKey(detail),
     name: detail.title,
     description: detail.description,
     caseType: detail.caseType,
@@ -101,6 +124,8 @@ export const CaseRecord = {
   makePk,
   makeSk,
   makeCaseSortKey,
+  makeAssigneeKey,
+  makeVisibilityKey,
   fromDetail,
   toDetail,
 } as const;
