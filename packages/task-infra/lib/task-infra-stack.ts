@@ -50,6 +50,13 @@ export class TaskInfraStack extends cdk.Stack {
       }));
     };
 
+    const grantCaseMutation = (fn: NodejsFunction, writeActions: string[]) => {
+      fn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['dynamodb:GetItem', 'dynamodb:Query', ...writeActions],
+        resources: [tableArn, tableIndexesArn],
+      }));
+    };
+
     const postConfirmationFn = new NodejsFunction(this, 'PostConfirmationFunction', {
       runtime: Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../../task-api/src/aws/handlers/auth/postConfirmation.ts'),
@@ -312,6 +319,16 @@ export class TaskInfraStack extends cdk.Stack {
     });
     grantTableRead(getCaseFn);
 
+    const updateCaseFn = new NodejsFunction(this, 'UpdateCaseFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/updateCase.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(updateCaseFn, ['dynamodb:PutItem']);
+
     const api = new apigateway.RestApi(this, 'TaskApi', {
       restApiName: 'Task Tree API',
       description: 'API for TaskTree management - v2',
@@ -358,6 +375,7 @@ export class TaskInfraStack extends cdk.Stack {
 
     const caseIdResource = casesResource.addResource('{id}');
     caseIdResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseFn), { authorizer });
+    caseIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateCaseFn), { authorizer });
 
     const tasksResource = api.root.addResource('tasks');
     tasksResource.addMethod('GET', new apigateway.LambdaIntegration(getTasksFn), { authorizer });
