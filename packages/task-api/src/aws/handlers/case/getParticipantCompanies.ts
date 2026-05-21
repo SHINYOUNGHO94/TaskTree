@@ -5,8 +5,8 @@ import {
   CaseOwnerType,
   CaseParticipantCompanyStatus,
   CaseTargetScope,
-  UserProfile,
 } from "@task/core";
+import type { UserEntity } from "@/aws/entities/items/userRecord";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
@@ -18,7 +18,7 @@ const isOwnerAllowed = (caseDetail: CaseDetail, userId: string): boolean => {
   return false;
 };
 
-const isInternalAccessAllowed = (caseDetail: CaseDetail, userId: string, profile: UserProfile): boolean => {
+const isInternalAccessAllowed = (caseDetail: CaseDetail, userId: string, profile: UserEntity): boolean => {
   if (isOwnerAllowed(caseDetail, userId)) return true;
 
   switch (caseDetail.targetScope) {
