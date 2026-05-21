@@ -1,5 +1,11 @@
 # AI Coding Principles
 
+## 運用品質基準
+
+Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` にも必ず従います。
+
+残りの v2 作業では、認可、tenant 分離、IAM、DynamoDB access pattern、UI error state、deployment impact を第一級の coding concern として扱います。
+
 このドキュメントは、TaskTree で作業するすべての AI エージェントが従うべき共通コーディング原則です。
 
 ## 1. 実装前に理解する

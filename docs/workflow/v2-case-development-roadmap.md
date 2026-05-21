@@ -1,5 +1,21 @@
 # v2 Case Development Roadmap
 
+## Task 16-18 運用品質 Gate
+
+Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` に必ず従います。
+
+残りの各 task を完了扱いにする前に、実装報告で次を明示します。
+
+- 認可と tenant 分離
+- API contract と validation 変更
+- DynamoDB access pattern と GSI 影響
+- IAM と deployment 影響
+- UI loading / empty / error / partial-error state
+- 実行した verification command
+
+過去の実務運用経験は、engineering reference pattern としてのみ使います。
+勤務先の固有 code、data、comment、業務固有実装をコピーしてはなりません。
+
 このドキュメントは、`docs/core/case-collaboration-model.md` を実装していくための中長期ロードマップです。
 
 各 Task の詳細な作業内容は、必要に応じて `docs/workflow/task-*-*.md` に分離します。
@@ -95,9 +111,9 @@ Task 11 以降は、API 1 本ごとに PR を分けすぎないようにしま�
 
 ## 現在位置
 
-Task 13 までで、`REQUEST` case の作成、一覧、詳細、状態変更、作業実行、協業ログ、コメント、担当希望、承認 / 却下まで確認できる入口を作りました。
+Task 14 までで、`REQUEST` / `STANDARD` case の作成、一覧、詳細、状態変更、作業実行、協業ログ、コメント、担当希望、承認 / 却下、STANDARD から REQUEST への分解まで確認できる入口を作りました。
 
-Task 14 からは、STANDARD case を作成し、REQUEST または task へ分解する業務フローへ広げます。
+Task 15 からは、PROJECT case を作成し、PROJECT -> STANDARD -> REQUEST の階層を確認できる業務フローへ広げます。
 
 ## 注意
 

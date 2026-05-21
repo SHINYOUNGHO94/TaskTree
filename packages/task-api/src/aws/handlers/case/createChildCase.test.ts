@@ -234,7 +234,7 @@ describe("createChildCase", () => {
     expect(response.statusCode).toBe(403);
   });
 
-  it("returns 400 when parent case is not STANDARD", async () => {
+  it("returns 400 when parent case is REQUEST (cannot create child under REQUEST)", async () => {
     const requestCase = { ...standardCase, caseType: CaseType.REQUEST };
     const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
       caseResult: requestCase,
@@ -243,6 +243,51 @@ describe("createChildCase", () => {
     const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     expect(response.statusCode).toBe(400);
+  });
+
+  it("returns 201 when parent case is PROJECT and creates STANDARD child", async () => {
+    const projectCase = {
+      ...standardCase,
+      caseId: "PROJECT-1",
+      caseType: CaseType.PROJECT,
+      projectId: null,
+      parentCaseId: null,
+    };
+    const caseSaveMock = vi.fn().mockResolvedValue(undefined);
+    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+      caseResult: projectCase,
+      profileResult: mockProfile,
+      caseSaveMock,
+    });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const response = await handler(makeEvent({ sub: "user-1", id: "PROJECT-1", body: validBody }));
+    expect(response.statusCode).toBe(201);
+    const savedCase = caseSaveMock.mock.calls[0][0] as {
+      caseType: string;
+      projectId: string;
+      parentCaseId: string;
+    };
+    expect(savedCase.caseType).toBe(CaseType.STANDARD);
+    expect(savedCase.projectId).toBe("PROJECT-1");
+    expect(savedCase.parentCaseId).toBe("PROJECT-1");
+  });
+
+  it("REQUEST child under STANDARD inherits projectId from STANDARD parent", async () => {
+    const standardWithProject = { ...standardCase, projectId: "PROJECT-1" };
+    const caseSaveMock = vi.fn().mockResolvedValue(undefined);
+    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+      caseResult: standardWithProject,
+      profileResult: mockProfile,
+      caseSaveMock,
+    });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
+    const savedCase = caseSaveMock.mock.calls[0][0] as {
+      caseType: string;
+      projectId: string;
+    };
+    expect(savedCase.caseType).toBe(CaseType.REQUEST);
+    expect(savedCase.projectId).toBe("PROJECT-1");
   });
 
   it("returns 403 when caller is neither creator nor USER owner", async () => {

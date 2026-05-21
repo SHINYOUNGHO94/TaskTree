@@ -104,15 +104,30 @@ describe("createCase", () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it("PROJECT caseType の場合は 400", async () => {
-    const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
-    const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
+  it("PROJECT caseType の場合は 201 (root PROJECT creation is allowed)", async () => {
+    const caseRepo = { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseRepository;
+    const userRepo = {
+      findByUserId: vi.fn().mockResolvedValue(mockCreatorProfile),
+    } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
     const response = await handler(
       eventWithAuth("creator-1", { ...validBody, caseType: CaseType.PROJECT }),
     );
-    expect(response.statusCode).toBe(400);
-    expect(caseRepo.save).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(201);
+    expect(caseRepo.save).toHaveBeenCalledOnce();
+  });
+
+  it("root PROJECT case has projectId=null and parentCaseId=null", async () => {
+    const caseRepo = { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseRepository;
+    const userRepo = {
+      findByUserId: vi.fn().mockResolvedValue(mockCreatorProfile),
+    } as unknown as UserRepository;
+    const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
+    await handler(eventWithAuth("creator-1", { ...validBody, caseType: CaseType.PROJECT }));
+    const saved = (caseRepo.save as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(saved.caseType).toBe(CaseType.PROJECT);
+    expect(saved.projectId).toBeNull();
+    expect(saved.parentCaseId).toBeNull();
   });
 
   it("不正な deliveryType の場合は 400", async () => {

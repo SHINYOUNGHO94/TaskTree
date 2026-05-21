@@ -1,5 +1,11 @@
 # Coding Rules
 
+## 運用品質基準
+
+残りの v2 Case 作業は、すべて `docs/core/operational-quality-baseline.md` に従います。
+
+認可、tenant 分離、API validation、DynamoDB access pattern、IAM、UI error state、deployment impact、verification command を確認するまで、Task 16、Task 17、Task 18 を完了扱いにしてはなりません。
+
 このドキュメントは、TaskTree のコード修正時に必ず従うべきルールです。
 
 ## 基本原則

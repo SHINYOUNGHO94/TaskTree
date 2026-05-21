@@ -1,5 +1,10 @@
 # AGENTS.md
 
+## 運用品質基準
+
+- Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` に必ず従う。
+- 認可、tenant 分離、IAM、DynamoDB access pattern、UI error state、deployment impact を必須 review point とする。
+
 このリポジトリでは、GPT/Codex、Claude、Gemini など複数の AI エージェントを利用して TaskTree を改善します。
 
 すべての AI エージェントは、作業前に以下の共通ドキュメントを必ず読み、必ず従ってください。
@@ -11,6 +16,7 @@
 - `docs/core/current-architecture.md`
 - `docs/core/package-boundaries.md`
 - `docs/core/coding-rules.md`
+- `docs/core/operational-quality-baseline.md`
 - `docs/workflow/ai-team-workflow.md`
 - `docs/core/case-collaboration-model.md`
 - `docs/workflow/v2-case-development-roadmap.md`

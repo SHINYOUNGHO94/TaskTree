@@ -1,5 +1,10 @@
 # GPT.md
 
+## 運用品質基準
+
+- Task 16、Task 17、Task 18 の review または実装前に `docs/core/operational-quality-baseline.md` を読む。
+- 過去の実務運用経験は、一般化された engineering principle としてのみ扱う。勤務先の固有 code や data をコピーしてはならない。
+
 GPT/Codex 用の TaskTree 作業エントリーポイントです。
 
 作業前に必ず `AGENTS.md` を読み、そこに記載された共通ドキュメントに必ず従ってください。
