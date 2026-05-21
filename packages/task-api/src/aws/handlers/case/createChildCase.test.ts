@@ -10,6 +10,8 @@ import {
 } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
+import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
+import { CaseVisibilityRepository } from "@/repositories/caseVisibilityRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { createHandler } from "./createChildCase";
 
@@ -99,40 +101,46 @@ const makeMockRepos = (overrides: {
   const caseHistoryRepo = {
     save: vi.fn().mockResolvedValue(undefined),
   } as unknown as CaseHistoryRepository;
+  const assignmentRepo = {
+    save: vi.fn().mockResolvedValue(undefined),
+  } as unknown as CaseAssignmentRepository;
+  const visibilityRepo = {
+    save: vi.fn().mockResolvedValue(undefined),
+  } as unknown as CaseVisibilityRepository;
   const userRepo = {
     findByUserId: vi.fn().mockImplementation((id: string) => {
       if (id === "user-1") return Promise.resolve(overrides.profileResult);
       return Promise.resolve(overrides.targetUserResult);
     }),
   } as unknown as UserRepository;
-  return { caseRepo, caseHistoryRepo, userRepo };
+  return { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo };
 };
 
 describe("createChildCase", () => {
   it("returns 401 when JWT is missing", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ id: "CASE-1", body: validBody }));
     expect(response.statusCode).toBe(401);
   });
 
   it("returns 400 when body is missing", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(400);
   });
 
   it("returns 400 for invalid JSON", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1", rawBody: "not-json" }));
     expect(response.statusCode).toBe(400);
   });
 
   it("returns 400 for unexpected fields", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { ...validBody, extra: "field" } }),
     );
@@ -140,8 +148,8 @@ describe("createChildCase", () => {
   });
 
   it("returns 400 when title is empty", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { ...validBody, title: "  " } }),
     );
@@ -149,8 +157,8 @@ describe("createChildCase", () => {
   });
 
   it("returns 400 when description is empty", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { ...validBody, description: "  " } }),
     );
@@ -158,8 +166,8 @@ describe("createChildCase", () => {
   });
 
   it("returns 400 for invalid deliveryType", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { ...validBody, deliveryType: "INVALID" } }),
     );
@@ -167,8 +175,8 @@ describe("createChildCase", () => {
   });
 
   it("returns 400 for invalid targetScope", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -180,8 +188,8 @@ describe("createChildCase", () => {
   });
 
   it("returns 400 for invalid requiredRole", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -193,8 +201,8 @@ describe("createChildCase", () => {
   });
 
   it("returns 400 when dueDate has invalid type", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { ...validBody, dueDate: 123 } }),
     );
@@ -202,21 +210,21 @@ describe("createChildCase", () => {
   });
 
   it("returns 500 when user profile is not found", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardCase,
       profileResult: undefined,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     expect(response.statusCode).toBe(500);
   });
 
   it("returns 404 when parent case does not exist", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: undefined,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-NONEXISTENT", body: validBody }),
     );
@@ -225,22 +233,22 @@ describe("createChildCase", () => {
 
   it("returns 403 for case from another company", async () => {
     const otherCompanyCase = { ...standardCase, companyId: "COMP-OTHER" };
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: otherCompanyCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     expect(response.statusCode).toBe(403);
   });
 
   it("returns 400 when parent case is REQUEST (cannot create child under REQUEST)", async () => {
     const requestCase = { ...standardCase, caseType: CaseType.REQUEST };
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: requestCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     expect(response.statusCode).toBe(400);
   });
@@ -254,12 +262,12 @@ describe("createChildCase", () => {
       parentCaseId: null,
     };
     const caseSaveMock = vi.fn().mockResolvedValue(undefined);
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: projectCase,
       profileResult: mockProfile,
       caseSaveMock,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "PROJECT-1", body: validBody }));
     expect(response.statusCode).toBe(201);
     const savedCase = caseSaveMock.mock.calls[0][0] as {
@@ -275,12 +283,12 @@ describe("createChildCase", () => {
   it("REQUEST child under STANDARD inherits projectId from STANDARD parent", async () => {
     const standardWithProject = { ...standardCase, projectId: "PROJECT-1" };
     const caseSaveMock = vi.fn().mockResolvedValue(undefined);
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardWithProject,
       profileResult: mockProfile,
       caseSaveMock,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     const savedCase = caseSaveMock.mock.calls[0][0] as {
       caseType: string;
@@ -297,21 +305,21 @@ describe("createChildCase", () => {
       ownerType: CaseOwnerType.USER,
       ownerId: "other-user",
     };
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: restrictedCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     expect(response.statusCode).toBe(403);
   });
 
   it("returns 403 when TEAM scope does not use caller team id", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -324,12 +332,12 @@ describe("createChildCase", () => {
 
   it("returns 201 with caseId on successful creation by creator", async () => {
     const caseSaveMock = vi.fn().mockResolvedValue(undefined);
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardCase,
       profileResult: mockProfile,
       caseSaveMock,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     expect(response.statusCode).toBe(201);
     const body = JSON.parse(response.body) as { caseId: string };
@@ -344,23 +352,23 @@ describe("createChildCase", () => {
       ownerType: CaseOwnerType.USER,
       ownerId: "user-1",
     };
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: ownerCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     expect(response.statusCode).toBe(201);
   });
 
   it("saves child case with REQUEST type and correct parentCaseId", async () => {
     const caseSaveMock = vi.fn().mockResolvedValue(undefined);
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardCase,
       profileResult: mockProfile,
       caseSaveMock,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     const savedCase = caseSaveMock.mock.calls[0][0] as {
       caseType: string;
@@ -375,24 +383,24 @@ describe("createChildCase", () => {
   it("inherits projectId from parent case", async () => {
     const parentWithProject = { ...standardCase, projectId: "PROJ-1" };
     const caseSaveMock = vi.fn().mockResolvedValue(undefined);
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: parentWithProject,
       profileResult: mockProfile,
       caseSaveMock,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     await handler(makeEvent({ sub: "user-1", id: "CASE-1", body: validBody }));
     const savedCase = caseSaveMock.mock.calls[0][0] as { projectId: string };
     expect(savedCase.projectId).toBe("PROJ-1");
   });
 
   it("returns 404 when USER scope target user does not exist", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardCase,
       profileResult: mockProfile,
       targetUserResult: undefined,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -404,12 +412,12 @@ describe("createChildCase", () => {
   });
 
   it("returns 403 when USER scope target user belongs to another company", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardCase,
       profileResult: mockProfile,
       targetUserResult: { ...targetUserProfile, companyId: "COMP-OTHER" },
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -421,12 +429,12 @@ describe("createChildCase", () => {
   });
 
   it("returns 403 when USER scope target user is outside caller team", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardCase,
       profileResult: mockProfile,
       targetUserResult: { ...targetUserProfile, teamId: "TEAM-OTHER" },
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -438,12 +446,12 @@ describe("createChildCase", () => {
   });
 
   it("returns 201 for USER scope target within caller team", async () => {
-    const { caseRepo, caseHistoryRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
       caseResult: standardCase,
       profileResult: mockProfile,
       targetUserResult: targetUserProfile,
     });
-    const handler = createHandler({ caseRepo, caseHistoryRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",

@@ -1,8 +1,10 @@
 import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseHistoryAction, CaseOwnerType, CaseStatus } from "@task/core";
+import { CaseDetail, CaseHistoryAction, CaseOwnerType, CaseStatus } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
+import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
+import { CaseVisibilityRepository } from "@/repositories/caseVisibilityRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import {
   badRequest,
@@ -16,8 +18,26 @@ import {
 export interface UpdateCaseDeps {
   caseRepo: CaseRepository;
   caseHistoryRepo: CaseHistoryRepository;
+  assignmentRepo: CaseAssignmentRepository;
+  visibilityRepo: CaseVisibilityRepository;
   userRepo: UserRepository;
 }
+
+const saveCaseAndAccessRecords = async (
+  deps: Pick<UpdateCaseDeps, "caseRepo" | "assignmentRepo" | "visibilityRepo">,
+  caseDetail: CaseDetail,
+): Promise<void> => {
+  if (typeof deps.caseRepo.saveWithAccessRecords === "function") {
+    await deps.caseRepo.saveWithAccessRecords(caseDetail);
+    return;
+  }
+
+  await deps.caseRepo.save(caseDetail);
+  await Promise.all([
+    deps.assignmentRepo.save(caseDetail),
+    deps.visibilityRepo.save(caseDetail),
+  ]);
+};
 
 export const createHandler =
   (deps: UpdateCaseDeps) =>
@@ -80,7 +100,7 @@ export const createHandler =
         updatedAt: new Date().toISOString(),
       };
 
-      await deps.caseRepo.save(updatedCase);
+      await saveCaseAndAccessRecords(deps, updatedCase);
 
       try {
         await deps.caseHistoryRepo.save({
@@ -111,5 +131,7 @@ const tableName = process.env.TABLE_NAME || "";
 export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
   caseHistoryRepo: new CaseHistoryRepository(tableName),
+  assignmentRepo: new CaseAssignmentRepository(tableName),
+  visibilityRepo: new CaseVisibilityRepository(tableName),
   userRepo: new UserRepository(tableName),
 });

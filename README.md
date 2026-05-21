@@ -396,6 +396,28 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `yarn.cmd workspace @task/infra cdk synth` — pass（GSI 追加確認）
 - `yarn.cmd test:api` — 294 tests pass
 
+### Task 17: Case 権限・割当 record 正式化
+
+- Case read permission を `casePermissionService` に寄せ、detail / history / comments / tasks / participant companies の読み取り条件を統一した
+- `CaseAssignmentRecord` / `CaseVisibilityRecord` を追加し、`byAssignee` / `byVisibility` GSI で正式 record を検索する構成へ移行した
+- `GET /cases` を `COMPANY` / `DIVISION` / `DEPARTMENT` / `TEAM` / `USER` の assignment / visibility に対応させ、`requiredRole` を考慮して一覧取得するようにした
+- Case 作成、child case 作成、status 更新では Case 本体と assignment / visibility record を transaction で同期し、access record だけ欠ける状態を防ぐようにした
+- Claim approval では旧 owner assignment の削除、新 owner assignment、visibility record、Case 更新、claim 更新を同じ transaction に含め、stale assignment が残らないようにした
+- 外部 participant company は `OPEN` かつ `ACTIVE` の場合だけ読み取り可能とし、`DIRECT` case や `INVITED` / `REJECTED` / `REMOVED` 状態では読み取り不可にした
+- Dashboard の外部案件招待一覧では、`INVITED` 状態の detail link を表示しないようにした
+
+**Deployment Impact:**
+- new Lambda: no
+- new API route: no
+- new DynamoDB table: no
+- new DynamoDB GSI: no（既存 `byAssignee` / `byVisibility` を再利用）
+- IAM permission change: yes（Case 作成 / child case 作成 / status 更新 / claim approval 系 Lambda に transaction / delete 系権限を追加）
+- deployment required: yes
+
+**Verification:**
+- `yarn.cmd type-check:api` — pass
+- `git diff --check` — pass（CRLF warning only）
+
 ---
 
 ## 開発メモ

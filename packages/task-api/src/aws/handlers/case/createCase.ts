@@ -2,6 +2,8 @@ import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
+import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
+import { CaseVisibilityRepository } from "@/repositories/caseVisibilityRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { DivisionRepository } from "@/repositories/divisionRepository";
 import { DepartmentRepository } from "@/repositories/departmentRepository";
@@ -67,6 +69,8 @@ const ALLOWED_ROOT_CASE_TYPES: string[] = [CaseType.REQUEST, CaseType.STANDARD, 
 export interface CreateCaseDeps {
   caseRepo: CaseRepository;
   caseHistoryRepo: CaseHistoryRepository;
+  assignmentRepo: CaseAssignmentRepository;
+  visibilityRepo: CaseVisibilityRepository;
   userRepo: UserRepository;
   divisionRepo: DivisionRepository;
   deptRepo: DepartmentRepository;
@@ -85,6 +89,22 @@ interface CreateCaseBody {
   projectId?: unknown;
   parentCaseId?: unknown;
 }
+
+const saveCaseAndAccessRecords = async (
+  deps: Pick<CreateCaseDeps, "caseRepo" | "assignmentRepo" | "visibilityRepo">,
+  caseDetail: CaseDetail,
+): Promise<void> => {
+  if (typeof deps.caseRepo.saveWithAccessRecords === "function") {
+    await deps.caseRepo.saveWithAccessRecords(caseDetail);
+    return;
+  }
+
+  await deps.caseRepo.save(caseDetail);
+  await Promise.all([
+    deps.assignmentRepo.save(caseDetail),
+    deps.visibilityRepo.save(caseDetail),
+  ]);
+};
 
 export const createHandler =
   (deps: CreateCaseDeps) =>
@@ -246,7 +266,7 @@ export const createHandler =
         updatedAt: now,
       };
 
-      await deps.caseRepo.save(caseDetail);
+      await saveCaseAndAccessRecords(deps, caseDetail);
 
       try {
         await deps.caseHistoryRepo.save({
@@ -277,6 +297,8 @@ const tableName = process.env.TABLE_NAME || "";
 export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
   caseHistoryRepo: new CaseHistoryRepository(tableName),
+  assignmentRepo: new CaseAssignmentRepository(tableName),
+  visibilityRepo: new CaseVisibilityRepository(tableName),
   userRepo: new UserRepository(tableName),
   divisionRepo: new DivisionRepository(tableName),
   deptRepo: new DepartmentRepository(tableName),

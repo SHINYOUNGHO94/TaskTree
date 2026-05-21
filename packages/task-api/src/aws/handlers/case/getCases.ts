@@ -1,7 +1,17 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { UserRole } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { internalServerError, unauthorized } from "@/errors/utils";
+
+const ROLE_RANK: Record<UserRole, number> = {
+  [UserRole.GUEST]: 1,
+  [UserRole.USER]: 2,
+  [UserRole.TEAM_ADMIN]: 3,
+  [UserRole.DEPT_ADMIN]: 4,
+  [UserRole.DIVISION_ADMIN]: 5,
+  [UserRole.COMPANY_ADMIN]: 6,
+};
 
 export interface GetCasesDeps {
   caseRepo: CaseRepository;
@@ -20,8 +30,11 @@ export const createHandler =
 
       const cases = await deps.caseRepo.findByUser({
         companyId: profile.companyId,
-        userId,
+        divisionId: profile.divisionId,
+        departmentId: profile.departmentId,
         teamId: profile.teamId,
+        userId,
+        userRoleRank: ROLE_RANK[profile.role] ?? 1,
       });
 
       return {
