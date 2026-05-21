@@ -48,4 +48,26 @@ export const CaseService = {
       throw error;
     }
   },
+
+  getCase: async (caseId: string): Promise<CaseDetail> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}`,
+        options: {
+          headers: {
+            Authorization: idToken || '',
+          },
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as CaseDetail;
+    } catch (error) {
+      console.error('Error fetching case:', error);
+      throw error;
+    }
+  },
 };

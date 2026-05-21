@@ -3,6 +3,7 @@ import { Calendar } from 'lucide-react';
 
 interface CaseCardProps {
   caseDetail: CaseDetail;
+  onClick?: (caseId: string) => void;
 }
 
 const caseTypeStyles: Record<CaseType, string> = {
@@ -31,11 +32,15 @@ const STATUS_LABELS: Record<CaseStatus, string> = {
   [CaseStatus.REOPENED]: '再開',
 };
 
-export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail }) => {
+export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick }) => {
   const createdDate = new Date(caseDetail.createdAt).toLocaleDateString('ja-JP');
 
   return (
-    <div className="bg-white border border-gray-200 p-5 rounded-xl hover:border-gray-300 transition-all shadow-sm">
+    <button
+      type="button"
+      onClick={() => onClick?.(caseDetail.caseId)}
+      className={`w-full text-left bg-white border border-gray-200 p-5 rounded-xl hover:border-gray-300 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2${onClick ? ' cursor-pointer' : ''}`}
+    >
       <div className="flex justify-between items-start mb-3">
         <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${caseTypeStyles[caseDetail.caseType]}`}>
           {caseDetail.caseType}
@@ -60,6 +65,6 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail }) => {
         </div>
         <span className="text-gray-400">{createdDate}</span>
       </div>
-    </div>
+    </button>
   );
 };
