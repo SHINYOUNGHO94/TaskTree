@@ -10,9 +10,29 @@ import {
   CaseService,
   CaseStatus,
   CaseTargetScope,
+  CaseTaskDetail,
+  CaseTaskStatus,
   CaseType,
   UserRole,
 } from "@task/core";
+
+const TASK_STATUS_LABELS: Record<CaseTaskStatus, string> = {
+  [CaseTaskStatus.TODO]: "未対応",
+  [CaseTaskStatus.IN_PROGRESS]: "対応中",
+  [CaseTaskStatus.REVIEW_REQUESTED]: "レビュー依頼",
+  [CaseTaskStatus.DONE]: "完了",
+  [CaseTaskStatus.ON_HOLD]: "保留",
+  [CaseTaskStatus.CANCELED]: "キャンセル",
+};
+
+const TASK_STATUS_STYLES: Record<CaseTaskStatus, string> = {
+  [CaseTaskStatus.TODO]: "bg-gray-100 text-gray-600",
+  [CaseTaskStatus.IN_PROGRESS]: "bg-blue-100 text-blue-600",
+  [CaseTaskStatus.REVIEW_REQUESTED]: "bg-purple-100 text-purple-600",
+  [CaseTaskStatus.DONE]: "bg-green-100 text-green-600",
+  [CaseTaskStatus.ON_HOLD]: "bg-yellow-100 text-yellow-600",
+  [CaseTaskStatus.CANCELED]: "bg-red-100 text-red-600",
+};
 
 type ErrorType = "notFound" | "forbidden" | "error";
 
@@ -107,6 +127,15 @@ const CaseDetailPage = () => {
   const [selectedStatus, setSelectedStatus] = useState<CaseStatus | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [caseTasks, setCaseTasks] = useState<CaseTaskDetail[]>([]);
+  const [isTasksLoading, setIsTasksLoading] = useState(false);
+  const [tasksError, setTasksError] = useState<string | null>(null);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [taskCreateError, setTaskCreateError] = useState<string | null>(null);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -139,11 +168,52 @@ const CaseDetailPage = () => {
     }
   };
 
+  const fetchCaseTasks = useCallback(async () => {
+    setIsTasksLoading(true);
+    setTasksError(null);
+    try {
+      const data = await CaseService.getCaseTasks(id as string);
+      setCaseTasks(data);
+    } catch (error) {
+      console.error("Failed to fetch case tasks", error);
+      setTasksError("作業の取得に失敗しました。");
+    } finally {
+      setIsTasksLoading(false);
+    }
+  }, [id]);
+
+  const handleCreateTask = async () => {
+    if (!newTaskTitle.trim()) {
+      setTaskCreateError("タイトルを入力してください。");
+      return;
+    }
+    setIsCreatingTask(true);
+    setTaskCreateError(null);
+    try {
+      await CaseService.createCaseTask(id as string, {
+        title: newTaskTitle.trim(),
+        description: newTaskDescription,
+        dueDate: newTaskDueDate || null,
+      });
+      setNewTaskTitle("");
+      setNewTaskDescription("");
+      setNewTaskDueDate("");
+      setShowTaskForm(false);
+      await fetchCaseTasks();
+    } catch (error) {
+      console.error("Failed to create case task", error);
+      setTaskCreateError("作業の作成に失敗しました。再度お試しください。");
+    } finally {
+      setIsCreatingTask(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchCase();
+      fetchCaseTasks();
     }
-  }, [id, fetchCase]);
+  }, [id, fetchCase, fetchCaseTasks]);
 
   if (isLoading) {
     return (
@@ -363,6 +433,107 @@ const CaseDetailPage = () => {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mt-6">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">作業一覧</h3>
+          <button
+            onClick={() => {
+              setShowTaskForm(!showTaskForm);
+              setTaskCreateError(null);
+            }}
+            className="text-sm font-bold px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+          >
+            {showTaskForm ? "キャンセル" : "+ 作業を追加"}
+          </button>
+        </div>
+
+        {showTaskForm && (
+          <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+            <div className="space-y-4">
+              {taskCreateError && (
+                <p className="text-sm text-red-600 font-medium">{taskCreateError}</p>
+              )}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  タイトル
+                </label>
+                <input
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="作業のタイトルを入力"
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  内容（任意）
+                </label>
+                <textarea
+                  value={newTaskDescription}
+                  onChange={(e) => setNewTaskDescription(e.target.value)}
+                  placeholder="作業の詳細を入力..."
+                  rows={3}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  期限（任意）
+                </label>
+                <input
+                  type="date"
+                  value={newTaskDueDate}
+                  onChange={(e) => setNewTaskDueDate(e.target.value)}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                onClick={handleCreateTask}
+                disabled={isCreatingTask}
+                className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isCreatingTask ? "作成中..." : "作業を作成"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="p-6">
+          {isTasksLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
+            </div>
+          ) : tasksError ? (
+            <p className="text-sm text-red-600 text-center py-6">{tasksError}</p>
+          ) : caseTasks.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">作業はまだありません。</p>
+          ) : (
+            <ul className="space-y-3">
+              {caseTasks.map((task) => (
+                <li
+                  key={task.taskId}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors"
+                >
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${TASK_STATUS_STYLES[task.status]}`}
+                  >
+                    {TASK_STATUS_LABELS[task.status]}
+                  </span>
+                  <span className="text-sm font-bold text-gray-800 flex-1 truncate">
+                    {task.title}
+                  </span>
+                  {task.dueDate && (
+                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                      {task.dueDate}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>
