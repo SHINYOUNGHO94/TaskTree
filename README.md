@@ -301,6 +301,18 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - History、Comment、Approval flow、Claim request、task 編集・削除・状態変更は後続 Task に分離
 - `type-check:core`、`type-check:api`、`@task/app` lint / build、`@task/infra` build、API テストで検証
 
+### Task 12: Case 協業ログとコメント機能の追加
+
+- Case 詳細画面に History と Comment セクションを追加し、Case 上の協業状況を確認できるようにした
+- `GET /cases/{id}/history`、`GET /cases/{id}/comments`、`POST /cases/{id}/comments` API と対応する Lambda を追加
+- `@task/core` に `CaseHistoryEntry`、`CaseComment`、`CreateCaseCommentInput` と `CaseService.getCaseHistory` / `getCaseComments` / `createCaseComment` を追加
+- Case 作成、Case 状態変更、Case task 作成時に `CASE_CREATED`、`STATUS_CHANGED`、`TASK_CREATED` の History を自動記録するようにした
+- DynamoDB では既存 `byCase` GSI を使い、`CaseHistory#{createdAt}#{historyId}` / `CaseComment#{createdAt}#{commentId}` の `caseSortKey` で取得する構成にした
+- Comment 作成では authorId と companyId をサーバー側で決定し、`content` 以外の field を拒否することでクライアントからのなりすまし入力を防止
+- History / Comment の取得・作成は Case 閲覧権限と同じ範囲に制限し、別会社 case や権限外ユーザーのアクセスを拒否
+- Comment 編集・削除、History の差分表示、Approval flow、Claim request は後続 Task に分離
+- `type-check:core`、`type-check:api`、`@task/app` build、`@task/infra` build、API テストで検証
+
 ---
 
 ## 開発メモ

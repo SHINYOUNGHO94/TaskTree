@@ -2,6 +2,7 @@ import { APIGatewayProxyEvent } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
 import { CaseDeliveryType, CaseOwnerType, CaseStatus, CaseTargetScope, CaseType, UserRole } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
+import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { DivisionRepository } from "@/repositories/divisionRepository";
 import { DepartmentRepository } from "@/repositories/departmentRepository";
@@ -55,7 +56,11 @@ const mockTeam = {
 
 const parseBody = <T>(body: string) => JSON.parse(body) as T;
 
+const makeHistoryRepo = () =>
+  ({ save: vi.fn().mockResolvedValue(undefined) }) as unknown as CaseHistoryRepository;
+
 const makeNeverCalledOrgRepos = () => ({
+  caseHistoryRepo: makeHistoryRepo(),
   divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
   deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,
   teamRepo: { findByCompanyId: vi.fn().mockResolvedValue([mockTeam]) } as unknown as TeamRepository,
@@ -203,6 +208,7 @@ describe("createCase", () => {
     } as unknown as DivisionRepository;
     const handler = createHandler({
       caseRepo,
+      caseHistoryRepo: makeHistoryRepo(),
       userRepo,
       divisionRepo,
       deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,
@@ -232,6 +238,7 @@ describe("createCase", () => {
     } as unknown as DepartmentRepository;
     const handler = createHandler({
       caseRepo,
+      caseHistoryRepo: makeHistoryRepo(),
       userRepo,
       divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
       deptRepo,
@@ -261,6 +268,7 @@ describe("createCase", () => {
     } as unknown as TeamRepository;
     const handler = createHandler({
       caseRepo,
+      caseHistoryRepo: makeHistoryRepo(),
       userRepo,
       divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
       deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,
@@ -308,6 +316,7 @@ describe("createCase", () => {
     } as unknown as DivisionRepository;
     const handler = createHandler({
       caseRepo,
+      caseHistoryRepo: makeHistoryRepo(),
       userRepo,
       divisionRepo,
       deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,
@@ -335,6 +344,7 @@ describe("createCase", () => {
     } as unknown as DepartmentRepository;
     const handler = createHandler({
       caseRepo,
+      caseHistoryRepo: makeHistoryRepo(),
       userRepo,
       divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
       deptRepo,
@@ -362,6 +372,7 @@ describe("createCase", () => {
     } as unknown as TeamRepository;
     const handler = createHandler({
       caseRepo,
+      caseHistoryRepo: makeHistoryRepo(),
       userRepo,
       divisionRepo: { findById: vi.fn(), findByCompanyId: vi.fn() } as unknown as DivisionRepository,
       deptRepo: { findByCompanyId: vi.fn() } as unknown as DepartmentRepository,

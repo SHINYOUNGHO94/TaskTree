@@ -4,7 +4,6 @@ node_modules/
 .yarn/unplugged
 .yarn/install-state.gz
 .pnp.*
-
 # Build artifacts
 dist/
 .next/
@@ -29,6 +28,8 @@ Thumbs.db
 
 # AI analysis artifacts
 repomix-output.xml
-
+cdk-outputs.json
+*_kr.md
+!docs/workflow/*_kr.md
 # Lock file (Yarn v4 standard)
 # yarn.lock should NOT be ignored.

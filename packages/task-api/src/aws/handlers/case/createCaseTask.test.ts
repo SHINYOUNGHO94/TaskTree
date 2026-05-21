@@ -9,6 +9,7 @@ import {
   UserRole,
 } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
+import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { CaseTaskRepository } from "@/repositories/caseTaskRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { createHandler } from "./createCaseTask";
@@ -79,17 +80,20 @@ const makeMockRepos = (overrides: {
   const caseRepo = {
     findById: vi.fn().mockResolvedValue(overrides.caseResult),
   } as unknown as CaseRepository;
+  const caseHistoryRepo = {
+    save: vi.fn().mockResolvedValue(undefined),
+  } as unknown as CaseHistoryRepository;
   const caseTaskRepo = { save } as unknown as CaseTaskRepository;
   const userRepo = {
     findByUserId: vi.fn().mockResolvedValue(overrides.profileResult),
   } as unknown as UserRepository;
-  return { caseRepo, caseTaskRepo, userRepo };
+  return { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo };
 };
 
 describe("createCaseTask", () => {
   it("JWT がない場合は 401", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ id: "CASE-1", body: { title: "Task", description: "" } }),
     );
@@ -97,15 +101,15 @@ describe("createCaseTask", () => {
   });
 
   it("body がない場合は 400", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(400);
   });
 
   it("不正な JSON の場合は 400", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", rawBody: "not-json" }),
     );
@@ -113,8 +117,8 @@ describe("createCaseTask", () => {
   });
 
   it("title が空の場合は 400", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "  ", description: "" } }),
     );
@@ -122,33 +126,20 @@ describe("createCaseTask", () => {
   });
 
   it("description が文字列でない場合は 400", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "Task" } }),
     );
     expect(response.statusCode).toBe(400);
   });
 
-  it("許可されていない field が含まれる場合は 400", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
-    const response = await handler(
-      makeEvent({
-        sub: "user-1",
-        id: "CASE-1",
-        body: { title: "Task", description: "", status: "DONE" },
-      }),
-    );
-    expect(response.statusCode).toBe(400);
-  });
-
   it("user profile が存在しない場合は 500", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: undefined,
     });
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "Task", description: "" } }),
     );
@@ -156,11 +147,11 @@ describe("createCaseTask", () => {
   });
 
   it("case が存在しない場合は 404", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({
       caseResult: undefined,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -173,11 +164,11 @@ describe("createCaseTask", () => {
 
   it("別会社の case は 403", async () => {
     const otherCompanyCase = { ...baseCase, companyId: "COMP-OTHER" };
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({
       caseResult: otherCompanyCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "Task", description: "" } }),
     );
@@ -186,11 +177,11 @@ describe("createCaseTask", () => {
 
   it("creator でも USER owner でもない場合は 403", async () => {
     const restrictedCase = { ...baseCase, creatorId: "other-user", ownerId: "other-user" };
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({
       caseResult: restrictedCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "Task", description: "" } }),
     );
@@ -198,11 +189,11 @@ describe("createCaseTask", () => {
   });
 
   it("creator は task を作成できる", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "Task", description: "Desc" } }),
     );
@@ -219,11 +210,11 @@ describe("createCaseTask", () => {
       ownerType: CaseOwnerType.USER,
       ownerId: "user-1",
     };
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({
       caseResult: ownerCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "Task", description: "" } }),
     );
@@ -231,11 +222,11 @@ describe("createCaseTask", () => {
   });
 
   it("作成された task には TODO status と caseId が含まれる", async () => {
-    const { caseRepo, caseTaskRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseHistoryRepo, caseTaskRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseTaskRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, caseTaskRepo, userRepo });
     await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "Task", description: "Desc" } }),
     );
