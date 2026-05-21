@@ -29,6 +29,7 @@ export const TaskService = {
     try {
       const { tokens } = await fetchAuthSession();
       const idToken = tokens?.idToken?.toString();
+      const body = { ...input };
 
       const restOperation = post({
         apiName: 'TaskApi',
@@ -37,8 +38,7 @@ export const TaskService = {
           headers: {
             Authorization: idToken || ''
           },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          body: input as any,
+          body,
         }
       });
       await restOperation.response;
@@ -74,17 +74,16 @@ export const TaskService = {
       const idToken = tokens?.idToken?.toString();
 
       const { id, ...fields } = input;
-      const body = Object.fromEntries(
+      const body: Partial<Omit<UpdateTaskInput, "id">> = Object.fromEntries(
         Object.entries(fields).filter(([, v]) => v !== undefined)
-      );
+      ) as Partial<Omit<UpdateTaskInput, "id">>;
 
       const restOperation = put({
         apiName: 'TaskApi',
         path: `tasks/${id}`,
         options: {
           headers: { Authorization: idToken || '' },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          body: body as any,
+          body,
         }
       });
       await restOperation.response;

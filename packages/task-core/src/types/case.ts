@@ -71,7 +71,7 @@ export interface CaseDetail extends CaseSummary {
   description: string;
 }
 
-export interface CreateCaseInput {
+export interface CreateRootCaseInput {
   title: string;
   description: string;
   caseType: CaseType;
@@ -82,10 +82,9 @@ export interface CreateCaseInput {
   requiredRole: UserRole;
 
   dueDate: string | null;
-
-  projectId?: string;
-  parentCaseId?: string;
 }
+
+export type CreateCaseInput = CreateRootCaseInput;
 
 export interface UpdateCaseInput {
   caseId: string;

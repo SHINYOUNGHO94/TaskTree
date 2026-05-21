@@ -62,9 +62,9 @@ const makeNeverCalledOrgRepos = () => ({
 });
 
 describe("createCase", () => {
-  // ========= 인증/입력 검증 =========
+  // ========= 認証・入力検証 =========
 
-  it("JWT 없으면 401", async () => {
+  it("JWT がない場合は 401", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
@@ -73,7 +73,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("body 없으면 400", async () => {
+  it("body がない場合は 400", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
@@ -82,7 +82,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("필수 필드 누락 시 400", async () => {
+  it("必須フィールドが不足している場合は 400", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
@@ -91,7 +91,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("잘못된 caseType 값 시 400", async () => {
+  it("不正な caseType の場合は 400", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
@@ -99,7 +99,7 @@ describe("createCase", () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it("잘못된 deliveryType 값 시 400", async () => {
+  it("不正な deliveryType の場合は 400", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
@@ -107,7 +107,7 @@ describe("createCase", () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it("잘못된 targetScope 값 시 400", async () => {
+  it("不正な targetScope の場合は 400", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
@@ -115,7 +115,7 @@ describe("createCase", () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it("description이 빈 문자열이면 400", async () => {
+  it("description が空文字の場合は 400", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
@@ -124,7 +124,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("creator profile 없으면 500", async () => {
+  it("creator profile がない場合は 500", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = { findByUserId: vi.fn().mockResolvedValue(undefined) } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
@@ -133,9 +133,9 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  // ========= scope 권한 검증 =========
+  // ========= scope 権限検証 =========
 
-  it("USER 역할로 COMPANY scope → 403", async () => {
+  it("USER ロールで COMPANY scope を指定すると 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.USER }),
@@ -148,7 +148,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("TEAM_ADMIN으로 DIVISION scope → 403", async () => {
+  it("TEAM_ADMIN で DIVISION scope を指定すると 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.TEAM_ADMIN }),
@@ -161,7 +161,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("requiredRole이 creator role보다 높으면 403", async () => {
+  it("requiredRole が creator role より高い場合は 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.TEAM_ADMIN }),
@@ -174,7 +174,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("COMPANY scope에서 targetScopeId가 creator companyId와 다르면 403", async () => {
+  it("COMPANY scope で targetScopeId が creator companyId と異なる場合は 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.COMPANY_ADMIN }),
@@ -192,7 +192,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("DIVISION_ADMIN이 다른 division을 targetScope로 지정하면 403", async () => {
+  it("DIVISION_ADMIN が他 division を targetScope に指定すると 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.DIVISION_ADMIN }),
@@ -220,7 +220,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("DEPT_ADMIN이 다른 department를 targetScope로 지정하면 403", async () => {
+  it("DEPT_ADMIN が他 department を targetScope に指定すると 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.DEPT_ADMIN }),
@@ -249,7 +249,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("TEAM_ADMIN이 다른 team을 targetScope로 지정하면 403", async () => {
+  it("TEAM_ADMIN が他 team を targetScope に指定すると 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.TEAM_ADMIN }),
@@ -273,7 +273,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("USER는 자신이 아닌 user를 targetScope로 지정하면 403", async () => {
+  it("USER が自分以外の user を targetScope に指定すると 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockImplementation((id: string) => {
@@ -295,9 +295,9 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  // ========= org 존재 검증 =========
+  // ========= org 存在検証 =========
 
-  it("DIVISION scope + 존재하지 않는 divisionId → 404", async () => {
+  it("DIVISION scope で存在しない divisionId の場合は 404", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.DIVISION_ADMIN }),
@@ -325,7 +325,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("DEPARTMENT scope + 존재하지 않는 departmentId → 404", async () => {
+  it("DEPARTMENT scope で存在しない departmentId の場合は 404", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.DEPT_ADMIN }),
@@ -352,7 +352,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("TEAM scope + 존재하지 않는 teamId → 404", async () => {
+  it("TEAM scope で存在しない teamId の場合は 404", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.TEAM_ADMIN }),
@@ -374,7 +374,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("USER scope + 존재하지 않는 userId → 404", async () => {
+  it("USER scope で存在しない userId の場合は 404", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockImplementation((id: string) => {
@@ -394,7 +394,7 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  it("USER scope + 타 회사 사용자 → 403", async () => {
+  it("USER scope で他会社ユーザーを指定すると 403", async () => {
     const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockImplementation((id: string) => {
@@ -414,9 +414,9 @@ describe("createCase", () => {
     expect(caseRepo.save).not.toHaveBeenCalled();
   });
 
-  // ========= 정상 흐름 =========
+  // ========= 正常系 =========
 
-  it("정상 요청 시 201 + caseId 반환", async () => {
+  it("正常リクエストでは 201 と caseId を返す", async () => {
     const caseRepo = { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue(mockCreatorProfile),
@@ -429,7 +429,7 @@ describe("createCase", () => {
     expect(caseRepo.save).toHaveBeenCalledOnce();
   });
 
-  it("서버가 status=WAITING, ownerType=USER, ownerId=creatorId 설정", async () => {
+  it("サーバーが status=WAITING, ownerType=USER, ownerId=creatorId を設定する", async () => {
     const caseRepo = { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue(mockCreatorProfile),
@@ -442,7 +442,7 @@ describe("createCase", () => {
     expect(saved.ownerId).toBe("creator-1");
   });
 
-  it("클라이언트 companyId 주입 시도 → 무시하고 creator profile 값 사용", async () => {
+  it("クライアントの companyId 注入を無視して creator profile の値を使う", async () => {
     const caseRepo = { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue(mockCreatorProfile),
@@ -454,22 +454,44 @@ describe("createCase", () => {
     expect(saved.creatorId).toBe("creator-1");
   });
 
-  it("선택 필드(dueDate, projectId) 포함 시 정상 저장", async () => {
+  it("任意フィールド dueDate を含む場合も正常に保存する", async () => {
     const caseRepo = { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue(mockCreatorProfile),
     } as unknown as UserRepository;
     const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
     await handler(
-      eventWithAuth("creator-1", { ...validBody, dueDate: "2026-12-31", projectId: "PROJ-1" })
+      eventWithAuth("creator-1", { ...validBody, dueDate: "2026-12-31" })
     );
     const saved = (caseRepo.save as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(saved.dueDate).toBe("2026-12-31");
-    expect(saved.projectId).toBe("PROJ-1");
+    expect(saved.projectId).toBeNull();
     expect(saved.parentCaseId).toBeNull();
   });
 
-  it("COMPANY_ADMIN이 COMPANY scope로 자사 case 생성 시 201", async () => {
+  it("projectId を指定すると 400（未対応フィールド）", async () => {
+    const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
+    const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
+    const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
+    const response = await handler(
+      eventWithAuth("creator-1", { ...validBody, projectId: "PROJ-1" })
+    );
+    expect(response.statusCode).toBe(400);
+    expect(caseRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("parentCaseId を指定すると 400（未対応フィールド）", async () => {
+    const caseRepo = { save: vi.fn() } as unknown as CaseRepository;
+    const userRepo = { findByUserId: vi.fn() } as unknown as UserRepository;
+    const handler = createHandler({ caseRepo, userRepo, ...makeNeverCalledOrgRepos() });
+    const response = await handler(
+      eventWithAuth("creator-1", { ...validBody, parentCaseId: "CASE-PARENT" })
+    );
+    expect(response.statusCode).toBe(400);
+    expect(caseRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("COMPANY_ADMIN が COMPANY scope で自社 case を作成すると 201", async () => {
     const caseRepo = { save: vi.fn().mockResolvedValue(undefined) } as unknown as CaseRepository;
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue({ ...mockCreatorProfile, role: UserRole.COMPANY_ADMIN }),
