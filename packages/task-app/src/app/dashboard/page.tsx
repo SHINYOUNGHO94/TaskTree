@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, RefreshCw } from "lucide-react";
+import { FileText, Plus, RefreshCw } from "lucide-react";
 import { TaskService, TaskSummary, TaskStatus } from "@task/core";
 import { useUser } from "../../components/providers/UserProvider";
 import { TaskCard } from "../../components/dashboard/TaskCard";
+import { CreateCaseModal } from "../../components/dashboard/CreateCaseModal";
 import { CreateTaskModal } from "../../components/dashboard/CreateTaskModal";
 import { EmptyTaskState } from "../../components/dashboard/EmptyTaskState";
 
@@ -16,6 +17,7 @@ const DashboardPage = () => {
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   // 初期データのロード
@@ -86,14 +88,20 @@ const DashboardPage = () => {
         </div>
 
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={fetchTasks}
             className="p-2.5 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition-all text-gray-500 shadow-sm"
             title="更新"
           >
             <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
           </button>
-          <button 
+          <button
+            className="border border-gray-300 bg-white text-gray-700 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
+            onClick={() => setIsCaseModalOpen(true)}
+          >
+            <FileText size={18} /> REQUEST 案件
+          </button>
+          <button
             className="bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all shadow-sm flex items-center gap-2"
             onClick={() => setIsModalOpen(true)}
           >
@@ -132,13 +140,20 @@ const DashboardPage = () => {
         <EmptyTaskState onCreateClick={() => setIsModalOpen(true)} />
       )}
       
-      <CreateTaskModal 
+      <CreateTaskModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchTasks}
         onSubmitTask={async (task) => await TaskService.createTask(task)}
         memberId={user.id}
         profile={profile}
+      />
+      <CreateCaseModal
+        isOpen={isCaseModalOpen}
+        onClose={() => setIsCaseModalOpen(false)}
+        onSuccess={() => {}}
+        profile={profile}
+        userId={user.id}
       />
     </section>
   );
