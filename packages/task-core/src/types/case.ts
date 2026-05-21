@@ -97,3 +97,35 @@ export interface UpdateCaseInput {
 export interface UpdateCaseStatusInput {
   status: CaseStatus;
 }
+
+export enum CaseTaskStatus {
+  TODO = "TODO",
+  IN_PROGRESS = "IN_PROGRESS",
+  REVIEW_REQUESTED = "REVIEW_REQUESTED",
+  DONE = "DONE",
+  ON_HOLD = "ON_HOLD",
+  CANCELED = "CANCELED",
+}
+
+export interface CaseTaskSummary {
+  taskId: string;
+  caseId: string;
+  companyId: string;
+  creatorId: string;
+  assigneeId: string | null;
+  title: string;
+  status: CaseTaskStatus;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CaseTaskDetail extends CaseTaskSummary {
+  description: string;
+}
+
+export interface CreateCaseTaskInput {
+  title: string;
+  description: string;
+  dueDate: string | null;
+}

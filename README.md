@@ -290,6 +290,17 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - History 自動記録、Comment、Approval flow、Claim request、Case 配下 task 作成は後続 Task に分離
 - `type-check:core`、`type-check:api`、`@task/app` lint / build、API テストで検証
 
+### Task 11: Case 作業実行フローの追加
+
+- Case 詳細画面から Case に紐付く作業を作成し、同じ詳細画面で配下作業一覧を確認できるようにした
+- `GET /cases/{id}/tasks` と `POST /cases/{id}/tasks` API、`GetCaseTasksFunction`、`CreateCaseTaskFunction` を追加
+- `@task/core` に Case task 用の型と `CaseService.getCaseTasks` / `createCaseTask` を追加し、フロントエンドから型付き service 経由で利用する構成を維持
+- DynamoDB では既存 `byCase` GSI を使い、`CaseTask#{status}#{updatedAt}#{taskId}` の `caseSortKey` で Case 配下作業を取得する構成にした
+- 作業作成は同一会社内の Case creator または USER owner のみに制限し、作業一覧取得は Case 閲覧権限と同じ範囲に制限
+- 不正 JSON、未対応 field、存在しない case、別会社 case、権限外ユーザーを拒否する API テストを追加
+- History、Comment、Approval flow、Claim request、task 編集・削除・状態変更は後続 Task に分離
+- `type-check:core`、`type-check:api`、`@task/app` lint / build、`@task/infra` build、API テストで検証
+
 ---
 
 ## 開発メモ
