@@ -38,7 +38,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick }) => {
             {CASE_TYPE_LABELS[caseDetail.caseType]}
           </span>
           <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 rounded border ${statusStyles[caseDetail.status]}`}>
-            {STATUS_LABELS[caseDetail.status]}
+            {CASE_STATUS_LABELS[caseDetail.status]}
           </span>
         </div>
 
