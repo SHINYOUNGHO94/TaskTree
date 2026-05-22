@@ -514,6 +514,48 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 
 **注意:** 既存 DB に残っている `divisionId="NONE"` の `一般部署` は自動削除しません。対象ユーザーの部署を新組織へ変更した後、管理者が手動で削除できます。
 
+### Task 21: Case-first Dashboard ワークフロー整理
+
+**Dashboard 変更:**
+
+- Dashboard 上部の `REQUEST 案件` 単独ボタンと `新規タスク作成` プライマリーボタンを削除し、`案件作成` 1 ボタンに統合した
+- 案件一覧に `自分の案件 / 公開案件 / 組織案件 / プロジェクト` の 4 タブを追加
+  - クライアント側フィルタリング: `自分の案件` = creatorId/ownerId が自分、`公開案件` = deliveryType OPEN、`組織案件` = targetScope が USER 以外、`プロジェクト` = caseType PROJECT
+  - タブ切り替え時に検索・フィルターをリセットし、空画面誤認を防止
+- v1 個人タスクを `個人タスク（旧）` セクションに折りたたみで格納し、Case 配下タスクと混同しないよう UI を分離した
+
+**CreateCaseModal 改善:**
+
+- `deliveryType`（DIRECT/OPEN）・`targetScope`（COMPANY〜USER）・`requiredRole` 選択を追加
+- targetScope 別の targetScopeId 自動 fallback を廃止し、必要な選択は必須化した
+  - COMPANY_ADMIN が DIVISION/DEPT/TEAM/USER を選ぶ場合は必ず選択が必要
+  - DIVISION_ADMIN: 自 division 自動、下位は選択必須
+  - DEPT_ADMIN: 自 dept 自動、下位は選択必須
+  - TEAM_ADMIN: 自 team 自動、USER は選択必須
+  - USER/GUEST: 自分自身のみ自動
+- targetScope = USER 選択時は deliveryType を DIRECT に固定し、requiredRole を USER に強制する
+- 組織 selector は `OrgService.getDivisions / getDepartments / getTeams` と `UserService.getCompanyUsers` を使用
+  - 各選択で下位を連鎖フィルタリング（division → dept → team → user）
+  - 送信先選択（ `*` 必須）と絞り込み（任意フィルター）をラベルで区別
+- org data fetch を `Promise.all` で一括取得し、一つでも失敗したら orgError を表示して再試行ボタンを提供
+- フォーム下部に送信先確認サマリー（送信先名・配信方式・閲覧権限）を表示
+
+**API / DynamoDB / GSI / IAM 変更なし**（フロントエンドのみの修正）
+
+**検証 (Task 21 追加分):**
+
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+
+**残存 gap (case-collaboration-model.md 対比):**
+
+- 公開案件タブの claim 状態別 UI（申請可能 / 申請中 / 自分の申請）は未実装（Task 13 で claim API は実装済み）
+- 組織案件の厳密なサーバー側フィルタリング未実装（現在は targetScope !== USER のクライアント近似値）
+- OPEN case 専用探索画面は未実装
+- Case task の編集 / 削除 / 承認フローは未完成
+
 **デプロイ影響:**
 - Lambda コード変更: `PostConfirmationFunction`、`InviteUserFunction`
 - 新規 Lambda: `DeleteUserFunction`

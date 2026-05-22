@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileText, LayoutGrid, List, Plus, RefreshCw, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, LayoutGrid, List, Plus, RefreshCw, Search } from "lucide-react";
 import {
   CaseDeliveryType,
   CaseDetail,
   CaseParticipantCompanyStatus,
   CaseService,
   CaseStatus,
+  CaseTargetScope,
   CaseType,
   ParticipantCompanyInvitation,
   TaskService,
@@ -29,6 +30,7 @@ type CaseStatusFilter = "ALL" | CaseStatus;
 type DeliveryTypeFilter = "ALL" | CaseDeliveryType;
 type OwnershipFilter = "ALL" | "CREATED_BY_ME" | "OWNED_BY_ME";
 type SortKey = "updatedAt_desc" | "createdAt_desc" | "dueDate_asc" | "status" | "caseType";
+type CaseAreaTab = "MY" | "OPEN" | "ORG" | "PROJECT";
 
 const SORT_LABELS: Record<SortKey, string> = {
   updatedAt_desc: "更新日 (新しい順)",
@@ -36,6 +38,27 @@ const SORT_LABELS: Record<SortKey, string> = {
   dueDate_asc: "期限 (近い順)",
   status: "ステータス",
   caseType: "案件種別",
+};
+
+const TAB_LABELS: Record<CaseAreaTab, string> = {
+  MY: "自分の案件",
+  OPEN: "公開案件",
+  ORG: "組織案件",
+  PROJECT: "プロジェクト",
+};
+
+const TAB_EMPTY_MESSAGES: Record<CaseAreaTab, string> = {
+  MY: "自分が作成または担当している案件はありません。",
+  OPEN: "公開中（OPEN）の案件はありません。",
+  ORG: "組織向けの案件はありません。",
+  PROJECT: "プロジェクト案件はありません。",
+};
+
+const TAB_DESCRIPTIONS: Record<CaseAreaTab, string> = {
+  MY: "自分が作成・担当する案件（案件 = 業務依頼・協業単位）",
+  OPEN: "権限範囲内で担当希望できる公開案件",
+  ORG: "組織・部署・チームへ向けた案件",
+  PROJECT: "複数案件をまとめるプロジェクト",
 };
 
 const STATUS_ORDER: Record<CaseStatus, number> = {
@@ -53,6 +76,21 @@ const CASE_TYPE_ORDER: Record<CaseType, number> = {
   [CaseType.STANDARD]: 1,
   [CaseType.REQUEST]: 2,
 };
+
+function filterByArea(cases: CaseDetail[], tab: CaseAreaTab, userId: string): CaseDetail[] {
+  switch (tab) {
+    case "MY":
+      return cases.filter((c) => c.creatorId === userId || c.ownerId === userId);
+    case "OPEN":
+      return cases.filter((c) => c.deliveryType === CaseDeliveryType.OPEN);
+    case "ORG":
+      return cases.filter((c) => c.targetScope !== CaseTargetScope.USER);
+    case "PROJECT":
+      return cases.filter((c) => c.caseType === CaseType.PROJECT);
+    default:
+      return cases;
+  }
+}
 
 function applyFiltersAndSort(
   cases: CaseDetail[],
@@ -111,21 +149,31 @@ const DashboardPage = () => {
   const { user, profile } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tasks, setTasks] = useState<TaskSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Case state
   const [cases, setCases] = useState<CaseDetail[]>([]);
   const [casesLoading, setCasesLoading] = useState(true);
   const [casesError, setCasesError] = useState<string | null>(null);
+  const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
+
+  // Legacy task state
+  const [tasks, setTasks] = useState<TaskSummary[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [taskActionError, setTaskActionError] = useState<string | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [legacyExpanded, setLegacyExpanded] = useState(false);
+
+  // Invitations state
   const [invitations, setInvitations] = useState<ParticipantCompanyInvitation[]>([]);
   const [invitationsLoading, setInvitationsLoading] = useState(false);
   const [invitationsError, setInvitationsError] = useState<string | null>(null);
   const [processingInvitation, setProcessingInvitation] = useState<string | null>(null);
   const [invitationActionErrors, setInvitationActionErrors] = useState<Record<string, string>>({});
 
-  // Case search / filter / sort / view state — restored from URL params when returning from detail
+  // Case area tab
+  const [activeTab, setActiveTab] = useState<CaseAreaTab>("MY");
+
+  // Case search / filter / sort / view state
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const [caseTypeFilter, setCaseTypeFilter] = useState<CaseTypeFilter>(
     (searchParams.get("caseType") as CaseTypeFilter) ?? "ALL",
@@ -148,24 +196,11 @@ const DashboardPage = () => {
 
   useEffect(() => {
     if (user) {
-      fetchTasks();
       fetchCases();
+      fetchTasks();
       fetchInvitations();
     }
   }, [user]);
-
-  const fetchTasks = async () => {
-    setIsLoading(true);
-    try {
-      const data = await TaskService.getTasks();
-      const uniqueTasks = Array.from(new Map(data.map(item => [item.id, item])).values());
-      setTasks(uniqueTasks);
-    } catch (error) {
-      console.error("Failed to fetch tasks", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchCases = async () => {
     setCasesLoading(true);
@@ -178,6 +213,19 @@ const DashboardPage = () => {
       setCasesError("案件の取得に失敗しました。再度お試しください。");
     } finally {
       setCasesLoading(false);
+    }
+  };
+
+  const fetchTasks = async () => {
+    setTasksLoading(true);
+    try {
+      const data = await TaskService.getTasks();
+      const uniqueTasks = Array.from(new Map(data.map((item) => [item.id, item])).values());
+      setTasks(uniqueTasks);
+    } catch (error) {
+      console.error("Failed to fetch tasks", error);
+    } finally {
+      setTasksLoading(false);
     }
   };
 
@@ -220,26 +268,26 @@ const DashboardPage = () => {
     }
   };
 
-  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
-    setActionError(null);
+  const handleTaskStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+    setTaskActionError(null);
     try {
       await TaskService.updateTask({ id: taskId, status: newStatus });
       await fetchTasks();
     } catch (error) {
       console.error("Failed to update status", error);
-      setActionError("ステータスの更新に失敗しました。再度お試しください。");
+      setTaskActionError("ステータスの更新に失敗しました。再度お試しください。");
     }
   };
 
-  const handleDelete = async (taskId: string) => {
+  const handleTaskDelete = async (taskId: string) => {
     if (!window.confirm("このタスクを削除しますか？")) return;
-    setActionError(null);
+    setTaskActionError(null);
     try {
       await TaskService.deleteTask(taskId);
       await fetchTasks();
     } catch (error) {
       console.error("Failed to delete task", error);
-      setActionError("タスクの削除に失敗しました。再度お試しください。");
+      setTaskActionError("タスクの削除に失敗しました。再度お試しください。");
     }
   };
 
@@ -260,10 +308,29 @@ const DashboardPage = () => {
     router.push(`/dashboard/cases/${caseId}?${params.toString()}`);
   };
 
+  const resetFilters = () => {
+    setSearchQuery("");
+    setCaseTypeFilter("ALL");
+    setStatusFilter("ALL");
+    setDeliveryTypeFilter("ALL");
+    setOwnershipFilter("ALL");
+  };
+
+  const handleTabChange = (tab: CaseAreaTab) => {
+    setActiveTab(tab);
+    resetFilters();
+  };
+
+  // Tab filtering then search/filter/sort
+  const tabFilteredCases = useMemo(
+    () => filterByArea(cases, activeTab, user?.id ?? ""),
+    [cases, activeTab, user?.id],
+  );
+
   const filteredCases = useMemo(
     () =>
       applyFiltersAndSort(
-        cases,
+        tabFilteredCases,
         user?.id ?? "",
         searchQuery,
         caseTypeFilter,
@@ -272,122 +339,71 @@ const DashboardPage = () => {
         ownershipFilter,
         sortKey,
       ),
-    [cases, user?.id, searchQuery, caseTypeFilter, statusFilter, deliveryTypeFilter, ownershipFilter, sortKey],
+    [tabFilteredCases, user?.id, searchQuery, caseTypeFilter, statusFilter, deliveryTypeFilter, ownershipFilter, sortKey],
   );
 
   if (!user) return null;
 
   return (
     <section>
+      {/* ── Page header ─────────────────────────────────────── */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            マイタスク
-            <span className="text-sm font-normal bg-gray-100 px-2 py-1 rounded text-gray-500">
-              {tasks.length}
-            </span>
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">タスク管理・追跡</p>
+          <h2 className="text-2xl font-bold text-gray-900">ダッシュボード</h2>
+          <p className="text-gray-500 text-sm mt-1">
+            案件（業務依頼・協業単位）と配下タスク（実作業）を管理します
+          </p>
         </div>
-
         <div className="flex gap-3">
           <button
-            onClick={fetchTasks}
+            onClick={() => { fetchCases(); fetchTasks(); fetchInvitations(); }}
             className="p-2.5 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition-all text-gray-500 shadow-sm"
             title="更新"
           >
-            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
-          </button>
-          <button
-            className="border border-gray-300 bg-white text-gray-700 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
-            onClick={() => setIsCaseModalOpen(true)}
-          >
-            <FileText size={18} /> REQUEST 案件
+            <RefreshCw size={18} className={casesLoading ? "animate-spin" : ""} />
           </button>
           <button
             className="bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all shadow-sm flex items-center gap-2"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => setIsCaseModalOpen(true)}
           >
-            <Plus size={18} /> 新規タスク作成
+            <Plus size={18} /> 案件作成
           </button>
         </div>
       </div>
 
-      {actionError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
-          {actionError}
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-48 bg-white border border-gray-100 animate-pulse rounded-2xl" />
-          ))}
-        </div>
-      ) : tasks.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              currentUserId={user.id}
-              userRole={profile?.role}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDelete}
-              onClick={handleTaskClick}
-            />
-          ))}
-        </div>
-      ) : (
-        <EmptyTaskState onCreateClick={() => setIsModalOpen(true)} />
-      )}
-
-      <CreateTaskModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={fetchTasks}
-        onSubmitTask={async (task) => await TaskService.createTask(task)}
-        memberId={user.id}
-        profile={profile}
-      />
-
-      {/* Case section */}
-      <div className="mt-12">
-        <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              案件一覧
-              <span className="text-sm font-normal bg-gray-100 px-2 py-1 rounded text-gray-500">
-                {filteredCases.length}
-                {filteredCases.length !== cases.length && (
-                  <span className="ml-1 text-gray-400">/ {cases.length}</span>
-                )}
-              </span>
-            </h2>
-            <p className="text-gray-500 text-sm mt-1">関連する案件</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 rounded-lg border transition-colors ${viewMode === "list" ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}
-              title="リスト表示"
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode("board")}
-              className={`p-2 rounded-lg border transition-colors ${viewMode === "board" ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}
-              title="ボード表示"
-            >
-              <LayoutGrid size={16} />
-            </button>
-          </div>
+      {/* ── Case section ─────────────────────────────────────── */}
+      <div className="mb-10">
+        {/* Area tabs */}
+        <div className="flex gap-1 mb-5 bg-gray-100/70 p-1 rounded-xl border border-gray-200/60 w-fit">
+          {(["MY", "OPEN", "ORG", "PROJECT"] as CaseAreaTab[]).map((tab) => {
+            const count = filterByArea(cases, tab, user.id).length;
+            return (
+              <button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  activeTab === tab
+                    ? "bg-white text-gray-900 shadow-sm border border-gray-200/50"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50/80"
+                }`}
+              >
+                {TAB_LABELS[tab]}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-normal ${
+                  activeTab === tab ? "bg-gray-100 text-gray-500" : "text-gray-400"
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Search / Filter / Sort controls */}
-        <div className="bg-gray-50/60 border border-gray-200/80 p-3 rounded-2xl flex flex-wrap gap-3 mb-6 items-center shadow-sm">
-          <div className="relative flex-1 min-w-[240px]">
+        {/* Tab description */}
+        <p className="text-xs text-gray-400 mb-4">{TAB_DESCRIPTIONS[activeTab]}</p>
+
+        {/* Search / Filter / Sort */}
+        <div className="bg-gray-50/60 border border-gray-200/80 p-3 rounded-2xl flex flex-wrap gap-3 mb-4 items-center shadow-sm">
+          <div className="relative flex-1 min-w-[220px]">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -430,8 +446,8 @@ const DashboardPage = () => {
             className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             <option value="ALL">配信: すべて</option>
-            <option value={CaseDeliveryType.DIRECT}>直接依頼</option>
-            <option value={CaseDeliveryType.OPEN}>公開</option>
+            <option value={CaseDeliveryType.DIRECT}>DIRECT</option>
+            <option value={CaseDeliveryType.OPEN}>OPEN</option>
           </select>
 
           <select
@@ -450,25 +466,39 @@ const DashboardPage = () => {
             className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-              <option key={k} value={k}>
-                {SORT_LABELS[k]}
-              </option>
+              <option key={k} value={k}>{SORT_LABELS[k]}</option>
             ))}
           </select>
+
+          <div className="flex gap-1">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-2 rounded-lg border transition-colors ${viewMode === "list" ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}
+              title="リスト表示"
+            >
+              <List size={15} />
+            </button>
+            <button
+              onClick={() => setViewMode("board")}
+              className={`p-2 rounded-lg border transition-colors ${viewMode === "board" ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"}`}
+              title="ボード表示"
+            >
+              <LayoutGrid size={15} />
+            </button>
+          </div>
         </div>
 
+        {/* Error */}
         {casesError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 flex items-center justify-between gap-4">
             <span>{casesError}</span>
-            <button
-              onClick={fetchCases}
-              className="text-xs font-bold underline text-red-600 hover:text-red-800 shrink-0"
-            >
+            <button onClick={fetchCases} className="text-xs font-bold underline text-red-600 hover:text-red-800 shrink-0">
               再試行
             </button>
           </div>
         )}
 
+        {/* Case list */}
         {casesLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
@@ -491,23 +521,25 @@ const DashboardPage = () => {
               </div>
             ))}
           </div>
-        ) : cases.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 bg-gray-50/30 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-6">
+        ) : tabFilteredCases.length === 0 ? (
+          <div className="py-16 text-center bg-gray-50/30 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-6">
             <FileText size={36} className="mx-auto mb-3 text-gray-300" />
-            <p className="text-sm font-medium text-gray-500">案件はありません</p>
+            <p className="text-sm font-medium text-gray-500">{TAB_EMPTY_MESSAGES[activeTab]}</p>
+            {activeTab === "MY" && (
+              <button
+                onClick={() => setIsCaseModalOpen(true)}
+                className="mt-4 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-all shadow-sm"
+              >
+                案件を作成する
+              </button>
+            )}
           </div>
         ) : filteredCases.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 bg-gray-50/30 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-6">
+          <div className="py-16 text-center bg-gray-50/30 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-6">
             <Search size={36} className="mx-auto mb-3 text-gray-300" />
             <p className="text-sm font-medium text-gray-500">条件に一致する案件がありません</p>
             <button
-              onClick={() => {
-                setSearchQuery("");
-                setCaseTypeFilter("ALL");
-                setStatusFilter("ALL");
-                setDeliveryTypeFilter("ALL");
-                setOwnershipFilter("ALL");
-              }}
+              onClick={resetFilters}
               className="mt-4 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl hover:bg-gray-50 shadow-sm transition-all text-xs font-bold"
             >
               フィルターをリセット
@@ -524,20 +556,11 @@ const DashboardPage = () => {
         )}
       </div>
 
-      <CreateCaseModal
-        isOpen={isCaseModalOpen}
-        onClose={() => setIsCaseModalOpen(false)}
-        onSuccess={fetchCases}
-        profile={profile}
-        userId={user.id}
-      />
-
-      {/* External invitations section */}
-      {/* External invitations section */}
-      <div className="mt-12 bg-gray-50/30 border border-gray-200/60 p-6 rounded-2xl shadow-sm mb-8">
+      {/* ── External invitations ─────────────────────────────── */}
+      <div className="mt-4 bg-gray-50/30 border border-gray-200/60 p-6 rounded-2xl shadow-sm mb-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">外部案件招待</h2>
+            <h2 className="text-lg font-bold text-gray-900">外部案件招待</h2>
             <p className="text-gray-500 text-sm mt-1">他社から受け取った案件参加招待</p>
           </div>
         </div>
@@ -545,10 +568,7 @@ const DashboardPage = () => {
         {invitationsError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 flex items-center justify-between gap-4">
             <span>{invitationsError}</span>
-            <button
-              onClick={fetchInvitations}
-              className="text-xs font-bold underline text-red-600 hover:text-red-800 shrink-0"
-            >
+            <button onClick={fetchInvitations} className="text-xs font-bold underline text-red-600 hover:text-red-800 shrink-0">
               再試行
             </button>
           </div>
@@ -582,9 +602,7 @@ const DashboardPage = () => {
                               : "bg-emerald-50 text-emerald-700 border-emerald-100"
                           }`}
                         >
-                          {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED
-                            ? "招待中"
-                            : "参加中"}
+                          {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED ? "招待中" : "参加中"}
                         </span>
                         <span className="text-[10px] text-gray-400 font-mono tracking-wide px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100">
                           {inv.caseSummary.caseType} / {inv.caseSummary.status}
@@ -610,18 +628,14 @@ const DashboardPage = () => {
                       {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED && (
                         <>
                           <button
-                            onClick={() =>
-                              handleInvitationAction(inv, CaseParticipantCompanyStatus.ACTIVE)
-                            }
+                            onClick={() => handleInvitationAction(inv, CaseParticipantCompanyStatus.ACTIVE)}
                             disabled={isProcessing}
                             className="text-xs font-bold px-3.5 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm hover:shadow transition-all"
                           >
                             {isProcessing ? "処理中..." : "承認"}
                           </button>
                           <button
-                            onClick={() =>
-                              handleInvitationAction(inv, CaseParticipantCompanyStatus.REJECTED)
-                            }
+                            onClick={() => handleInvitationAction(inv, CaseParticipantCompanyStatus.REJECTED)}
                             disabled={isProcessing}
                             className="text-xs font-bold px-3.5 py-2 rounded-xl bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm hover:shadow transition-all"
                           >
@@ -637,6 +651,93 @@ const DashboardPage = () => {
           </ul>
         )}
       </div>
+
+      {/* ── Legacy task section ──────────────────────────────── */}
+      <div className="border border-gray-200/60 rounded-2xl overflow-hidden mb-8">
+        <button
+          onClick={() => setLegacyExpanded((v) => !v)}
+          className="w-full flex items-center justify-between px-6 py-4 bg-gray-50/60 hover:bg-gray-100/60 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold text-gray-600">個人タスク（旧）</span>
+            <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-md font-medium">
+              {tasks.length} 件
+            </span>
+            <span className="text-[10px] text-gray-400 border border-gray-200 px-2 py-0.5 rounded-md hidden sm:inline">
+              ※ v2 案件配下のタスクとは別です
+            </span>
+          </div>
+          {legacyExpanded ? (
+            <ChevronUp size={16} className="text-gray-400" />
+          ) : (
+            <ChevronDown size={16} className="text-gray-400" />
+          )}
+        </button>
+
+        {legacyExpanded && (
+          <div className="p-6 bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-xs text-gray-400">
+                個人タスクは v1 形式のタスクです。案件（Case）配下の実作業タスクとは異なります。
+              </p>
+              <button
+                className="border border-gray-300 bg-white text-gray-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-1.5"
+                onClick={() => setIsTaskModalOpen(true)}
+              >
+                <Plus size={14} /> タスク作成
+              </button>
+            </div>
+
+            {taskActionError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+                {taskActionError}
+              </div>
+            )}
+
+            {tasksLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-40 bg-gray-50 border border-gray-100 animate-pulse rounded-xl" />
+                ))}
+              </div>
+            ) : tasks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {tasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    currentUserId={user.id}
+                    userRole={profile?.role}
+                    onStatusChange={handleTaskStatusChange}
+                    onDelete={handleTaskDelete}
+                    onClick={handleTaskClick}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyTaskState onCreateClick={() => setIsTaskModalOpen(true)} />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Modals ─────────────────────────────────────────────── */}
+      <CreateCaseModal
+        isOpen={isCaseModalOpen}
+        onClose={() => setIsCaseModalOpen(false)}
+        onSuccess={fetchCases}
+        profile={profile}
+        userId={user.id}
+      />
+
+      <CreateTaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onSuccess={fetchTasks}
+        onSubmitTask={async (task) => await TaskService.createTask(task)}
+        memberId={user.id}
+        profile={profile}
+      />
     </section>
   );
 };
