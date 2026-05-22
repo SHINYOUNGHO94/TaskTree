@@ -89,58 +89,50 @@ export const UserService = {
   },
 
   deleteUser: async (userId: string): Promise<void> => {
-    try {
-      const { tokens } = await fetchAuthSession();
-      const idToken = tokens?.idToken?.toString();
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
 
-      const restOperation = del({
-        apiName: "TaskApi",
-        path: `user/${userId}`,
-        options: {
-          headers: {
-            Authorization: idToken || '',
-          }
+    const restOperation = del({
+      apiName: "TaskApi",
+      path: `user/${userId}`,
+      options: {
+        headers: {
+          Authorization: idToken || '',
         }
-      });
-
-      const response = await restOperation.response;
-
-      if (response.statusCode !== 200) {
-        const json = await response.body.json() as { error?: string };
-        throw new Error(json?.error || `Failed to delete user (Status: ${response.statusCode})`);
       }
-    } catch (error) {
-      throw error;
+    });
+
+    const response = await restOperation.response;
+
+    if (response.statusCode !== 200) {
+      const json = await response.body.json() as { error?: string };
+      throw new Error(json?.error || `Failed to delete user (Status: ${response.statusCode})`);
     }
   },
 
   inviteUser: async (params: { email: string; name: string; divisionId?: string; departmentId?: string; teamId?: string; role?: string }): Promise<{ userId: string }> => {
-    try {
-      const { tokens } = await fetchAuthSession();
-      const idToken = tokens?.idToken?.toString();
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
 
-      const restOperation = post({
-        apiName: "TaskApi",
-        path: "user/invite",
-        options: {
-          body: params,
-          headers: {
-            Authorization: idToken || '',
-          }
+    const restOperation = post({
+      apiName: "TaskApi",
+      path: "user/invite",
+      options: {
+        body: params,
+        headers: {
+          Authorization: idToken || '',
         }
-      });
-
-      const response = await restOperation.response;
-
-      if (response.statusCode !== 200) {
-        throw new Error(`Failed to invite user (Status: ${response.statusCode})`);
       }
+    });
 
-      const json = await response.body.json();
-      const responseBody = InviteUserResponseSchema.parse(json);
-      return responseBody;
-    } catch (error) {
-      throw error;
+    const response = await restOperation.response;
+
+    if (response.statusCode !== 200) {
+      throw new Error(`Failed to invite user (Status: ${response.statusCode})`);
     }
+
+    const json = await response.body.json();
+    const responseBody = InviteUserResponseSchema.parse(json);
+    return responseBody;
   }
 };
