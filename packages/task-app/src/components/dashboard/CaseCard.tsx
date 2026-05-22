@@ -1,5 +1,6 @@
 import { CaseDetail, CaseStatus, CaseType } from '@task/core';
 import { Calendar } from 'lucide-react';
+import { CASE_STATUS_LABELS, CASE_TYPE_LABELS } from './caseLabels';
 
 interface CaseCardProps {
   caseDetail: CaseDetail;
@@ -22,16 +23,6 @@ const statusStyles: Record<CaseStatus, string> = {
   [CaseStatus.REOPENED]: 'bg-orange-50 text-orange-700 border border-orange-200/60',
 };
 
-const STATUS_LABELS: Record<CaseStatus, string> = {
-  [CaseStatus.WAITING]: '待機中',
-  [CaseStatus.IN_PROGRESS]: '対応中',
-  [CaseStatus.REVIEW_REQUESTED]: 'レビュー依頼',
-  [CaseStatus.COMPLETED]: '完了',
-  [CaseStatus.ON_HOLD]: '保留',
-  [CaseStatus.CANCELED]: 'キャンセル',
-  [CaseStatus.REOPENED]: '再開',
-};
-
 export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick }) => {
   const createdDate = new Date(caseDetail.createdAt).toLocaleDateString('ja-JP');
 
@@ -44,10 +35,10 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick }) => {
       <div>
         <div className="flex justify-between items-center mb-3">
           <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 rounded border ${caseTypeStyles[caseDetail.caseType]}`}>
-            {caseDetail.caseType}
+            {CASE_TYPE_LABELS[caseDetail.caseType]}
           </span>
           <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 rounded border ${statusStyles[caseDetail.status]}`}>
-            {STATUS_LABELS[caseDetail.status]}
+            {CASE_STATUS_LABELS[caseDetail.status]}
           </span>
         </div>
 

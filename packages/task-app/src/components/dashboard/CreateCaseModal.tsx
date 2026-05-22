@@ -18,6 +18,7 @@ import {
   UserRole,
   UserService,
 } from '@task/core';
+import { CASE_DELIVERY_TYPE_LABELS, CASE_TYPE_LABELS } from './caseLabels';
 
 interface CreateCaseModalProps {
   isOpen: boolean;
@@ -477,16 +478,16 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               <div>
                 <h2 className="text-base font-bold text-gray-900">
                   {selectedCaseType === CaseType.PROJECT
-                    ? 'PROJECT 案件作成'
+                    ? `${CASE_TYPE_LABELS[CaseType.PROJECT]}作成`
                     : selectedCaseType === CaseType.STANDARD
-                      ? 'STANDARD 案件作成'
-                      : 'REQUEST 案件作成'}
+                      ? `${CASE_TYPE_LABELS[CaseType.STANDARD]}作成`
+                      : `${CASE_TYPE_LABELS[CaseType.REQUEST]}作成`}
                 </h2>
                 <p className="text-[11px] text-gray-400 mt-0.5">
                   {selectedCaseType === CaseType.PROJECT
-                    ? '複数の STANDARD に分解できる大型案件'
+                    ? `複数の${CASE_TYPE_LABELS[CaseType.STANDARD]}に分解できる大型案件`
                     : selectedCaseType === CaseType.STANDARD
-                      ? '複数の REQUEST に分解できる社内案件'
+                      ? `複数の${CASE_TYPE_LABELS[CaseType.REQUEST]}に分解できる社内案件`
                       : '特定の組織・ユーザーへの依頼'}
                 </p>
               </div>
@@ -552,7 +553,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           value={ct}
                           className="sr-only"
                         />
-                        {ct}
+                        {CASE_TYPE_LABELS[ct]}
                       </label>
                     ))}
                   </div>
@@ -616,7 +617,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           }}
                           disabled={targetScope === CaseTargetScope.USER}
                         />
-                        <span className="text-xs font-bold">{dt}</span>
+                        <span className="text-xs font-bold">{CASE_DELIVERY_TYPE_LABELS[dt]}</span>
                         <span className="text-[10px] text-gray-400 mt-0.5">
                           {dt === CaseDeliveryType.DIRECT ? '特定の相手へ直接' : '権限範囲内に公開'}
                         </span>
@@ -856,7 +857,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       閲覧に必要な権限
                       {deliveryType === CaseDeliveryType.OPEN && (
-                        <span className="ml-1 text-amber-500 font-normal normal-case">（OPEN 案件では重要）</span>
+                        <span className="ml-1 text-amber-500 font-normal normal-case">（公募案件では重要）</span>
                       )}
                     </label>
                     <select

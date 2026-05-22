@@ -17,6 +17,7 @@ import { useUser } from "../../components/providers/UserProvider";
 import { CaseBoardView } from "../../components/dashboard/CaseBoardView";
 import { CaseCard } from "../../components/dashboard/CaseCard";
 import { CreateCaseModal } from "../../components/dashboard/CreateCaseModal";
+import { CASE_DELIVERY_TYPE_LABELS, CASE_STATUS_LABELS, CASE_TYPE_LABELS } from "../../components/dashboard/caseLabels";
 
 type ViewMode = "list" | "board";
 type CaseTypeFilter = "ALL" | CaseType;
@@ -43,7 +44,7 @@ const TAB_LABELS: Record<CaseAreaTab, string> = {
 
 const TAB_EMPTY_MESSAGES: Record<CaseAreaTab, string> = {
   MY: "自分が作成または担当している案件はありません。",
-  OPEN: "公開中（OPEN）の案件はありません。",
+  OPEN: "公募中の案件はありません。",
   ORG: "組織向けの案件はありません。",
   PROJECT: "プロジェクト案件はありません。",
 };
@@ -366,9 +367,9 @@ const DashboardPage = () => {
             className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             <option value="ALL">種別: すべて</option>
-            <option value={CaseType.REQUEST}>REQUEST</option>
-            <option value={CaseType.STANDARD}>STANDARD</option>
-            <option value={CaseType.PROJECT}>PROJECT</option>
+            <option value={CaseType.REQUEST}>{CASE_TYPE_LABELS[CaseType.REQUEST]}</option>
+            <option value={CaseType.STANDARD}>{CASE_TYPE_LABELS[CaseType.STANDARD]}</option>
+            <option value={CaseType.PROJECT}>{CASE_TYPE_LABELS[CaseType.PROJECT]}</option>
           </select>
 
           <select
@@ -392,8 +393,8 @@ const DashboardPage = () => {
             className="text-sm border border-gray-200/80 rounded-xl px-3.5 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer"
           >
             <option value="ALL">配信: すべて</option>
-            <option value={CaseDeliveryType.DIRECT}>DIRECT</option>
-            <option value={CaseDeliveryType.OPEN}>OPEN</option>
+            <option value={CaseDeliveryType.DIRECT}>{CASE_DELIVERY_TYPE_LABELS[CaseDeliveryType.DIRECT]}</option>
+            <option value={CaseDeliveryType.OPEN}>{CASE_DELIVERY_TYPE_LABELS[CaseDeliveryType.OPEN]}</option>
           </select>
 
           <select
@@ -551,7 +552,7 @@ const DashboardPage = () => {
                           {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED ? "招待中" : "参加中"}
                         </span>
                         <span className="text-[10px] text-gray-400 font-mono tracking-wide px-1.5 py-0.5 bg-gray-50 rounded border border-gray-100">
-                          {inv.caseSummary.caseType} / {inv.caseSummary.status}
+                          {CASE_TYPE_LABELS[inv.caseSummary.caseType]} / {CASE_STATUS_LABELS[inv.caseSummary.status]}
                         </span>
                       </div>
                       <p className="text-sm font-bold text-gray-900 truncate mb-1">{inv.caseSummary.title}</p>
