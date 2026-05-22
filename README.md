@@ -572,6 +572,64 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `yarn.cmd workspace @task/app build` — pass
 - `yarn.cmd test:api` — 349 tests pass
 
+### Task 22: レガシータスクフロー削除
+
+v1 の standalone task flow（個人タスク）を v2 コードベースから完全に削除し、Dashboard を Case-first 構成に一本化した。
+
+**削除したファイル:**
+
+- `packages/task-app/src/components/dashboard/CreateTaskModal.tsx`
+- `packages/task-app/src/components/dashboard/TaskCard.tsx`
+- `packages/task-app/src/components/dashboard/EmptyTaskState.tsx`
+- `packages/task-app/src/components/dashboard/EditTaskModal.tsx`
+- `packages/task-app/src/app/dashboard/tasks/[id]/page.tsx`（route `/dashboard/tasks/{id}` 廃止）
+- `packages/task-core/src/task/TaskService.ts`
+- `packages/task-core/src/types/task.ts`（TaskStatus, TaskLevel, AccessScope, CreateTaskInput, UpdateTaskInput を含む）
+- `packages/task-api/src/aws/handlers/task/` 以下 5 ファイル（createTask, getTasks, getTask, updateTask, deleteTask）
+- `packages/task-api/src/repositories/taskRepository.ts`
+- `packages/task-api/src/aws/entities/items/taskRecord.ts`
+
+**修正したファイル:**
+
+- `packages/task-app/src/app/dashboard/page.tsx`: legacy task state/handler/import/UI セクションを全て削除。Dashboard は案件作成ボタンと 4 タブ Case 一覧のみ。
+- `packages/task-core/src/index.ts`: `./types/task`・`./task/TaskService` エクスポート削除
+- `packages/task-infra/lib/task-infra-stack.ts`: 5 Lambda 定義（GetTasksFunction, CreateTaskFunction, GetTaskFunction, UpdateTaskFunction, DeleteTaskFunction）と `/tasks`・`/tasks/{id}` API Gateway ルートを削除
+- `packages/task-infra/lib/task-infra-stack.ts`: legacy task 専用になっていた Scan 権限 helper も削除
+
+**確認済み v2 CaseTask 保持ファイル:**
+
+- `packages/task-api/src/aws/handlers/case/getCaseTasks.ts` — 保持
+- `packages/task-api/src/aws/handlers/case/createCaseTask.ts` — 保持
+- `packages/task-api/src/repositories/caseTaskRepository.ts` — 保持
+- `packages/task-api/src/aws/entities/items/caseTaskRecord.ts` — 保持
+- `/cases/{id}/tasks` API ルート — 保持
+- Case 詳細画面の CaseTask 一覧・作成 UI — 保持
+
+**削除した API ルート:**
+
+- `GET /tasks`
+- `POST /tasks`
+- `GET /tasks/{id}`
+- `PUT /tasks/{id}`
+- `DELETE /tasks/{id}`
+
+**デプロイ影響:**
+
+- CDK deploy 必要
+- 削除 Lambda: GetTasksFunction, CreateTaskFunction, GetTaskFunction, UpdateTaskFunction, DeleteTaskFunction
+- 削除 API route: `/tasks`、`/tasks/{id}`
+- DynamoDB テーブル / GSI 変更: なし（既存データは残存するが v2 では参照しない）
+- IAM 変更: 削除 Lambda 分の権限が自動解除
+
+**検証:**
+
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass（`/dashboard/tasks/{id}` ルート消滅を確認）
+- `yarn.cmd workspace @task/infra build` — pass
+- `yarn.cmd test:api` — 317 tests pass（legacy task テストは削除済み）
+
 ---
 
 ## 開発メモ

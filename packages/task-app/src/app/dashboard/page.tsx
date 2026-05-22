@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, FileText, LayoutGrid, List, Plus, RefreshCw, Search } from "lucide-react";
+import { FileText, LayoutGrid, List, Plus, RefreshCw, Search } from "lucide-react";
 import {
   CaseDeliveryType,
   CaseDetail,
@@ -12,17 +12,11 @@ import {
   CaseTargetScope,
   CaseType,
   ParticipantCompanyInvitation,
-  TaskService,
-  TaskSummary,
-  TaskStatus,
 } from "@task/core";
 import { useUser } from "../../components/providers/UserProvider";
 import { CaseBoardView } from "../../components/dashboard/CaseBoardView";
 import { CaseCard } from "../../components/dashboard/CaseCard";
-import { TaskCard } from "../../components/dashboard/TaskCard";
 import { CreateCaseModal } from "../../components/dashboard/CreateCaseModal";
-import { CreateTaskModal } from "../../components/dashboard/CreateTaskModal";
-import { EmptyTaskState } from "../../components/dashboard/EmptyTaskState";
 
 type ViewMode = "list" | "board";
 type CaseTypeFilter = "ALL" | CaseType;
@@ -156,13 +150,6 @@ const DashboardPage = () => {
   const [casesError, setCasesError] = useState<string | null>(null);
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
 
-  // Legacy task state
-  const [tasks, setTasks] = useState<TaskSummary[]>([]);
-  const [tasksLoading, setTasksLoading] = useState(true);
-  const [taskActionError, setTaskActionError] = useState<string | null>(null);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [legacyExpanded, setLegacyExpanded] = useState(false);
-
   // Invitations state
   const [invitations, setInvitations] = useState<ParticipantCompanyInvitation[]>([]);
   const [invitationsLoading, setInvitationsLoading] = useState(false);
@@ -197,7 +184,6 @@ const DashboardPage = () => {
   useEffect(() => {
     if (user) {
       fetchCases();
-      fetchTasks();
       fetchInvitations();
     }
   }, [user]);
@@ -213,19 +199,6 @@ const DashboardPage = () => {
       setCasesError("案件の取得に失敗しました。再度お試しください。");
     } finally {
       setCasesLoading(false);
-    }
-  };
-
-  const fetchTasks = async () => {
-    setTasksLoading(true);
-    try {
-      const data = await TaskService.getTasks();
-      const uniqueTasks = Array.from(new Map(data.map((item) => [item.id, item])).values());
-      setTasks(uniqueTasks);
-    } catch (error) {
-      console.error("Failed to fetch tasks", error);
-    } finally {
-      setTasksLoading(false);
     }
   };
 
@@ -266,33 +239,6 @@ const DashboardPage = () => {
     } finally {
       setProcessingInvitation(null);
     }
-  };
-
-  const handleTaskStatusChange = async (taskId: string, newStatus: TaskStatus) => {
-    setTaskActionError(null);
-    try {
-      await TaskService.updateTask({ id: taskId, status: newStatus });
-      await fetchTasks();
-    } catch (error) {
-      console.error("Failed to update status", error);
-      setTaskActionError("ステータスの更新に失敗しました。再度お試しください。");
-    }
-  };
-
-  const handleTaskDelete = async (taskId: string) => {
-    if (!window.confirm("このタスクを削除しますか？")) return;
-    setTaskActionError(null);
-    try {
-      await TaskService.deleteTask(taskId);
-      await fetchTasks();
-    } catch (error) {
-      console.error("Failed to delete task", error);
-      setTaskActionError("タスクの削除に失敗しました。再度お試しください。");
-    }
-  };
-
-  const handleTaskClick = (id: string) => {
-    router.push(`/dashboard/tasks/${id}`);
   };
 
   const handleCaseClick = (caseId: string) => {
@@ -356,7 +302,7 @@ const DashboardPage = () => {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => { fetchCases(); fetchTasks(); fetchInvitations(); }}
+            onClick={() => { fetchCases(); fetchInvitations(); }}
             className="p-2.5 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition-all text-gray-500 shadow-sm"
             title="更新"
           >
@@ -652,75 +598,6 @@ const DashboardPage = () => {
         )}
       </div>
 
-      {/* ── Legacy task section ──────────────────────────────── */}
-      <div className="border border-gray-200/60 rounded-2xl overflow-hidden mb-8">
-        <button
-          onClick={() => setLegacyExpanded((v) => !v)}
-          className="w-full flex items-center justify-between px-6 py-4 bg-gray-50/60 hover:bg-gray-100/60 transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold text-gray-600">個人タスク（旧）</span>
-            <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-md font-medium">
-              {tasks.length} 件
-            </span>
-            <span className="text-[10px] text-gray-400 border border-gray-200 px-2 py-0.5 rounded-md hidden sm:inline">
-              ※ v2 案件配下のタスクとは別です
-            </span>
-          </div>
-          {legacyExpanded ? (
-            <ChevronUp size={16} className="text-gray-400" />
-          ) : (
-            <ChevronDown size={16} className="text-gray-400" />
-          )}
-        </button>
-
-        {legacyExpanded && (
-          <div className="p-6 bg-white">
-            <div className="flex justify-between items-center mb-4">
-              <p className="text-xs text-gray-400">
-                個人タスクは v1 形式のタスクです。案件（Case）配下の実作業タスクとは異なります。
-              </p>
-              <button
-                className="border border-gray-300 bg-white text-gray-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-1.5"
-                onClick={() => setIsTaskModalOpen(true)}
-              >
-                <Plus size={14} /> タスク作成
-              </button>
-            </div>
-
-            {taskActionError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
-                {taskActionError}
-              </div>
-            )}
-
-            {tasksLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-40 bg-gray-50 border border-gray-100 animate-pulse rounded-xl" />
-                ))}
-              </div>
-            ) : tasks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {tasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    currentUserId={user.id}
-                    userRole={profile?.role}
-                    onStatusChange={handleTaskStatusChange}
-                    onDelete={handleTaskDelete}
-                    onClick={handleTaskClick}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyTaskState onCreateClick={() => setIsTaskModalOpen(true)} />
-            )}
-          </div>
-        )}
-      </div>
-
       {/* ── Modals ─────────────────────────────────────────────── */}
       <CreateCaseModal
         isOpen={isCaseModalOpen}
@@ -730,14 +607,6 @@ const DashboardPage = () => {
         userId={user.id}
       />
 
-      <CreateTaskModal
-        isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
-        onSuccess={fetchTasks}
-        onSubmitTask={async (task) => await TaskService.createTask(task)}
-        memberId={user.id}
-        profile={profile}
-      />
     </section>
   );
 };
