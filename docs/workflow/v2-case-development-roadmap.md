@@ -106,6 +106,12 @@ Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` に�
   - legacy task を主要導線から外し、Case 配下 task との混同を避ける
   - `REQUEST` / `STANDARD` / `PROJECT` 作成時の送信先、公開範囲、必要権限を role 別に選択できるようにする
   - `自分の案件` / `公開案件` / `組織案件` / `プロジェクト` の画面区分へ近づける
+- Task 22: `Legacy task flow 削除`
+  - 詳細計画: `docs/workflow/task-22-remove-legacy-task-flow-plan.md`
+  - v1 standalone task flow を完全削除
+  - Dashboard `個人タスク（旧）` セクション、関連 state/handler/component を除去
+  - `TaskService`、`types/task` を task-core から削除
+  - `/tasks` API ルートと Lambda 5 本を CDK stack から削除
 
 ## 進め方の目安
 
@@ -130,6 +136,8 @@ Task 18 では、v2 Case roadmap の最終仕上げとして、検索、フィ�
 Task 19、Task 20 では、UI と組織管理の運用品質を改善しました。
 
 Task 21 では、実際の利用確認で見つかった Dashboard 上の legacy task / v2 Case 混在を整理し、`case-collaboration-model.md` の Case-first 方針に合わせて作成導線と一覧区分を修正します。
+
+Task 22 では、v1 standalone task flow を完全に削除しました。Dashboard は v2 Case-first 構成に一本化され、`/tasks` API ルートと関連 Lambda も CDK stack から除去しました。v2 CaseTask flow は保持しています。
 
 ## 注意
 

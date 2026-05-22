@@ -29,13 +29,6 @@ export class TaskInfraStack extends cdk.Stack {
       }));
     };
 
-    const grantTableScanRead = (fn: NodejsFunction) => {
-      fn.addToRolePolicy(new iam.PolicyStatement({
-        actions: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:Scan'],
-        resources: [tableArn, tableIndexesArn],
-      }));
-    };
-
     const grantTableCreate = (fn: NodejsFunction) => {
       fn.addToRolePolicy(new iam.PolicyStatement({
         actions: ['dynamodb:PutItem'],
@@ -309,57 +302,6 @@ export class TaskInfraStack extends cdk.Stack {
       },
     });
     grantTableRead(getUserProfileFn);
-
-    const getTasksFn = new NodejsFunction(this, 'GetTasksFunction', {
-      runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/getTasks.ts'),
-      handler: 'handler',
-      environment: {
-        TABLE_NAME: database.entities.tableName,
-      },
-    });
-    grantTableScanRead(getTasksFn);
-
-    const createTaskFn = new NodejsFunction(this, 'CreateTaskFunction', {
-      runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/createTask.ts'),
-      handler: 'handler',
-      environment: {
-        TABLE_NAME: database.entities.tableName,
-      },
-    });
-    grantTableRead(createTaskFn);
-    grantTableCreate(createTaskFn);
-
-    const getTaskFn = new NodejsFunction(this, 'GetTaskFunction', {
-      runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/getTask.ts'),
-      handler: 'handler',
-      environment: {
-        TABLE_NAME: database.entities.tableName,
-      },
-    });
-    grantTableScanRead(getTaskFn);
-
-    const updateTaskFn = new NodejsFunction(this, 'UpdateTaskFunction', {
-      runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/updateTask.ts'),
-      handler: 'handler',
-      environment: {
-        TABLE_NAME: database.entities.tableName,
-      },
-    });
-    grantTaskMutation(updateTaskFn, ['dynamodb:PutItem']);
-
-    const deleteTaskFn = new NodejsFunction(this, 'DeleteTaskFunction', {
-      runtime: Runtime.NODEJS_20_X,
-      entry: path.join(__dirname, '../../task-api/src/aws/handlers/task/deleteTask.ts'),
-      handler: 'handler',
-      environment: {
-        TABLE_NAME: database.entities.tableName,
-      },
-    });
-    grantTaskMutation(deleteTaskFn, ['dynamodb:DeleteItem']);
 
     const createCaseFn = new NodejsFunction(this, 'CreateCaseFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -636,15 +578,6 @@ export class TaskInfraStack extends cdk.Stack {
 
     const participantCompanyInvitationsResource = casesResource.addResource('participant-company-invitations');
     participantCompanyInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getParticipantCompanyInvitationsFn), { authorizer });
-
-    const tasksResource = api.root.addResource('tasks');
-    tasksResource.addMethod('GET', new apigateway.LambdaIntegration(getTasksFn), { authorizer });
-    tasksResource.addMethod('POST', new apigateway.LambdaIntegration(createTaskFn), { authorizer });
-
-    const tasksIdResource = tasksResource.addResource('{id}');
-    tasksIdResource.addMethod('GET', new apigateway.LambdaIntegration(getTaskFn), { authorizer });
-    tasksIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateTaskFn), { authorizer });
-    tasksIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTaskFn), { authorizer });
 
     new cdk.CfnOutput(this, 'CognitoUserPoolId', {
       value: userPool.userPoolId,
