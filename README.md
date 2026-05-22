@@ -632,6 +632,57 @@ v1 の standalone task flow（個人タスク）を v2 コードベースから�
 
 ---
 
+### Task 23: Case 表示名と UI ラベル整備
+
+Case 関連画面で UUID がそのまま表示される問題を解消し、enum 値を日本語ラベルで表示するよう改善した。
+
+**UUID 表示解消（フロントエンドのみ）:**
+
+- `comment.authorId` → `UserService.getCompanyUsers()` で取得したユーザーマップから `name → email → shortId` の順で解決
+- `req.requesterId`（担当希望一覧）→ 同上で名前表示
+- `caseDetail.creatorId`（案件仕様サイドバー）→ 同上で名前表示
+- `caseDetail.ownerId`（担当欄）→ `ownerType === USER` 時は名前表示、それ以外は短縮 ID
+- `caseDetail.targetScopeId`（公開範囲欄）→ `targetScope === USER` 時は名前表示、それ以外は短縮 ID
+- `caseHistory.actorId`（履歴）→ 操作者名を履歴行に表示
+- hover title でも userId をそのまま出さず、表示名または短縮 ID を出すよう統一
+
+**enum 日本語ラベル化:**
+
+- `CaseType` バッジ（Case 詳細、CaseCard、子案件、外部招待一覧）: REQUEST→依頼、STANDARD→通常案件、PROJECT→プロジェクト
+- `CaseStatus` バッジ（外部招待一覧）: 日本語表示に統一
+- Dashboard の種別 / 配信 filter: REQUEST / STANDARD / PROJECT / DIRECT / OPEN を日本語ラベル化
+- Case 作成 modal の見出し、種別選択、配信方式選択を日本語ラベル化
+- 子案件の hardcoded "STANDARD" / "REQUEST" 文字列を label 化
+
+**追加ファイル:**
+
+- `packages/task-app/src/components/dashboard/caseLabels.ts`: 共通 helper
+  - `CASE_TYPE_LABELS`, `CASE_DELIVERY_TYPE_LABELS`, `CASE_STATUS_LABELS`, `CASE_TARGET_SCOPE_LABELS`, `CLAIM_STATUS_LABELS`, `CASE_TASK_STATUS_LABELS`
+  - `shortId(id)`: 先頭 8 文字 + "…"
+  - `resolveDisplayName(id, userMap)`: name → email → shortId の順で fallback
+
+**変更ファイル:**
+
+- `packages/task-app/src/app/dashboard/cases/[id]/page.tsx`: UUID 解消・ラベル化
+- `packages/task-app/src/components/dashboard/CaseCard.tsx`: caseType / status ラベルを共通 helper へ統一
+- `packages/task-app/src/components/dashboard/CreateCaseModal.tsx`: 作成 modal の raw enum 表示を日本語化
+- `packages/task-app/src/app/dashboard/page.tsx`: filter と招待カードの caseType / status / deliveryType ラベル化
+- `packages/task-app/src/app/dashboard/cases/[id]/page.tsx`: Case 詳細内の status / delivery / target scope / task status label を共通 helper へ統一
+
+**API 変更:** なし。フロントエンドのみ修正。
+
+**デプロイ影響:** なし。CDK deploy 不要。app build / hosting deploy のみ。
+
+**検証:**
+
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+- `yarn.cmd test:api` — 317 tests pass
+
+---
+
 ## 開発メモ
 
 実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。

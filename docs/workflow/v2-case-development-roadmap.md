@@ -112,6 +112,11 @@ Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` に�
   - Dashboard `個人タスク（旧）` セクション、関連 state/handler/component を除去
   - `TaskService`、`types/task` を task-core から削除
   - `/tasks` API ルートと Lambda 5 本を CDK stack から削除
+- Task 23: `Case 表示名・UI ラベル整備`
+  - 詳細計画: `docs/workflow/task-23-case-display-name-labels-plan.md`
+  - UUID 直接表示を `resolveDisplayName` helper で名前表示に変換
+  - enum 値を日本語ラベル（依頼 / 通常案件 / プロジェクト等）で表示
+  - 共通 helper `caseLabels.ts` 追加（API 変更なし）
 
 ## 進め方の目安
 
@@ -138,6 +143,8 @@ Task 19、Task 20 では、UI と組織管理の運用品質を改善しまし�
 Task 21 では、実際の利用確認で見つかった Dashboard 上の legacy task / v2 Case 混在を整理し、`case-collaboration-model.md` の Case-first 方針に合わせて作成導線と一覧区分を修正します。
 
 Task 22 では、v1 standalone task flow を完全に削除しました。Dashboard は v2 Case-first 構成に一本化され、`/tasks` API ルートと関連 Lambda も CDK stack から除去しました。v2 CaseTask flow は保持しています。
+
+Task 23 では、Case 関連画面での UUID 直接表示を解消し、enum 値を日本語ラベルで表示するよう改善しました。共通 helper `caseLabels.ts` を追加し、API 変更なしでフロントエンドのみで対応しました。
 
 ## 注意
 
