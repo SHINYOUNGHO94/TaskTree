@@ -683,6 +683,108 @@ Case 関連画面で UUID がそのまま表示される問題を解消し、enu
 
 ---
 
+### Task 25: ChildCase 作成 UX 整備
+
+Case 詳細画面で、親子 Case の作成導線と Server 側制約を明確にした。
+
+**Case 作成ボタン改善:**
+
+- PROJECT 詳細: `+ 標準案件を作成` ボタンを表示（child type は STANDARD 固定）
+- STANDARD 詳細: `+ 依頼案件を作成` ボタンを表示（child type は REQUEST 固定）
+- REQUEST 詳細: child case 作成ボタンを表示しない
+- ボタン表示権限: creator / USER owner に加えて、親 Case ownerType に応じた組織 admin も許可
+
+**ChildCase 作成 form 改善:**
+
+- form 上部に `作成される案件種別: 標準案件 / 依頼案件` を明示
+- submit ボタン文言もタイプ別（`標準案件を作成` / `依頼案件を作成`）に変更
+- enum 生値を UI に表示しない
+
+**ChildCase 一覧 UX 改善:**
+
+- STANDARD 詳細の child case 一覧に caseType バッジを追加（REQUEST ラベルを明示）
+
+**Server 側 CaseType 制約（既存維持）:**
+
+- PROJECT 親 → STANDARD child のみ
+- STANDARD 親 → REQUEST child のみ
+- REQUEST 親 → child 作成不可（400）
+- child case type はサーバーが親 case type から決定する
+
+**Server 側権限強化:**
+
+- creator / USER owner に加えて、組織 owner type に応じた admin role を許可
+  - COMPANY owner: COMPANY_ADMIN
+  - DIVISION owner: COMPANY_ADMIN または同 division の DIVISION_ADMIN
+  - DEPARTMENT owner: COMPANY_ADMIN / DIVISION_ADMIN / 同 dept の DEPT_ADMIN
+  - TEAM owner: COMPANY_ADMIN / DIVISION_ADMIN / DEPT_ADMIN / 同 team の TEAM_ADMIN
+- 他社 Case へのアクセスは 403
+
+**targetScope / requiredRole 検証強化（P1 修正後）:**
+
+- `ALLOWED_TARGET_SCOPES_BY_ROLE` による role 別 targetScope 制約を実装（root Case と同一ロジック）
+  - COMPANY_ADMIN: COMPANY / DIVISION / DEPARTMENT / TEAM / USER
+  - DIVISION_ADMIN: DIVISION / DEPARTMENT / TEAM / USER
+  - DEPT_ADMIN: DEPARTMENT / TEAM / USER
+  - TEAM_ADMIN: TEAM / USER
+  - USER / GUEST: USER のみ
+- 各 targetScope に応じた targetScopeId 存在確認を実装
+  - COMPANY: targetScopeId が caller の companyId と一致するかを確認
+  - DIVISION: `divisionRepo.findById` で存在確認、DIVISION_ADMIN は自組織のみ
+  - DEPARTMENT: `deptRepo.findByCompanyId` で存在確認、DEPT_ADMIN は自部署のみ
+  - TEAM: `teamRepo.findByCompanyId` で存在確認、TEAM_ADMIN は自チームのみ
+  - USER: `userRepo.findByUserId` で存在確認、USER/GUEST は自分自身のみ
+- `targetScope = USER` かつ `deliveryType = OPEN` の組み合わせを 400 で拒否
+- `requiredRole` を作成者の role rank で動的に検証（作成者 role より高い値は 400）
+- `createChildCase` Lambda の deps に `DivisionRepository`, `DepartmentRepository`, `TeamRepository` を追加
+- IAM 変更不要: `grantCaseMutation` はすでに `dynamodb:GetItem` / `dynamodb:Query` を含む
+
+**form 改善（P1 修正後）:**
+
+- targetScope select を role 別の許可スコープに絞り込み（TEAM/USER の固定から変更）
+- USER scope 選択時は deliveryType を DIRECT に自動固定
+- COMPANY scope 選択時は targetScopeId に companyId を自動入力（disabled 表示）
+- requiredRole select を caller の role rank 以下の全 role に拡張
+- form オープン時に role に基づいた初期値を自動設定
+
+**History（既存維持）:**
+
+- ChildCase 作成時は `CHILD_CASE_CREATED` を親 Case の History に記録
+- History 記録失敗は本処理を失敗させない
+
+**デプロイ影響:**
+
+- CDK deploy 不要（`grantCaseMutation` はすでに読み取り権限を含む）
+- 新規 Lambda なし
+- 新規 API route なし
+- DynamoDB table / GSI 変更なし
+- Lambda コードの deploy のみ必要
+
+**Case 詳細画面コンポーネント分離:**
+
+`packages/task-app/src/app/dashboard/cases/[id]/page.tsx`（2000 行超）を、責務ごとのコンポーネントに分離した。
+
+新規作成ファイル（`packages/task-app/src/components/case-detail/`）:
+
+- `caseDetailPermissions.ts`: 権限判定ヘルパーとロール定数を集約（`canManageCaseOwner`、`canManageCaseTask`、`CHILD_CASE_ALLOWED_SCOPES_BY_ROLE` 等）
+- `CreateChildCaseForm.tsx`: 子案件作成フォーム全体。組織データ取得・カスケードセレクタ・フォーム state・`CaseService.createChildCase` 呼び出しを内包
+- `CaseChildCasesSection.tsx`: 子案件階層セクション。`showChildCaseForm` を内部管理し、`CreateChildCaseForm` を条件レンダリング
+- `CaseTasksSection.tsx`: 作業一覧。作成・編集・削除の mutation state と modal を内包
+- `CaseHistorySection.tsx`: 履歴タイムライン（表示専用）
+- `CaseCommentsSection.tsx`: コメント一覧と投稿フォーム
+- `CaseParticipantCompanySection.tsx`: 参加会社一覧と招待フォーム
+
+`page.tsx` は route パラメーター・データ取得コールバック・state 管理・セクションレイアウトのみを担当し、約 520 行に削減した。
+
+**検証:**
+
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+- `yarn.cmd test:api` — 365 tests pass（P1/P2 修正後 新規 15 test 追加）
+
+---
+
 ### Task 24: CaseTask 操作フロー整備
 
 Case 詳細の `作業一覧` を、表示専用のリストから編集可能な CaseTask 管理 UI に拡張した。
@@ -720,6 +822,13 @@ Case 詳細の `作業一覧` を、表示専用のリストから編集可能�
 - 新規 API route: `PUT /cases/{id}/tasks/{taskId}`, `DELETE /cases/{id}/tasks/{taskId}`
 - DynamoDB table / GSI 変更なし
 - IAM: CaseTask 更新 / 削除と History 記録に必要な DynamoDB 権限を追加
+
+**検証:**
+
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+- `yarn.cmd test:api` — 365 tests pass
 
 ---
 
