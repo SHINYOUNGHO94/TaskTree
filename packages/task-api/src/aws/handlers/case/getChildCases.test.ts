@@ -3,12 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CaseDeliveryType,
   CaseOwnerType,
+  CaseParticipantCompanyStatus,
   CaseStatus,
   CaseTargetScope,
   CaseType,
   UserRole,
 } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
+import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { createHandler } from "./getChildCases";
 
@@ -81,9 +83,24 @@ const childCase = {
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
+const activeParticipant = {
+  participantCompanyId: "COMP-1",
+  caseId: "CASE-1",
+  ownerCompanyId: "COMP-OWNER",
+  companyId: "COMP-1",
+  companyName: "Participant Company",
+  status: CaseParticipantCompanyStatus.ACTIVE,
+  invitedBy: "owner-user",
+  reviewedBy: "admin-user",
+  reviewedAt: "2026-01-01T00:00:00.000Z",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+};
+
 const makeMockRepos = (overrides: {
   caseResult?: unknown;
   profileResult?: unknown;
+  participantResult?: unknown;
   childrenResult?: unknown[];
 }) => {
   const caseRepo = {
@@ -93,44 +110,47 @@ const makeMockRepos = (overrides: {
   const userRepo = {
     findByUserId: vi.fn().mockResolvedValue(overrides.profileResult),
   } as unknown as UserRepository;
-  return { caseRepo, userRepo };
+  const participantCompanyRepo = {
+    findByCaseAndCompany: vi.fn().mockResolvedValue(overrides.participantResult),
+  } as unknown as CaseParticipantCompanyRepository;
+  return { caseRepo, participantCompanyRepo, userRepo };
 };
 
 describe("getChildCases", () => {
   it("returns 401 when JWT is missing", async () => {
-    const { caseRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, userRepo });
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ id: "CASE-1" }));
     expect(response.statusCode).toBe(401);
   });
 
   it("returns 500 when user profile is not found", async () => {
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: undefined,
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(500);
   });
 
   it("returns 404 when case does not exist", async () => {
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: undefined,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-NONEXISTENT" }));
     expect(response.statusCode).toBe(404);
   });
 
   it("returns 403 for case from another company", async () => {
     const otherCompanyCase = { ...baseCase, companyId: "COMP-OTHER" };
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: otherCompanyCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(403);
   });
@@ -144,22 +164,41 @@ describe("getChildCases", () => {
       targetScope: CaseTargetScope.USER,
       targetScopeId: "other-user",
     };
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: restrictedCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
+    const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
+    expect(response.statusCode).toBe(403);
+  });
+
+  it("returns 403 when caller does not satisfy requiredRole", async () => {
+    const adminOnlyCase = {
+      ...baseCase,
+      creatorId: "other-user",
+      ownerType: CaseOwnerType.USER,
+      ownerId: "other-user",
+      requiredRole: UserRole.COMPANY_ADMIN,
+      targetScope: CaseTargetScope.TEAM,
+      targetScopeId: "TEAM-1",
+    };
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
+      caseResult: adminOnlyCase,
+      profileResult: mockProfile,
+    });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(403);
   });
 
   it("returns 200 with children for creator", async () => {
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
       childrenResult: [childCase],
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as unknown[];
@@ -173,12 +212,12 @@ describe("getChildCases", () => {
       ownerType: CaseOwnerType.USER,
       ownerId: "user-1",
     };
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: ownerCase,
       profileResult: mockProfile,
       childrenResult: [childCase],
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
   });
@@ -192,12 +231,12 @@ describe("getChildCases", () => {
       targetScope: CaseTargetScope.USER,
       targetScopeId: "user-1",
     };
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: userTargetCase,
       profileResult: mockProfile,
       childrenResult: [],
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
   });
@@ -211,23 +250,44 @@ describe("getChildCases", () => {
       targetScope: CaseTargetScope.TEAM,
       targetScopeId: "TEAM-1",
     };
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: teamTargetCase,
       profileResult: mockProfile,
       childrenResult: [],
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
   });
 
+  it("returns 200 for ACTIVE participant company user on OPEN parent case", async () => {
+    const externalOpenCase = {
+      ...baseCase,
+      companyId: "COMP-OWNER",
+      deliveryType: CaseDeliveryType.OPEN,
+      creatorId: "owner-user",
+      ownerId: "owner-user",
+    };
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
+      caseResult: externalOpenCase,
+      profileResult: mockProfile,
+      participantResult: activeParticipant,
+      childrenResult: [childCase],
+    });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
+    const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as unknown[];
+    expect(body).toHaveLength(1);
+  });
+
   it("returns empty array when no children exist", async () => {
-    const { caseRepo, userRepo } = makeMockRepos({
+    const { caseRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
       childrenResult: [],
     });
-    const handler = createHandler({ caseRepo, userRepo });
+    const handler = createHandler({ caseRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as unknown[];

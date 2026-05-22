@@ -2,8 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { UserProfile, UserService, UserRole, OrgService, Department, Team, Division } from "@task/core";
-import { Users, Plus, Mail, Shield, Building, Layers } from "lucide-react";
+import { Users, Plus, Mail, Shield, Building, Layers, Pencil, Trash2 } from "lucide-react";
 import { useUser } from "../../../components/providers/UserProvider";
+
+type OrgTarget =
+  | { type: "division"; id: string; name: string }
+  | { type: "department"; id: string; name: string }
+  | { type: "team"; id: string; name: string };
 
 export default function TeamPage() {
   const { profile } = useUser();
@@ -34,6 +39,15 @@ export default function TeamPage() {
   const [selectedDivForDept, setSelectedDivForDept] = useState("");
   const [selectedDeptForTeam, setSelectedDeptForTeam] = useState("");
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+
+  // edit / delete state
+  const [editTarget, setEditTarget] = useState<OrgTarget | null>(null);
+  const [editName, setEditName] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<OrgTarget | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isOrgMutating, setIsOrgMutating] = useState(false);
+  const [orgMutationError, setOrgMutationError] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -126,9 +140,11 @@ export default function TeamPage() {
   const handleCreateTeam = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!newTeamName || !selectedDeptForTeam || !profile?.companyId) return;
+    const selectedDepartment = departments.find((dept) => dept.departmentId === selectedDeptForTeam);
+    if (!selectedDepartment) return;
     try {
       setIsCreatingOrg(true);
-      await OrgService.createTeam(newTeamName, selectedDeptForTeam);
+      await OrgService.createTeam(newTeamName, selectedDeptForTeam, selectedDepartment.divisionId);
       setIsTeamModalOpen(false);
       setNewTeamName("");
       setSelectedDeptForTeam("");
@@ -137,6 +153,66 @@ export default function TeamPage() {
       console.error(err);
     } finally {
       setIsCreatingOrg(false);
+    }
+  };
+
+  const openEdit = (target: OrgTarget) => {
+    setEditTarget(target);
+    setEditName(target.name);
+    setOrgMutationError(null);
+    setIsEditModalOpen(true);
+  };
+
+  const openDeleteConfirm = (target: OrgTarget) => {
+    setDeleteTarget(target);
+    setOrgMutationError(null);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleOrgUpdate = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    if (!editTarget || !editName.trim()) return;
+    try {
+      setIsOrgMutating(true);
+      setOrgMutationError(null);
+      if (editTarget.type === "division") {
+        await OrgService.updateDivision(editTarget.id, editName.trim());
+      } else if (editTarget.type === "department") {
+        await OrgService.updateDepartment(editTarget.id, editName.trim());
+      } else {
+        await OrgService.updateTeam(editTarget.id, editName.trim());
+      }
+      setIsEditModalOpen(false);
+      setEditTarget(null);
+      setEditName("");
+      fetchData();
+    } catch (err) {
+      setOrgMutationError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setIsOrgMutating(false);
+    }
+  };
+
+  const handleOrgDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      setIsOrgMutating(true);
+      setOrgMutationError(null);
+      if (deleteTarget.type === "division") {
+        await OrgService.deleteDivision(deleteTarget.id);
+      } else if (deleteTarget.type === "department") {
+        await OrgService.deleteDepartment(deleteTarget.id);
+      } else {
+        await OrgService.deleteTeam(deleteTarget.id);
+      }
+      setIsDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+      fetchData();
+    } catch (err) {
+      setOrgMutationError(err instanceof Error ? err.message : "Failed to delete");
+      setIsDeleteConfirmOpen(false);
+    } finally {
+      setIsOrgMutating(false);
     }
   };
 
@@ -150,9 +226,21 @@ export default function TeamPage() {
     );
   }
 
+  const canManageDivision = profile.role === UserRole.COMPANY_ADMIN;
+  const canManageDepartment = (div: Division) =>
+    profile.role === UserRole.COMPANY_ADMIN ||
+    (profile.role === UserRole.DIVISION_ADMIN && profile.divisionId === div.divisionId);
+  const canManageTeam = (dept: Department) =>
+    profile.role === UserRole.COMPANY_ADMIN ||
+    (profile.role === UserRole.DIVISION_ADMIN && profile.divisionId === dept.divisionId) ||
+    (profile.role === UserRole.DEPT_ADMIN && profile.departmentId === dept.departmentId);
+
   const getDivName = (id?: string) => id ? (divisions.find(d => d.divisionId === id)?.name || id) : "---";
   const getDeptName = (id?: string) => id ? (departments.find(d => d.departmentId === id)?.name || id) : "---";
   const getTeamName = (id?: string) => id ? (teams.find(t => t.teamId === id)?.name || id) : "---";
+
+  const orgTypeLabel = (type: OrgTarget["type"]) =>
+    type === "division" ? "本部" : type === "department" ? "部署" : "チーム";
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -196,6 +284,12 @@ export default function TeamPage() {
         </div>
       </div>
 
+      {orgMutationError && (
+        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+          {orgMutationError}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -204,7 +298,7 @@ export default function TeamPage() {
                 <Building size={16} /> 組織ツリー
               </h3>
             </div>
-            
+
             {isLoading ? (
               <div className="flex justify-center p-4">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
@@ -215,22 +309,88 @@ export default function TeamPage() {
               <div className="space-y-6">
                 {divisions.map((div) => (
                   <div key={div.divisionId} className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-bold text-indigo-600">
-                      <Shield size={14} />
-                      {div.name}
+                    <div className="group flex items-center justify-between gap-1 min-w-0">
+                      <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 min-w-0">
+                        <Shield size={14} className="flex-shrink-0" />
+                        <span className="truncate">{div.name}</span>
+                      </div>
+                      {canManageDivision && (
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <button
+                            onClick={() => openEdit({ type: "division", id: div.divisionId, name: div.name })}
+                            disabled={isOrgMutating}
+                            className="p-1 text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-50 rounded"
+                            title="名前を変更"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => openDeleteConfirm({ type: "division", id: div.divisionId, name: div.name })}
+                            disabled={isOrgMutating}
+                            className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 rounded"
+                            title="削除"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div className="pl-4 border-l-2 border-indigo-50 ml-1.5 space-y-4">
                       {departments.filter(d => d.divisionId === div.divisionId).map((dept) => (
                         <div key={dept.departmentId} className="space-y-2">
-                          <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                            {dept.name}
+                          <div className="group flex items-center justify-between gap-1 min-w-0">
+                            <div className="flex items-center gap-2 text-xs font-bold text-gray-800 min-w-0">
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                              <span className="truncate">{dept.name}</span>
+                            </div>
+                            {canManageDepartment(div) && (
+                              <div className="flex items-center gap-0.5 flex-shrink-0">
+                                <button
+                                  onClick={() => openEdit({ type: "department", id: dept.departmentId, name: dept.name })}
+                                  disabled={isOrgMutating}
+                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50 rounded"
+                                  title="名前を変更"
+                                >
+                                  <Pencil size={11} />
+                                </button>
+                                <button
+                                  onClick={() => openDeleteConfirm({ type: "department", id: dept.departmentId, name: dept.name })}
+                                  disabled={isOrgMutating}
+                                  className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 rounded"
+                                  title="削除"
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                            )}
                           </div>
                           <div className="pl-3.5 border-l border-gray-100 ml-0.5 space-y-2">
                             {teams.filter(t => t.departmentId === dept.departmentId).map(team => (
-                              <div key={team.teamId} className="flex items-center gap-2 text-[10px] font-medium text-gray-500 pl-2">
-                                <Layers size={10} className="text-gray-400" />
-                                {team.name}
+                              <div key={team.teamId} className="group flex items-center justify-between gap-1 min-w-0 pl-2">
+                                <div className="flex items-center gap-2 text-[10px] font-medium text-gray-500 min-w-0">
+                                  <Layers size={10} className="text-gray-400 flex-shrink-0" />
+                                  <span className="truncate">{team.name}</span>
+                                </div>
+                                {canManageTeam(dept) && (
+                                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                                    <button
+                                      onClick={() => openEdit({ type: "team", id: team.teamId, name: team.name })}
+                                      disabled={isOrgMutating}
+                                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 rounded"
+                                      title="名前を変更"
+                                    >
+                                      <Pencil size={10} />
+                                    </button>
+                                    <button
+                                      onClick={() => openDeleteConfirm({ type: "team", id: team.teamId, name: team.name })}
+                                      disabled={isOrgMutating}
+                                      className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 rounded"
+                                      title="削除"
+                                    >
+                                      <Trash2 size={10} />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -245,9 +405,31 @@ export default function TeamPage() {
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">部署（本部なし）</p>
                     {departments.filter(d => d.divisionId === "NONE").map((dept) => (
                       <div key={dept.departmentId} className="mb-3">
-                        <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
-                          <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                          {dept.name}
+                        <div className="group flex items-center justify-between gap-1 min-w-0">
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-800 min-w-0">
+                            <div className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                            <span className="truncate">{dept.name}</span>
+                          </div>
+                          {profile.role === UserRole.COMPANY_ADMIN && (
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                              <button
+                                onClick={() => openEdit({ type: "department", id: dept.departmentId, name: dept.name })}
+                                disabled={isOrgMutating}
+                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50 rounded"
+                                title="名前を変更"
+                              >
+                                <Pencil size={11} />
+                              </button>
+                              <button
+                                onClick={() => openDeleteConfirm({ type: "department", id: dept.departmentId, name: dept.name })}
+                                disabled={isOrgMutating}
+                                className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 rounded"
+                                title="削除"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -337,7 +519,7 @@ export default function TeamPage() {
           </div>
         </div>
       </div>
- 
+
       {isDivModalOpen && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
@@ -376,7 +558,7 @@ export default function TeamPage() {
           </div>
         </div>
       )}
- 
+
       {isInviteModalOpen && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
@@ -390,7 +572,7 @@ export default function TeamPage() {
                   {inviteError}
                 </div>
               )}
-              
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1.5">姓</label>
@@ -481,7 +663,7 @@ export default function TeamPage() {
                     value={inviteDeptId}
                     onChange={(e) => {
                       setInviteDeptId(e.target.value);
-                      setInviteTeamId(""); 
+                      setInviteTeamId("");
                     }}
                     disabled={!inviteDivId && divisions.length > 0}
                     className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white disabled:bg-gray-50 disabled:text-gray-400"
@@ -632,6 +814,86 @@ export default function TeamPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isEditModalOpen && editTarget && (
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">{orgTypeLabel(editTarget.type)}名を変更</h3>
+            </div>
+            <form onSubmit={handleOrgUpdate} className="p-5 space-y-4">
+              {orgMutationError && (
+                <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+                  {orgMutationError}
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">新しい名前</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm"
+                  placeholder={editTarget.name}
+                />
+              </div>
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsEditModalOpen(false); setEditTarget(null); setOrgMutationError(null); }}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl transition-all"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={isOrgMutating || !editName.trim()}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all disabled:opacity-50 flex justify-center items-center"
+                >
+                  {isOrgMutating ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : "変更する"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isDeleteConfirmOpen && deleteTarget && (
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">{orgTypeLabel(deleteTarget.type)}を削除</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-600">
+                <span className="font-bold text-gray-900">{deleteTarget.name}</span> を削除しますか？
+                この操作は元に戻せません。
+              </p>
+              <p className="text-xs text-gray-400">
+                所属メンバーや下位組織が存在する場合は削除できません。
+              </p>
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsDeleteConfirmOpen(false); setDeleteTarget(null); setOrgMutationError(null); }}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl transition-all"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOrgDelete}
+                  disabled={isOrgMutating}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all disabled:opacity-50 flex justify-center items-center"
+                >
+                  {isOrgMutating ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : "削除する"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

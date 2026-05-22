@@ -1,4 +1,4 @@
-import { get, post } from 'aws-amplify/api';
+import { get, post, put, del } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { z } from 'zod';
 
@@ -176,5 +176,80 @@ export const OrgService = {
       console.error("Failed to create team", error);
       throw error;
     }
-  }
+  },
+
+  updateDivision: async (divisionId: string, name: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: `division/${divisionId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name },
+      },
+    });
+    await restOperation.response;
+  },
+
+  deleteDivision: async (divisionId: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = del({
+      apiName: "TaskApi",
+      path: `division/${divisionId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+      },
+    });
+    await restOperation.response;
+  },
+
+  updateDepartment: async (departmentId: string, name: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: `department/${departmentId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name },
+      },
+    });
+    await restOperation.response;
+  },
+
+  deleteDepartment: async (departmentId: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = del({
+      apiName: "TaskApi",
+      path: `department/${departmentId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+      },
+    });
+    await restOperation.response;
+  },
+
+  updateTeam: async (teamId: string, name: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: `team/${teamId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name },
+      },
+    });
+    await restOperation.response;
+  },
+
+  deleteTeam: async (teamId: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = del({
+      apiName: "TaskApi",
+      path: `team/${teamId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+      },
+    });
+    await restOperation.response;
+  },
 };

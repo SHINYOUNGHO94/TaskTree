@@ -455,6 +455,35 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `yarn.cmd test:api` — 294 tests pass
 - `yarn.cmd test:e2e` — 5 passed, 3 skipped (authenticated tests skipped: TEST_USER_EMAIL/TEST_USER_PASSWORD not set)
 
+### Task 19: UI 改善と組織管理の運用機能追加
+
+- Dashboard と Case 詳細画面を、実運用で確認しやすい情報密度・パネル構成・エラー表示へ調整した
+- Case コメント作成と子 Case 一覧取得の権限判定を、Case 詳細 API と同じ読み取り権限ポリシーに統一した
+- `requiredRole` の確認と、OPEN case に参加している ACTIVE 外部会社のアクセス許可を反映した
+- 組織管理画面で、事業部・部署・チームの名前変更と削除を行えるようにした
+- `/division/{id}`、`/department/{id}`、`/team/{id}` に `PUT` / `DELETE` API を追加し、ロール別に操作範囲を制限した
+  - `COMPANY_ADMIN`: 自社の事業部・部署・チームを管理可能
+  - `DIVISION_ADMIN`: 自分の事業部配下の部署・チームを管理可能
+  - `DEPT_ADMIN`: 自分の部署配下のチームを管理可能
+- 下位組織や所属メンバーが残っている場合は削除できないようにした
+- 組織削除時の下位組織・ユーザー確認では `companyId` を用いて tenant 分離を維持した
+- 組織更新 API で不正な JSON を受け取った場合、500 ではなく 400 を返すようにした
+
+**デプロイ影響:**
+- 新規 Lambda: 組織更新・削除用に 6 個追加
+- 新規 API route: 組織更新・削除用に 6 route 追加
+- 新規 DynamoDB table: なし
+- 新規 DynamoDB GSI: なし
+- IAM 権限変更: あり。組織更新・削除 Lambda に `GetItem`、`Query`、必要な write action を付与
+- デプロイ要否: 必要
+
+**検証:**
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+- `yarn.cmd test:api` — 349 tests pass
+
 ---
 
 ## 開発メモ

@@ -1,9 +1,11 @@
 import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseComment, CaseDetail, CaseOwnerType, CaseTargetScope } from "@task/core";
+import { CaseComment } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseCommentRepository } from "@/repositories/caseCommentRepository";
+import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
+import { canReadCase, canReadCaseAsParticipant } from "@/services/casePermissionService";
 import {
   badRequest,
   forbidden,
@@ -13,21 +15,10 @@ import {
   unauthorized,
 } from "@/errors/utils";
 
-const isAccessAllowed = (
-  caseDetail: CaseDetail,
-  userId: string,
-  teamId: string,
-): boolean => {
-  if (caseDetail.creatorId === userId) return true;
-  if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
-  if (caseDetail.targetScope === CaseTargetScope.USER && caseDetail.targetScopeId === userId) return true;
-  if (caseDetail.targetScope === CaseTargetScope.TEAM && caseDetail.targetScopeId === teamId) return true;
-  return false;
-};
-
 export interface CreateCaseCommentDeps {
   caseRepo: CaseRepository;
   caseCommentRepo: CaseCommentRepository;
+  participantCompanyRepo: CaseParticipantCompanyRepository;
   userRepo: UserRepository;
 }
 
@@ -73,12 +64,20 @@ export const createHandler =
       if (!profile) return internalServerError("User profile not found");
       if (!existingCase) return notFound("Case not found");
 
-      if (existingCase.companyId !== profile.companyId) {
-        return forbidden("You do not have access to this case");
-      }
+      const isSameCompany = existingCase.companyId === profile.companyId;
 
-      if (!isAccessAllowed(existingCase, userId, profile.teamId)) {
-        return forbidden("You do not have access to this case");
+      if (isSameCompany) {
+        if (!canReadCase(existingCase, userId, profile)) {
+          return forbidden("You do not have access to this case");
+        }
+      } else {
+        const participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
+          caseId,
+          profile.companyId,
+        );
+        if (!canReadCaseAsParticipant(existingCase, participantRecord, profile.companyId)) {
+          return forbidden("You do not have access to this case");
+        }
       }
 
       const now = new Date().toISOString();
@@ -109,5 +108,6 @@ const tableName = process.env.TABLE_NAME || "";
 export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
   caseCommentRepo: new CaseCommentRepository(tableName),
+  participantCompanyRepo: new CaseParticipantCompanyRepository(tableName),
   userRepo: new UserRepository(tableName),
 });

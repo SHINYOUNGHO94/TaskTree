@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CaseDeliveryType,
   CaseOwnerType,
+  CaseParticipantCompanyStatus,
   CaseStatus,
   CaseTargetScope,
   CaseType,
@@ -10,6 +11,7 @@ import {
 } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseCommentRepository } from "@/repositories/caseCommentRepository";
+import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { createHandler } from "./createCaseComment";
 
@@ -70,9 +72,24 @@ const baseCase = {
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
+const activeParticipant = {
+  participantCompanyId: "COMP-1",
+  caseId: "CASE-1",
+  ownerCompanyId: "COMP-OWNER",
+  companyId: "COMP-1",
+  companyName: "Participant Company",
+  status: CaseParticipantCompanyStatus.ACTIVE,
+  invitedBy: "owner-user",
+  reviewedBy: "admin-user",
+  reviewedAt: "2026-01-01T00:00:00.000Z",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+};
+
 const makeMockRepos = (overrides: {
   caseResult?: unknown;
   profileResult?: unknown;
+  participantResult?: unknown;
   saveMock?: ReturnType<typeof vi.fn>;
 }) => {
   const save = overrides.saveMock ?? vi.fn().mockResolvedValue(undefined);
@@ -80,30 +97,33 @@ const makeMockRepos = (overrides: {
     findById: vi.fn().mockResolvedValue(overrides.caseResult),
   } as unknown as CaseRepository;
   const caseCommentRepo = { save } as unknown as CaseCommentRepository;
+  const participantCompanyRepo = {
+    findByCaseAndCompany: vi.fn().mockResolvedValue(overrides.participantResult),
+  } as unknown as CaseParticipantCompanyRepository;
   const userRepo = {
     findByUserId: vi.fn().mockResolvedValue(overrides.profileResult),
   } as unknown as UserRepository;
-  return { caseRepo, caseCommentRepo, userRepo };
+  return { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo };
 };
 
 describe("createCaseComment", () => {
   it("JWT がない場合は 401", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ id: "CASE-1", body: { content: "Hello" } }));
     expect(response.statusCode).toBe(401);
   });
 
   it("body がない場合は 400", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(makeEvent({ sub: "user-1", id: "CASE-1" }));
     expect(response.statusCode).toBe(400);
   });
 
   it("不正な JSON の場合は 400", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", rawBody: "not-json" }),
     );
@@ -111,8 +131,8 @@ describe("createCaseComment", () => {
   });
 
   it("content が空文字の場合は 400", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "  " } }),
     );
@@ -120,8 +140,8 @@ describe("createCaseComment", () => {
   });
 
   it("content がない場合は 400", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: {} }),
     );
@@ -129,8 +149,8 @@ describe("createCaseComment", () => {
   });
 
   it("content 以外の field がある場合は 400", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({});
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({
         sub: "user-1",
@@ -142,11 +162,11 @@ describe("createCaseComment", () => {
   });
 
   it("user profile が存在しない場合は 500", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: undefined,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "Hello" } }),
     );
@@ -154,11 +174,11 @@ describe("createCaseComment", () => {
   });
 
   it("case が存在しない場合は 404", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: undefined,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-NONEXISTENT", body: { content: "Hello" } }),
     );
@@ -167,11 +187,11 @@ describe("createCaseComment", () => {
 
   it("別会社の case は 403", async () => {
     const otherCompanyCase = { ...baseCase, companyId: "COMP-OTHER" };
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: otherCompanyCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "Hello" } }),
     );
@@ -186,11 +206,31 @@ describe("createCaseComment", () => {
       targetScope: CaseTargetScope.USER,
       targetScopeId: "other-user",
     };
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: inaccessibleCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
+    const response = await handler(
+      makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "Hello" } }),
+    );
+    expect(response.statusCode).toBe(403);
+  });
+
+  it("requiredRole を満たさない場合は 403", async () => {
+    const adminOnlyCase = {
+      ...baseCase,
+      creatorId: "other-user",
+      ownerId: "other-user",
+      requiredRole: UserRole.COMPANY_ADMIN,
+      targetScope: CaseTargetScope.TEAM,
+      targetScopeId: "TEAM-1",
+    };
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
+      caseResult: adminOnlyCase,
+      profileResult: mockProfile,
+    });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "Hello" } }),
     );
@@ -198,11 +238,11 @@ describe("createCaseComment", () => {
   });
 
   it("creator は comment を作成できる", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "Hello" } }),
     );
@@ -220,11 +260,31 @@ describe("createCaseComment", () => {
       targetScope: CaseTargetScope.TEAM,
       targetScopeId: "TEAM-1",
     };
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: teamCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
+    const response = await handler(
+      makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "Hello" } }),
+    );
+    expect(response.statusCode).toBe(201);
+  });
+
+  it("ACTIVE participant company user は OPEN case に comment を作成できる", async () => {
+    const externalOpenCase = {
+      ...baseCase,
+      companyId: "COMP-OWNER",
+      deliveryType: CaseDeliveryType.OPEN,
+      creatorId: "owner-user",
+      ownerId: "owner-user",
+    };
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
+      caseResult: externalOpenCase,
+      profileResult: mockProfile,
+      participantResult: activeParticipant,
+    });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     const response = await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "Hello" } }),
     );
@@ -232,11 +292,11 @@ describe("createCaseComment", () => {
   });
 
   it("作成された comment には authorId と companyId が含まれる", async () => {
-    const { caseRepo, caseCommentRepo, userRepo } = makeMockRepos({
+    const { caseRepo, caseCommentRepo, participantCompanyRepo, userRepo } = makeMockRepos({
       caseResult: baseCase,
       profileResult: mockProfile,
     });
-    const handler = createHandler({ caseRepo, caseCommentRepo, userRepo });
+    const handler = createHandler({ caseRepo, caseCommentRepo, participantCompanyRepo, userRepo });
     await handler(
       makeEvent({ sub: "user-1", id: "CASE-1", body: { content: "Hello" } }),
     );

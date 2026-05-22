@@ -57,6 +57,13 @@ export class TaskInfraStack extends cdk.Stack {
       }));
     };
 
+    const grantOrgMutation = (fn: NodejsFunction, writeActions: string[]) => {
+      fn.addToRolePolicy(new iam.PolicyStatement({
+        actions: ['dynamodb:GetItem', 'dynamodb:Query', ...writeActions],
+        resources: [tableArn, tableIndexesArn],
+      }));
+    };
+
     const postConfirmationFn = new NodejsFunction(this, 'PostConfirmationFunction', {
       runtime: Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../../task-api/src/aws/handlers/auth/postConfirmation.ts'),
@@ -194,6 +201,54 @@ export class TaskInfraStack extends cdk.Stack {
       },
     });
     grantTableRead(getTeamsFn);
+
+    const updateDivisionFn = new NodejsFunction(this, 'UpdateDivisionFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/division/updateDivision.ts'),
+      handler: 'handler',
+      environment: { TABLE_NAME: database.entities.tableName },
+    });
+    grantOrgMutation(updateDivisionFn, ['dynamodb:UpdateItem']);
+
+    const deleteDivisionFn = new NodejsFunction(this, 'DeleteDivisionFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/division/deleteDivision.ts'),
+      handler: 'handler',
+      environment: { TABLE_NAME: database.entities.tableName },
+    });
+    grantOrgMutation(deleteDivisionFn, ['dynamodb:DeleteItem']);
+
+    const updateDepartmentFn = new NodejsFunction(this, 'UpdateDepartmentFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/department/updateDepartment.ts'),
+      handler: 'handler',
+      environment: { TABLE_NAME: database.entities.tableName },
+    });
+    grantOrgMutation(updateDepartmentFn, ['dynamodb:UpdateItem']);
+
+    const deleteDepartmentFn = new NodejsFunction(this, 'DeleteDepartmentFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/department/deleteDepartment.ts'),
+      handler: 'handler',
+      environment: { TABLE_NAME: database.entities.tableName },
+    });
+    grantOrgMutation(deleteDepartmentFn, ['dynamodb:DeleteItem']);
+
+    const updateTeamFn = new NodejsFunction(this, 'UpdateTeamFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/team/updateTeam.ts'),
+      handler: 'handler',
+      environment: { TABLE_NAME: database.entities.tableName },
+    });
+    grantOrgMutation(updateTeamFn, ['dynamodb:UpdateItem']);
+
+    const deleteTeamFn = new NodejsFunction(this, 'DeleteTeamFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/team/deleteTeam.ts'),
+      handler: 'handler',
+      environment: { TABLE_NAME: database.entities.tableName },
+    });
+    grantOrgMutation(deleteTeamFn, ['dynamodb:DeleteItem']);
 
     const createUserFn = new NodejsFunction(this, 'CreateUserFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -404,13 +459,25 @@ export class TaskInfraStack extends cdk.Stack {
     divisionResource.addMethod('POST', new apigateway.LambdaIntegration(createDivisionFn), { authorizer });
     divisionResource.addMethod('GET', new apigateway.LambdaIntegration(getDivisionsFn), { authorizer });
 
+    const divisionIdResource = divisionResource.addResource('{id}');
+    divisionIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateDivisionFn), { authorizer });
+    divisionIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteDivisionFn), { authorizer });
+
     const departmentResource = api.root.addResource('department');
     departmentResource.addMethod('POST', new apigateway.LambdaIntegration(createDepartmentFn), { authorizer });
     departmentResource.addMethod('GET', new apigateway.LambdaIntegration(getDepartmentsFn), { authorizer });
 
+    const departmentIdResource = departmentResource.addResource('{id}');
+    departmentIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateDepartmentFn), { authorizer });
+    departmentIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteDepartmentFn), { authorizer });
+
     const teamResource = api.root.addResource('team');
     teamResource.addMethod('POST', new apigateway.LambdaIntegration(createTeamFn), { authorizer });
     teamResource.addMethod('GET', new apigateway.LambdaIntegration(getTeamsFn), { authorizer });
+
+    const teamIdResource = teamResource.addResource('{id}');
+    teamIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateTeamFn), { authorizer });
+    teamIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTeamFn), { authorizer });
 
     const userResource = api.root.addResource('user');
     userResource.addMethod('POST', new apigateway.LambdaIntegration(createUserFn));

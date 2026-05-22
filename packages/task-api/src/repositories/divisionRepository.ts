@@ -1,6 +1,6 @@
 import { DivisionRecord, DivisionRecordType } from "@/aws/entities/items/divisionRecord";
 import { BaseRepository } from "@/repositories/baseRepository";
-import { QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 export class DivisionRepository extends BaseRepository<DivisionRecordType> {
   constructor(tableName: string) {
@@ -46,5 +46,31 @@ export class DivisionRepository extends BaseRepository<DivisionRecordType> {
       })
     );
     return (response.Items || []) as DivisionRecordType[];
+  };
+
+  // 事業部名を更新します
+  update = async (companyId: string, divisionId: string, name: string): Promise<void> => {
+    const pk = DivisionRecord.makePk();
+    const sk = DivisionRecord.makeSk(companyId, divisionId);
+    await this.docClient.send(
+      new UpdateCommand({
+        TableName: this.tableName,
+        Key: { pk, sk },
+        UpdateExpression: "SET #name = :name, update_at = :update_at",
+        ExpressionAttributeNames: { "#name": "name" },
+        ExpressionAttributeValues: {
+          ":name": name,
+          ":update_at": new Date().toISOString(),
+        },
+        ConditionExpression: "attribute_exists(pk)",
+      })
+    );
+  };
+
+  // 事業部を削除します
+  deleteById = async (companyId: string, divisionId: string): Promise<void> => {
+    const pk = DivisionRecord.makePk();
+    const sk = DivisionRecord.makeSk(companyId, divisionId);
+    await this.delete(pk, sk);
   };
 }
