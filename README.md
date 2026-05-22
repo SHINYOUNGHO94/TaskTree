@@ -683,6 +683,46 @@ Case 関連画面で UUID がそのまま表示される問題を解消し、enu
 
 ---
 
+### Task 24: CaseTask 操作フロー整備
+
+Case 詳細の `作業一覧` を、表示専用のリストから編集可能な CaseTask 管理 UI に拡張した。
+
+**追加 API:**
+
+- `PUT /cases/{id}/tasks/{taskId}`: title / description / status / assigneeId / dueDate の部分更新
+- `DELETE /cases/{id}/tasks/{taskId}`: CaseTask 削除
+
+**UI:**
+
+- CaseTask 行に `編集` / `削除` 操作を追加
+- 編集 modal で title、description、status、assignee、dueDate を変更可能
+- 削除 confirm modal を追加
+- 操作権限のない user には編集 / 削除ボタンを表示しない
+- 担当者表示は Task 23 の表示名 helper を利用
+
+**認可 / tenant 分離:**
+
+- 更新 / 削除は Case creator、USER owner、組織 owner を管理できる admin、CaseTask creator、CaseTask assignee のみに制限
+- `assigneeId` は server side で存在確認し、同一 company user のみ許可
+- 他社 CaseTask、対象 Case に属さない taskId、権限のない user の操作を server side で拒否
+
+**History:**
+
+- `TASK_UPDATED`
+- `TASK_STATUS_CHANGED`
+- `TASK_ASSIGNEE_CHANGED`
+- `TASK_DELETED`
+
+**デプロイ影響:**
+
+- CDK deploy 必要
+- 新規 Lambda: `UpdateCaseTaskFunction`, `DeleteCaseTaskFunction`
+- 新規 API route: `PUT /cases/{id}/tasks/{taskId}`, `DELETE /cases/{id}/tasks/{taskId}`
+- DynamoDB table / GSI 変更なし
+- IAM: CaseTask 更新 / 削除と History 記録に必要な DynamoDB 権限を追加
+
+---
+
 ## 開発メモ
 
 実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。

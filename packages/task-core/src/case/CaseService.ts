@@ -1,4 +1,4 @@
-import { get, post, put } from 'aws-amplify/api';
+import { del, get, post, put } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import {
   CaseClaimRequest,
@@ -16,6 +16,7 @@ import {
   ParticipantCompanyInvitation,
   UpdateCaseClaimRequestInput,
   UpdateCaseStatusInput,
+  UpdateCaseTaskInput,
   UpdateParticipantCompanyStatusInput,
 } from '../types/case';
 
@@ -448,6 +449,56 @@ export const CaseService = {
       return await response.body.json() as unknown as { participantCompanyId: string };
     } catch (error) {
       console.error('Error updating participant company status:', error);
+      throw error;
+    }
+  },
+
+  updateCaseTask: async (
+    caseId: string,
+    taskId: string,
+    input: UpdateCaseTaskInput,
+  ): Promise<void> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const body: Record<string, string | null> = {};
+      if (input.title !== undefined) body.title = input.title;
+      if (input.description !== undefined) body.description = input.description;
+      if (input.status !== undefined) body.status = input.status;
+      if (input.assigneeId !== undefined) body.assigneeId = input.assigneeId ?? null;
+      if (input.dueDate !== undefined) body.dueDate = input.dueDate ?? null;
+
+      const restOperation = put({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/tasks/${taskId}`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body,
+        },
+      });
+      await restOperation.response;
+    } catch (error) {
+      console.error('Error updating case task:', error);
+      throw error;
+    }
+  },
+
+  deleteCaseTask: async (caseId: string, taskId: string): Promise<void> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = del({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/tasks/${taskId}`,
+        options: {
+          headers: { Authorization: idToken || '' },
+        },
+      });
+      await restOperation.response;
+    } catch (error) {
+      console.error('Error deleting case task:', error);
       throw error;
     }
   },
