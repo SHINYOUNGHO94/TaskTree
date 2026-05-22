@@ -1,7 +1,8 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseDetail, CaseOwnerType, CaseTargetScope } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
+import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
+import { canReadCase, canReadCaseAsParticipant } from "@/services/casePermissionService";
 import {
   forbidden,
   internalServerError,
@@ -9,20 +10,9 @@ import {
   unauthorized,
 } from "@/errors/utils";
 
-const isAccessAllowed = (
-  caseDetail: CaseDetail,
-  userId: string,
-  teamId: string,
-): boolean => {
-  if (caseDetail.creatorId === userId) return true;
-  if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
-  if (caseDetail.targetScope === CaseTargetScope.USER && caseDetail.targetScopeId === userId) return true;
-  if (caseDetail.targetScope === CaseTargetScope.TEAM && caseDetail.targetScopeId === teamId) return true;
-  return false;
-};
-
 export interface GetChildCasesDeps {
   caseRepo: CaseRepository;
+  participantCompanyRepo: CaseParticipantCompanyRepository;
   userRepo: UserRepository;
 }
 
@@ -44,12 +34,20 @@ export const createHandler =
       if (!profile) return internalServerError("User profile not found");
       if (!parentCase) return notFound("Case not found");
 
-      if (parentCase.companyId !== profile.companyId) {
-        return forbidden("You do not have access to this case");
-      }
+      const isSameCompany = parentCase.companyId === profile.companyId;
 
-      if (!isAccessAllowed(parentCase, userId, profile.teamId)) {
-        return forbidden("You do not have access to this case");
+      if (isSameCompany) {
+        if (!canReadCase(parentCase, userId, profile)) {
+          return forbidden("You do not have access to this case");
+        }
+      } else {
+        const participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
+          caseId,
+          profile.companyId,
+        );
+        if (!canReadCaseAsParticipant(parentCase, participantRecord, profile.companyId)) {
+          return forbidden("You do not have access to this case");
+        }
       }
 
       const children = await deps.caseRepo.findChildrenByParentCaseId(caseId);
@@ -68,5 +66,6 @@ export const createHandler =
 const tableName = process.env.TABLE_NAME || "";
 export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
+  participantCompanyRepo: new CaseParticipantCompanyRepository(tableName),
   userRepo: new UserRepository(tableName),
 });

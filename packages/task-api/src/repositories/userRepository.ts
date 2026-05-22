@@ -47,6 +47,34 @@ export class UserRepository extends BaseRepository<UserRecordType> {
     return items.map(item => UserRecord.toEntity(item));
   }
 
+  // チームに所属するユーザー一覧を取得 (主テーブル SK プレフィックスクエリ + companyId フィルタ)
+  async findByTeamId(teamId: string, companyId: string): Promise<UserEntity[]> {
+    const response = await this.docClient.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+        ExpressionAttributeValues: {
+          ":pk": UserRecord.makePk(),
+          ":skPrefix": `Team#${teamId}#`,
+        },
+      })
+    );
+    const items = (response.Items || []) as UserRecordType[];
+    return items.map((item) => UserRecord.toEntity(item)).filter((u) => u.companyId === companyId);
+  }
+
+  // 事業部に所属するユーザーが存在するか確認 (company GSI + フィルタ)
+  async hasUsersByDivisionId(companyId: string, divisionId: string): Promise<boolean> {
+    const users = await this.findByCompanyId(companyId);
+    return users.some((u) => u.divisionId === divisionId);
+  }
+
+  // 部署に所属するユーザーが存在するか確認 (company GSI + フィルタ)
+  async hasUsersByDepartmentId(companyId: string, departmentId: string): Promise<boolean> {
+    const users = await this.findByCompanyId(companyId);
+    return users.some((u) => u.departmentId === departmentId);
+  }
+
   async create(params: {
     companyId: string;
     divisionId?: string;
