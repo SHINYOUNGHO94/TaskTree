@@ -93,7 +93,6 @@ export const OrgService = {
       if (response.statusCode !== 201) throw new Error("Failed to create division");
       return { divisionId };
     } catch (error) {
-      console.error("Failed to create division", error);
       throw error;
     }
   },
@@ -133,7 +132,6 @@ export const OrgService = {
       if (response.statusCode !== 201) throw new Error("Failed to create department");
       return { departmentId };
     } catch (error) {
-      console.error("Failed to create department", error);
       throw error;
     }
   },
@@ -173,7 +171,6 @@ export const OrgService = {
       if (response.statusCode !== 201) throw new Error("Failed to create team");
       return { teamId };
     } catch (error) {
-      console.error("Failed to create team", error);
       throw error;
     }
   },

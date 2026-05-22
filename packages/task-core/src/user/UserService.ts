@@ -1,4 +1,4 @@
-import { get, post } from 'aws-amplify/api';
+import { get, post, del } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { UserProfile } from '../types/user';
 import { UserRole } from '../types/role';
@@ -88,6 +88,32 @@ export const UserService = {
     }
   },
 
+  deleteUser: async (userId: string): Promise<void> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = del({
+        apiName: "TaskApi",
+        path: `user/${userId}`,
+        options: {
+          headers: {
+            Authorization: idToken || '',
+          }
+        }
+      });
+
+      const response = await restOperation.response;
+
+      if (response.statusCode !== 200) {
+        const json = await response.body.json() as { error?: string };
+        throw new Error(json?.error || `Failed to delete user (Status: ${response.statusCode})`);
+      }
+    } catch (error) {
+      throw error;
+    }
+  },
+
   inviteUser: async (params: { email: string; name: string; divisionId?: string; departmentId?: string; teamId?: string; role?: string }): Promise<{ userId: string }> => {
     try {
       const { tokens } = await fetchAuthSession();
@@ -114,7 +140,6 @@ export const UserService = {
       const responseBody = InviteUserResponseSchema.parse(json);
       return responseBody;
     } catch (error) {
-      console.error("Failed to invite user", error);
       throw error;
     }
   }

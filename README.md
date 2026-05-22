@@ -484,6 +484,52 @@ v2.0.0 では、AI を単なるコード生成ツールとして使うのでは�
 - `yarn.cmd workspace @task/app build` — pass
 - `yarn.cmd test:api` — 349 tests pass
 
+### Task 20: 組織管理 UI コンポーネント分離・i18n エラーメッセージ・オンボーディング組織生成修正
+
+- 組織管理 page (`dashboard/team/page.tsx`) を責務ごとのコンポーネントへ分離した
+  - `page.tsx` はデータ取得・mutation handler・モーダル開閉状態を管理する
+  - `OrgTree`、`MemberTable`、`OrgEditModal`、`OrgDeleteConfirmModal`、`CreateDivisionModal`、`CreateDepartmentModal`、`CreateTeamModal`、`InviteMemberModal` を `packages/task-app/src/components/dashboard/team/` に追加した
+  - `orgPermissions.ts` に `OrgTarget` 型・`orgTypeLabel`・`ORG_ALLOWED_ROLES` を集約した
+  - `orgError.ts` に Amplify REST エラーからサーバーメッセージを安全に取り出す `extractOrgError` ヘルパーを追加した
+- `react-i18next` / `i18next` を `task-app` に追加し、組織管理画面の API エラーメッセージを i18n 化した
+  - 対応言語: `en`、`ja`、`ko`（fallback: `ja`）
+  - ブラウザ言語を `navigator.language` で自動検出し、`I18nProvider` が `useEffect` でマウント後に切り替える
+  - create / update / delete の全エラー表示に `t(extractOrgError(err))` を適用した
+  - サーバーの英語エラーメッセージ文字列を i18n key として使用し、API 側の変更は不要
+- 新規ユーザー登録時（`postConfirmation` Lambda）の初期組織生成を v2 構造に合わせた
+  - 旧: `divisionId="NONE"` の `一般部署` を生成していた
+  - 新: `管理本部` (Division) + `管理部` (Department) を生成し、COMPANY_ADMIN ユーザーを所属させる
+  - ID は `DIV-${userId.slice(0, 8)}` / `DEPT-${userId.slice(0, 8)}` 形式で生成する
+  - `PostConfirmationDeps` に `DivisionRepository` を追加した
+  - 既存 DB の `一般部署` レコードは自動削除しない。対象ユーザーの所属を新組織に変更後、手動削除が可能
+- メンバー招待時のロールと所属の整合性を強化した
+  - `TEAM_ADMIN` は自分のチーム、`DEPT_ADMIN` は自分の部署、`DIVISION_ADMIN` は自分の本部をサーバー側で強制する
+  - `COMPANY_ADMIN` を招待する場合は本部・部署・チームに所属させず、会社全体の管理者として扱う
+  - 招待 UI でもロールとログインユーザーの権限に応じて、選択できる所属範囲を制限した
+- 所属メンバーが残っている組織を整理できるよう、メンバー削除機能を追加した
+  - `DELETE /user/{id}` を追加し、Cognito ユーザーと DynamoDB の User record を削除する
+  - 自分自身の削除、他社ユーザーの削除、権限範囲外ユーザーの削除を禁止する
+  - `MemberTable` に削除ボタンを追加し、削除権限がある行にのみ表示する
+  - ブラウザ標準 confirm ではなく、専用の削除確認モーダルで操作を確認する
+
+**注意:** 既存 DB に残っている `divisionId="NONE"` の `一般部署` は自動削除しません。対象ユーザーの部署を新組織へ変更した後、管理者が手動で削除できます。
+
+**デプロイ影響:**
+- Lambda コード変更: `PostConfirmationFunction`、`InviteUserFunction`
+- 新規 Lambda: `DeleteUserFunction`
+- 新規 API route: `DELETE /user/{id}`
+- 新規 DynamoDB table / GSI: なし
+- IAM 権限変更: あり。`DeleteUserFunction` に DynamoDB `DeleteItem` と Cognito `AdminDeleteUser` を付与
+- Cognito trigger: 変更なし
+- デプロイ要否: 必要
+
+**検証:**
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+- `yarn.cmd test:api` — 349 tests pass
+
 ---
 
 ## 開発メモ
