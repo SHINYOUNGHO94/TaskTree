@@ -100,6 +100,12 @@ Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` に�
   - Board / List / Detail 動線整理
   - E2E テスト
   - 運用上のエラー状態整理
+- Task 21: `Case-first Dashboard workflow cleanup`
+  - 詳細計画: `docs/workflow/task-21-case-first-dashboard-workflow-plan.md`
+  - Dashboard を v2 Case 中心の画面構成へ整理する
+  - legacy task を主要導線から外し、Case 配下 task との混同を避ける
+  - `REQUEST` / `STANDARD` / `PROJECT` 作成時の送信先、公開範囲、必要権限を role 別に選択できるようにする
+  - `自分の案件` / `公開案件` / `組織案件` / `プロジェクト` の画面区分へ近づける
 
 ## 進め方の目安
 
@@ -120,6 +126,10 @@ Task 16 で、OPEN case を外部会社参加 flow へ広げました。
 Task 17 で、Task 16 までに増えた Case 権限判定を整理し、assignment record と visibility record を正式化しました。
 
 Task 18 では、v2 Case roadmap の最終仕上げとして、検索、フィルター、UI 導線、E2E、運用上の error state を安定化します。
+
+Task 19、Task 20 では、UI と組織管理の運用品質を改善しました。
+
+Task 21 では、実際の利用確認で見つかった Dashboard 上の legacy task / v2 Case 混在を整理し、`case-collaboration-model.md` の Case-first 方針に合わせて作成導線と一覧区分を修正します。
 
 ## 注意
 
