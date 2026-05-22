@@ -169,7 +169,7 @@ describe("inviteUser", () => {
     expect(userRepo.create).not.toHaveBeenCalled();
   });
 
-  it("TEAM_ADMIN が自分のチーム以外の teamId を指定すると 403 を返す", async () => {
+  it("TEAM_ADMIN が自分のチーム以外の teamId を指定しても自分のチームに強制される", async () => {
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue(mockTeamAdmin),
       create: vi.fn(),
@@ -180,11 +180,13 @@ describe("inviteUser", () => {
       eventWithAuth("team-admin-1", { ...validInviteBody, teamId: "TEAM-OTHER" })
     );
 
-    expect(response.statusCode).toBe(403);
-    expect(userRepo.create).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(userRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ teamId: "TEAM-1", departmentId: "DEPT-1", divisionId: "DIV-1" })
+    );
   });
 
-  it("DEPT_ADMIN が自分の department 外の departmentId を指定すると 403 を返す", async () => {
+  it("DEPT_ADMIN が自分の department 外の departmentId を指定しても自分の部署に強制される", async () => {
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue(mockDeptAdmin),
       create: vi.fn(),
@@ -195,11 +197,13 @@ describe("inviteUser", () => {
       eventWithAuth("dept-admin-1", { ...validInviteBody, departmentId: "DEPT-OTHER" })
     );
 
-    expect(response.statusCode).toBe(403);
-    expect(userRepo.create).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(userRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ departmentId: "DEPT-1", divisionId: "DIV-1" })
+    );
   });
 
-  it("DIVISION_ADMIN が自分の division 外の divisionId を指定すると 403 を返す", async () => {
+  it("DIVISION_ADMIN が自分の division 外の divisionId を指定しても自分の本部に強制される", async () => {
     const userRepo = {
       findByUserId: vi.fn().mockResolvedValue(mockDivisionAdmin),
       create: vi.fn(),
@@ -210,8 +214,10 @@ describe("inviteUser", () => {
       eventWithAuth("div-admin-1", { ...validInviteBody, divisionId: "DIV-OTHER" })
     );
 
-    expect(response.statusCode).toBe(403);
-    expect(userRepo.create).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(userRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ divisionId: "DIV-1" })
+    );
   });
 
   it("存在しない divisionId では COMPANY_ADMIN でも招待できない", async () => {

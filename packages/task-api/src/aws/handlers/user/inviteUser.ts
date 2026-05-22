@@ -89,25 +89,54 @@ export const createHandler = (deps: InviteUserDeps) => async (event: APIGatewayP
     let effectiveDeptId = normalizeId(departmentId);
     let effectiveTeamId = normalizeId(teamId);
 
-    if (callerProfile.role === UserRole.TEAM_ADMIN) {
-      effectiveDivisionId = effectiveDivisionId === "NONE" ? callerProfile.divisionId : effectiveDivisionId;
-      effectiveDeptId = effectiveDeptId === "NONE" ? callerProfile.departmentId : effectiveDeptId;
-      effectiveTeamId = effectiveTeamId === "NONE" ? callerProfile.teamId : effectiveTeamId;
-    } else if (callerProfile.role === UserRole.DEPT_ADMIN) {
-      effectiveDivisionId = effectiveDivisionId === "NONE" ? callerProfile.divisionId : effectiveDivisionId;
-      effectiveDeptId = effectiveDeptId === "NONE" ? callerProfile.departmentId : effectiveDeptId;
-    } else if (callerProfile.role === UserRole.DIVISION_ADMIN) {
-      effectiveDivisionId = effectiveDivisionId === "NONE" ? callerProfile.divisionId : effectiveDivisionId;
+    // Caller-role forcing: always overrides client input
+    switch (callerProfile.role as UserRole) {
+      case UserRole.TEAM_ADMIN:
+        effectiveDivisionId = callerProfile.divisionId;
+        effectiveDeptId = callerProfile.departmentId;
+        effectiveTeamId = callerProfile.teamId;
+        break;
+      case UserRole.DEPT_ADMIN:
+        effectiveDivisionId = callerProfile.divisionId;
+        effectiveDeptId = callerProfile.departmentId;
+        if (![UserRole.TEAM_ADMIN, UserRole.USER, UserRole.GUEST].includes(role as UserRole)) {
+          effectiveTeamId = "NONE";
+        }
+        break;
+      case UserRole.DIVISION_ADMIN:
+        effectiveDivisionId = callerProfile.divisionId;
+        break;
+      // COMPANY_ADMIN: no caller-based forcing; invited-role forcing applied below
     }
 
+    // Invited-role forcing: applied after caller forcing
+    switch (role as UserRole) {
+      case UserRole.COMPANY_ADMIN:
+        effectiveDivisionId = "NONE";
+        effectiveDeptId = "NONE";
+        effectiveTeamId = "NONE";
+        break;
+      case UserRole.DIVISION_ADMIN:
+        effectiveDeptId = "NONE";
+        effectiveTeamId = "NONE";
+        break;
+      case UserRole.DEPT_ADMIN:
+        effectiveTeamId = "NONE";
+        break;
+    }
+
+    // Validate required fields per invited role
     if ((role as UserRole) === UserRole.DIVISION_ADMIN && effectiveDivisionId === "NONE") {
       return createResponse(400, { error: "divisionId is required for DIVISION_ADMIN" });
     }
-    if ((role as UserRole) === UserRole.DEPT_ADMIN && effectiveDeptId === "NONE") {
-      return createResponse(400, { error: "departmentId is required for DEPT_ADMIN" });
+    if ((role as UserRole) === UserRole.DEPT_ADMIN) {
+      if (effectiveDivisionId === "NONE") return createResponse(400, { error: "divisionId is required for DEPT_ADMIN" });
+      if (effectiveDeptId === "NONE") return createResponse(400, { error: "departmentId is required for DEPT_ADMIN" });
     }
-    if ((role as UserRole) === UserRole.TEAM_ADMIN && effectiveTeamId === "NONE") {
-      return createResponse(400, { error: "teamId is required for TEAM_ADMIN" });
+    if ((role as UserRole) === UserRole.TEAM_ADMIN) {
+      if (effectiveDivisionId === "NONE") return createResponse(400, { error: "divisionId is required for TEAM_ADMIN" });
+      if (effectiveDeptId === "NONE") return createResponse(400, { error: "departmentId is required for TEAM_ADMIN" });
+      if (effectiveTeamId === "NONE") return createResponse(400, { error: "teamId is required for TEAM_ADMIN" });
     }
 
     if (effectiveTeamId !== "NONE" && effectiveDeptId === "NONE") {
@@ -115,29 +144,6 @@ export const createHandler = (deps: InviteUserDeps) => async (event: APIGatewayP
     }
     if (effectiveDeptId !== "NONE" && effectiveDivisionId === "NONE") {
       return createResponse(400, { error: "divisionId is required when departmentId is specified" });
-    }
-
-    switch (callerProfile.role as UserRole) {
-      case UserRole.TEAM_ADMIN:
-        if (
-          effectiveDivisionId !== callerProfile.divisionId ||
-          effectiveDeptId !== callerProfile.departmentId ||
-          effectiveTeamId !== callerProfile.teamId
-        ) {
-          return createResponse(403, { error: "TEAM_ADMIN can only invite to their own team" });
-        }
-        break;
-      case UserRole.DEPT_ADMIN:
-        if (effectiveDivisionId !== callerProfile.divisionId || effectiveDeptId !== callerProfile.departmentId) {
-          return createResponse(403, { error: "DEPT_ADMIN can only invite to their own department or below" });
-        }
-        break;
-      case UserRole.DIVISION_ADMIN:
-        if (effectiveDivisionId !== "NONE" && effectiveDivisionId !== callerProfile.divisionId) {
-          return createResponse(403, { error: "DIVISION_ADMIN can only invite to their own division or below" });
-        }
-        break;
-      // COMPANY_ADMIN: 同一会社内であれば制限なし (companyId はサーバー側で強制)
     }
 
     if (effectiveDivisionId !== "NONE") {

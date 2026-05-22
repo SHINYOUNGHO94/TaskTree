@@ -3,6 +3,7 @@ import { BaseRepository } from "./baseRepository";
 import { UserRecord, UserRecordType, UserEntity } from "@/aws/entities/items/userRecord";
 import { UserRole } from "@task/core";
 
+
 export class UserRepository extends BaseRepository<UserRecordType> {
   constructor(tableName: string) {
     super(tableName);
@@ -73,6 +74,12 @@ export class UserRepository extends BaseRepository<UserRecordType> {
   async hasUsersByDepartmentId(companyId: string, departmentId: string): Promise<boolean> {
     const users = await this.findByCompanyId(companyId);
     return users.some((u) => u.departmentId === departmentId);
+  }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    const entity = await this.findByUserId(userId);
+    if (!entity) return;
+    await this.delete(UserRecord.makePk(), UserRecord.makeSk(entity.teamId, entity.User));
   }
 
   async create(params: {

@@ -275,6 +275,21 @@ export class TaskInfraStack extends cdk.Stack {
       resources: [userPool.userPoolArn],
     }));
 
+    const deleteUserFn = new NodejsFunction(this, 'DeleteUserFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/user/deleteUser.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        USER_POOL_ID: userPool.userPoolId,
+      },
+    });
+    grantOrgMutation(deleteUserFn, ['dynamodb:DeleteItem']);
+    deleteUserFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['cognito-idp:AdminDeleteUser'],
+      resources: [userPool.userPoolArn],
+    }));
+
     const getCompanyUsersFn = new NodejsFunction(this, 'GetCompanyUsersFunction', {
       runtime: Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../../task-api/src/aws/handlers/user/getCompanyUsers.ts'),
@@ -485,6 +500,9 @@ export class TaskInfraStack extends cdk.Stack {
 
     const userInviteResource = userResource.addResource('invite');
     userInviteResource.addMethod('POST', new apigateway.LambdaIntegration(inviteUserFn), { authorizer });
+
+    const userIdResource = userResource.addResource('{id}');
+    userIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteUserFn), { authorizer });
 
     const companyUsersResource = userResource.addResource('company-users');
     companyUsersResource.addMethod('GET', new apigateway.LambdaIntegration(getCompanyUsersFn), { authorizer });
