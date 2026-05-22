@@ -130,10 +130,22 @@ export interface CreateCaseTaskInput {
   dueDate: string | null;
 }
 
+export interface UpdateCaseTaskInput {
+  title?: string;
+  description?: string;
+  status?: CaseTaskStatus;
+  assigneeId?: string | null;
+  dueDate?: string | null;
+}
+
 export enum CaseHistoryAction {
   CASE_CREATED = "CASE_CREATED",
   STATUS_CHANGED = "STATUS_CHANGED",
   TASK_CREATED = "TASK_CREATED",
+  TASK_UPDATED = "TASK_UPDATED",
+  TASK_STATUS_CHANGED = "TASK_STATUS_CHANGED",
+  TASK_ASSIGNEE_CHANGED = "TASK_ASSIGNEE_CHANGED",
+  TASK_DELETED = "TASK_DELETED",
   CLAIM_REQUESTED = "CLAIM_REQUESTED",
   CLAIM_APPROVED = "CLAIM_APPROVED",
   CLAIM_REJECTED = "CLAIM_REJECTED",

@@ -364,6 +364,26 @@ export class TaskInfraStack extends cdk.Stack {
     grantTableRead(createCaseTaskFn);
     grantTableCreate(createCaseTaskFn);
 
+    const updateCaseTaskFn = new NodejsFunction(this, 'UpdateCaseTaskFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/updateCaseTask.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(updateCaseTaskFn, ['dynamodb:PutItem']);
+
+    const deleteCaseTaskFn = new NodejsFunction(this, 'DeleteCaseTaskFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/deleteCaseTask.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(deleteCaseTaskFn, ['dynamodb:DeleteItem', 'dynamodb:PutItem']);
+
     const getCaseHistoryFn = new NodejsFunction(this, 'GetCaseHistoryFunction', {
       runtime: Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getCaseHistory.ts'),
@@ -460,6 +480,10 @@ export class TaskInfraStack extends cdk.Stack {
     const caseTasksResource = caseIdResource.addResource('tasks');
     caseTasksResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseTasksFn), { authorizer });
     caseTasksResource.addMethod('POST', new apigateway.LambdaIntegration(createCaseTaskFn), { authorizer });
+
+    const caseTaskIdResource = caseTasksResource.addResource('{taskId}');
+    caseTaskIdResource.addMethod('PUT', new apigateway.LambdaIntegration(updateCaseTaskFn), { authorizer });
+    caseTaskIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteCaseTaskFn), { authorizer });
 
     const caseHistoryResource = caseIdResource.addResource('history');
     caseHistoryResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseHistoryFn), { authorizer });

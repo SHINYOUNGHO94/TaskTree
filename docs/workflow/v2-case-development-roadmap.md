@@ -117,6 +117,13 @@ Task 16、Task 17、Task 18 は `docs/core/operational-quality-baseline.md` に�
   - UUID 直接表示を `resolveDisplayName` helper で名前表示に変換
   - enum 値を日本語ラベル（依頼 / 通常案件 / プロジェクト等）で表示
   - 共通 helper `caseLabels.ts` 追加（API 変更なし）
+- Task 24: `CaseTask CRUD + 担当者管理`
+  - CaseTask 編集（タイトル・内容・ステータス・担当者・期限）と削除を実装
+  - PUT `/cases/{id}/tasks/{taskId}` + DELETE `/cases/{id}/tasks/{taskId}` API
+  - `UpdateCaseTaskInput` type, `CaseHistoryAction` 拡張 (TASK_UPDATED / TASK_STATUS_CHANGED / TASK_ASSIGNEE_CHANGED / TASK_DELETED)
+  - Lambda: UpdateCaseTaskFunction + DeleteCaseTaskFunction
+  - UI: 編集モーダル（担当者セレクタ含む）+ 削除確認モーダル
+  - 認可: case creator / USER owner / task creator / task assignee の 4 パターン
 
 ## 進め方の目安
 
@@ -145,6 +152,8 @@ Task 21 では、実際の利用確認で見つかった Dashboard 上の legacy
 Task 22 では、v1 standalone task flow を完全に削除しました。Dashboard は v2 Case-first 構成に一本化され、`/tasks` API ルートと関連 Lambda も CDK stack から除去しました。v2 CaseTask flow は保持しています。
 
 Task 23 では、Case 関連画面での UUID 直接表示を解消し、enum 値を日本語ラベルで表示するよう改善しました。共通 helper `caseLabels.ts` を追加し、API 変更なしでフロントエンドのみで対応しました。
+
+Task 24 では、CaseTask の編集・削除 CRUD を実装しました。PUT / DELETE `/cases/{id}/tasks/{taskId}` API、UpdateCaseTaskFunction + DeleteCaseTaskFunction Lambda、UI 編集モーダル・削除確認モーダル、担当者セレクタを追加しました。`CaseHistoryAction` に TASK_UPDATED / TASK_STATUS_CHANGED / TASK_ASSIGNEE_CHANGED / TASK_DELETED を追加し、変更種別に応じた履歴記録を実装しました。認可は case creator / USER owner / task creator / task assignee の 4 パターンをサポートします。
 
 ## 注意
 

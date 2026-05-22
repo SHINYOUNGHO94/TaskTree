@@ -33,6 +33,8 @@ import {
   CaseTaskDetail,
   CaseTaskStatus,
   CaseType,
+  UpdateCaseTaskInput,
+  UserProfile,
   UserRole,
   UserService,
 } from "@task/core";
@@ -50,6 +52,10 @@ const HISTORY_ACTION_LABELS: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.CASE_CREATED]: "案件作成",
   [CaseHistoryAction.STATUS_CHANGED]: "ステータス変更",
   [CaseHistoryAction.TASK_CREATED]: "作業追加",
+  [CaseHistoryAction.TASK_UPDATED]: "作業更新",
+  [CaseHistoryAction.TASK_STATUS_CHANGED]: "作業ステータス変更",
+  [CaseHistoryAction.TASK_ASSIGNEE_CHANGED]: "作業担当者変更",
+  [CaseHistoryAction.TASK_DELETED]: "作業削除",
   [CaseHistoryAction.CLAIM_REQUESTED]: "担当希望",
   [CaseHistoryAction.CLAIM_APPROVED]: "担当承認",
   [CaseHistoryAction.CLAIM_REJECTED]: "担当却下",
@@ -83,6 +89,51 @@ const TASK_STATUS_STYLES: Record<CaseTaskStatus, string> = {
 };
 
 type ErrorType = "notFound" | "forbidden" | "error";
+
+const canManageCaseOwner = (profile: UserProfile | null, caseDetail: CaseDetail): boolean => {
+  if (!profile) return false;
+  if (profile.role === UserRole.COMPANY_ADMIN && caseDetail.ownerType === CaseOwnerType.COMPANY) {
+    return true;
+  }
+  if (caseDetail.ownerType === CaseOwnerType.DIVISION) {
+    return (
+      profile.role === UserRole.COMPANY_ADMIN ||
+      (profile.role === UserRole.DIVISION_ADMIN && caseDetail.divisionId === profile.divisionId)
+    );
+  }
+  if (caseDetail.ownerType === CaseOwnerType.DEPARTMENT) {
+    return (
+      profile.role === UserRole.COMPANY_ADMIN ||
+      (profile.role === UserRole.DIVISION_ADMIN && caseDetail.divisionId === profile.divisionId) ||
+      (profile.role === UserRole.DEPT_ADMIN && caseDetail.departmentId === profile.departmentId)
+    );
+  }
+  if (caseDetail.ownerType === CaseOwnerType.TEAM) {
+    return (
+      profile.role === UserRole.COMPANY_ADMIN ||
+      (profile.role === UserRole.DIVISION_ADMIN && caseDetail.divisionId === profile.divisionId) ||
+      (profile.role === UserRole.DEPT_ADMIN && caseDetail.departmentId === profile.departmentId) ||
+      (profile.role === UserRole.TEAM_ADMIN && caseDetail.teamId === profile.teamId)
+    );
+  }
+  return false;
+};
+
+const canManageCaseTask = (
+  task: CaseTaskDetail,
+  caseDetail: CaseDetail,
+  currentUserId: string | null,
+  profile: UserProfile | null,
+): boolean => {
+  if (!currentUserId) return false;
+  return (
+    caseDetail.creatorId === currentUserId ||
+    (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId) ||
+    canManageCaseOwner(profile, caseDetail) ||
+    task.creatorId === currentUserId ||
+    task.assigneeId === currentUserId
+  );
+};
 
 const UPDATABLE_STATUSES: CaseStatus[] = [
   CaseStatus.WAITING,
@@ -189,6 +240,17 @@ const CaseDetailPage = () => {
   const [newTaskDueDate, setNewTaskDueDate] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [taskCreateError, setTaskCreateError] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<CaseTaskDetail | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState("");
+  const [editTaskDescription, setEditTaskDescription] = useState("");
+  const [editTaskStatus, setEditTaskStatus] = useState<CaseTaskStatus>(CaseTaskStatus.TODO);
+  const [editTaskAssigneeId, setEditTaskAssigneeId] = useState<string>("");
+  const [editTaskDueDate, setEditTaskDueDate] = useState("");
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [editTaskError, setEditTaskError] = useState<string | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+  const [deleteTaskError, setDeleteTaskError] = useState<string | null>(null);
   const [caseHistory, setCaseHistory] = useState<CaseHistoryEntry[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -199,6 +261,7 @@ const CaseDetailPage = () => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentSubmitError, setCommentSubmitError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
   const [claimRequests, setClaimRequests] = useState<CaseClaimRequest[]>([]);
   const [isClaimsLoading, setIsClaimsLoading] = useState(false);
   const [claimsError, setClaimsError] = useState<string | null>(null);
@@ -539,12 +602,68 @@ const CaseDetailPage = () => {
     }
   };
 
+  const openEditTask = (task: CaseTaskDetail) => {
+    setEditingTask(task);
+    setEditTaskTitle(task.title);
+    setEditTaskDescription(task.description);
+    setEditTaskStatus(task.status);
+    setEditTaskAssigneeId(task.assigneeId ?? "");
+    setEditTaskDueDate(task.dueDate ?? "");
+    setEditTaskError(null);
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
+    if (!editTaskTitle.trim()) {
+      setEditTaskError("タイトルを入力してください。");
+      return;
+    }
+    setIsEditingTask(true);
+    setEditTaskError(null);
+    try {
+      const input: UpdateCaseTaskInput = {
+        title: editTaskTitle.trim(),
+        description: editTaskDescription,
+        status: editTaskStatus,
+        assigneeId: editTaskAssigneeId || null,
+        dueDate: editTaskDueDate || null,
+      };
+      await CaseService.updateCaseTask(id as string, editingTask.taskId, input);
+      setEditingTask(null);
+      await Promise.all([fetchCaseTasks(), fetchCaseHistory()]);
+    } catch (error) {
+      console.error("Failed to update case task", error);
+      setEditTaskError("作業の更新に失敗しました。再度お試しください。");
+    } finally {
+      setIsEditingTask(false);
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!deletingTaskId) return;
+    setIsDeletingTask(true);
+    setDeleteTaskError(null);
+    try {
+      await CaseService.deleteCaseTask(id as string, deletingTaskId);
+      setDeletingTaskId(null);
+      await Promise.all([fetchCaseTasks(), fetchCaseHistory()]);
+    } catch (error) {
+      console.error("Failed to delete case task", error);
+      setDeleteTaskError("作業の削除に失敗しました。再度お試しください。");
+    } finally {
+      setIsDeletingTask(false);
+    }
+  };
+
   useEffect(() => {
     fetchAuthSession()
       .then(({ tokens }) => {
         const sub = tokens?.idToken?.payload?.sub;
         if (typeof sub === "string") setCurrentUserId(sub);
       })
+      .catch(() => undefined);
+    UserService.getUserProfile()
+      .then(setCurrentProfile)
       .catch(() => undefined);
   }, []);
 
@@ -959,6 +1078,9 @@ const CaseDetailPage = () => {
                 <ul className="space-y-2.5">
                   {caseTasks.map((task) => {
                     const isCompleted = task.status === CaseTaskStatus.DONE;
+                    const canManageTask = caseDetail
+                      ? canManageCaseTask(task, caseDetail, currentUserId, currentProfile)
+                      : false;
                     return (
                       <li
                         key={task.taskId}
@@ -975,11 +1097,19 @@ const CaseDetailPage = () => {
                           <p className={`text-sm font-bold text-gray-800 truncate ${isCompleted ? "line-through text-gray-400 font-normal" : ""}`}>
                             {task.title}
                           </p>
-                          {task.description && (
-                            <p className="text-xs text-gray-400 mt-0.5 truncate">{task.description}</p>
-                          )}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {task.description && (
+                              <p className="text-xs text-gray-400 truncate">{task.description}</p>
+                            )}
+                            {task.assigneeId && (
+                              <span className="text-xs text-gray-400 whitespace-nowrap flex items-center gap-1">
+                                <User size={10} />
+                                {resolveDisplayName(task.assigneeId, userMap)}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${TASK_STATUS_STYLES[task.status]}`}>
                             {CASE_TASK_STATUS_LABELS[task.status]}
                           </span>
@@ -988,6 +1118,25 @@ const CaseDetailPage = () => {
                               <Calendar size={12} />
                               {task.dueDate}
                             </span>
+                          )}
+                          {canManageTask && (
+                            <>
+                              <button
+                                onClick={() => openEditTask(task)}
+                                className="text-xs text-gray-400 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors font-medium whitespace-nowrap"
+                              >
+                                編集
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setDeletingTaskId(task.taskId);
+                                  setDeleteTaskError(null);
+                                }}
+                                className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors font-medium whitespace-nowrap"
+                              >
+                                削除
+                              </button>
+                            </>
                           )}
                         </div>
                       </li>
@@ -1426,6 +1575,117 @@ const CaseDetailPage = () => {
 
         </div>
       </div>
+
+      {/* Edit Task Modal */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-800">作業を編集</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              {editTaskError && <ErrorAlert message={editTaskError} />}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">タイトル</label>
+                <input
+                  value={editTaskTitle}
+                  onChange={(e) => setEditTaskTitle(e.target.value)}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">内容</label>
+                <textarea
+                  value={editTaskDescription}
+                  onChange={(e) => setEditTaskDescription(e.target.value)}
+                  rows={3}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">ステータス</label>
+                <select
+                  value={editTaskStatus}
+                  onChange={(e) => setEditTaskStatus(e.target.value as CaseTaskStatus)}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
+                >
+                  {Object.values(CaseTaskStatus).map((s) => (
+                    <option key={s} value={s}>{CASE_TASK_STATUS_LABELS[s]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">担当者</label>
+                <select
+                  value={editTaskAssigneeId}
+                  onChange={(e) => setEditTaskAssigneeId(e.target.value)}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
+                >
+                  <option value="">担当者なし</option>
+                  {Array.from(userMap.entries()).map(([uid, u]) => (
+                    <option key={uid} value={uid}>{u.name || u.email || shortId(uid)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">期限（任意）</label>
+                <input
+                  type="date"
+                  value={editTaskDueDate}
+                  onChange={(e) => setEditTaskDueDate(e.target.value)}
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => setEditingTask(null)}
+                disabled={isEditingTask}
+                className="text-sm font-bold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleUpdateTask}
+                disabled={isEditingTask}
+                className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isEditingTask ? "更新中..." : "更新"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Task Confirm Modal */}
+      {deletingTaskId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="p-6">
+              <h3 className="text-sm font-bold text-gray-800 mb-2">作業を削除</h3>
+              <p className="text-sm text-gray-500">この作業を削除してもよいですか？この操作は元に戻せません。</p>
+              {deleteTaskError && <div className="mt-3"><ErrorAlert message={deleteTaskError} /></div>}
+            </div>
+            <div className="p-6 pt-0 flex justify-end gap-3">
+              <button
+                onClick={() => { setDeletingTaskId(null); setDeleteTaskError(null); }}
+                disabled={isDeletingTask}
+                className="text-sm font-bold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleDeleteTask}
+                disabled={isDeletingTask}
+                className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isDeletingTask ? "削除中..." : "削除する"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

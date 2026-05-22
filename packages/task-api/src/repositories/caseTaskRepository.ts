@@ -28,4 +28,20 @@ export class CaseTaskRepository extends BaseRepository<CaseTaskRecordType> {
     const items = (response.Items ?? []) as CaseTaskRecordType[];
     return items.map((item) => CaseTaskRecord.toDetail(item));
   }
+
+  async findById(caseId: string, taskId: string): Promise<CaseTaskDetail | null> {
+    const record = await this.get(
+      CaseTaskRecord.makePk(),
+      CaseTaskRecord.makeSk(caseId, taskId),
+    );
+    if (!record) return null;
+    return CaseTaskRecord.toDetail(record);
+  }
+
+  async remove(caseId: string, taskId: string): Promise<void> {
+    await this.delete(
+      CaseTaskRecord.makePk(),
+      CaseTaskRecord.makeSk(caseId, taskId),
+    );
+  }
 }
