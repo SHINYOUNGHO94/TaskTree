@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AmplifyProvider } from "../components/providers/AmplifyProvider";
 import { UserProvider } from "../components/providers/UserProvider";
+import { I18nProvider } from "../components/providers/I18nProvider";
 
 export const metadata: Metadata = {
   title: "TaskTree",
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="ja" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <AmplifyProvider>
-          <UserProvider>{children}</UserProvider>
+          <I18nProvider>
+            <UserProvider>{children}</UserProvider>
+          </I18nProvider>
         </AmplifyProvider>
       </body>
     </html>

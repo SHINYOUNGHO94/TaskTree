@@ -1,42 +1,64 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   ChevronRight,
   TreeDeciduous,
   Building2,
   Layers,
-  Users
+  Users,
+  Handshake,
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { useUser } from '../providers/UserProvider';
+import { USER_ROLE_LABELS } from './caseLabels';
+import { UserRole } from '@task/core';
 
-// サイドバーのメニュー項目定義
-const getMenuItems = (role?: string) => [
-  { id: 'dashboard', label: 'ダッシュボード', icon: LayoutDashboard, href: '/dashboard' },
-  ...(role === 'COMPANY_ADMIN' || role === 'DIVISION_ADMIN' || role === 'DEPT_ADMIN' || role === 'TEAM_ADMIN' ? [{ id: 'team', label: '組織管理', icon: Users, href: '/dashboard/team' }] : []),
+const AVATAR_GRADIENTS = [
+  "from-violet-500 to-purple-600",
+  "from-indigo-500 to-blue-600",
+  "from-emerald-500 to-teal-600",
+  "from-rose-500 to-pink-600",
+  "from-amber-500 to-orange-600",
+  "from-cyan-500 to-sky-600",
 ];
 
-// サイドバーコンポーネント
+const getAvatarGradient = (name: string) => {
+  const hash = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length];
+};
+
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { profile } = useUser();
+  const { t } = useTranslation('ui');
+
+  const getMenuItems = (role?: string) => [
+    { id: 'dashboard', label: t('Dashboard'), icon: LayoutDashboard, href: '/dashboard' },
+    { id: 'partners', label: t('Partners'), icon: Handshake, href: '/dashboard/partners' },
+    ...(role === 'COMPANY_ADMIN' || role === 'DIVISION_ADMIN' || role === 'DEPT_ADMIN' || role === 'TEAM_ADMIN'
+      ? [{ id: 'team', label: t('Org Management'), icon: Users, href: '/dashboard/team' }]
+      : []),
+  ];
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col sticky top-0">
-      <div className="p-6 border-b border-gray-50">
+    <aside className="w-64 h-screen bg-slate-900 flex flex-col sticky top-0 shadow-xl shadow-black/20">
+      {/* Logo */}
+      <div className="p-6 border-b border-slate-800/60">
         <div className="flex items-center gap-3">
-          <div className="bg-gray-900 p-2 rounded-lg">
-            <TreeDeciduous className="text-white" size={20} />
+          <div className="bg-indigo-600 p-2 rounded-lg">
+            <TreeDeciduous className="text-white" size={18} />
           </div>
-          <span className="text-xl font-bold text-gray-900 tracking-tight">TaskTree</span>
+          <span className="text-lg font-bold text-white tracking-tight">TaskTree</span>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">
-          メインメニュー
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-3">
+          {t('Main Menu')}
         </div>
         {getMenuItems(profile?.role).map((item) => {
           const isActive = pathname === item.href;
@@ -45,71 +67,83 @@ export const Sidebar: React.FC = () => {
               key={item.id}
               href={item.href}
               className={clsx(
-                "flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group",
-                isActive 
-                  ? "bg-gray-900 text-white shadow-md shadow-gray-200" 
-                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                "flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group",
+                isActive
+                  ? "bg-indigo-600 text-white"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
               )}
             >
               <div className="flex items-center gap-3">
-                <item.icon size={18} className={clsx(isActive ? "text-white" : "text-gray-400 group-hover:text-gray-600")} />
+                <item.icon
+                  size={16}
+                  className={clsx(
+                    isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200",
+                    "transition-colors"
+                  )}
+                />
                 <span className="text-sm font-semibold">{item.label}</span>
               </div>
-              {isActive && <ChevronRight size={14} className="text-white/50" />}
+              {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/50" />}
             </Link>
           );
         })}
 
-        <div className="mt-10">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-4">
-            組織階層
+        {/* Org Hierarchy */}
+        <div className="mt-8 pt-6 border-t border-slate-800/50">
+          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-3">
+            {t('Org Hierarchy')}
           </div>
           <div className="px-3 space-y-4">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 bg-gray-100 p-1.5 rounded-lg">
-                <Building2 size={14} className="text-gray-600" />
+              <div className="mt-0.5 bg-slate-800 p-1.5 rounded-md flex-shrink-0">
+                <Building2 size={13} className="text-slate-300" />
               </div>
-              <div>
-                <p className="text-[10px] text-gray-400 font-bold uppercase leading-none mb-1">Company</p>
-                <p className="text-xs font-bold text-gray-700">{profile?.companyName || "Loading..."}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase leading-none mb-1 tracking-wider">Company</p>
+                <p className="text-xs font-semibold text-white truncate">{profile?.companyName || t('Loading...')}</p>
                 {profile?.role === 'COMPANY_ADMIN' && (
-                  <span className="inline-block mt-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-bold rounded">全体管理者</span>
+                  <span className="inline-block mt-1.5 px-1.5 py-0.5 bg-indigo-900/50 text-indigo-300 text-[9px] font-bold rounded border border-indigo-700/30">
+                    {t('Overall Admin')}
+                  </span>
                 )}
               </div>
             </div>
 
-            {/* Hierarchy Section - Only render if user belongs to sub-levels or has specific scope */}
             {(profile?.divisionId !== 'NONE' || profile?.departmentId !== 'NONE' || profile?.teamId !== 'NONE') && (
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 bg-gray-100 p-1.5 rounded-lg">
-                  <Layers size={14} className="text-gray-600" />
+                <div className="mt-0.5 bg-slate-800 p-1.5 rounded-lg flex-shrink-0">
+                  <Layers size={13} className="text-slate-400" />
                 </div>
-                <div className="space-y-3 flex-1">
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase leading-none mb-1">My Scope</p>
-                    <div className="space-y-2">
-                      {profile?.divisionId !== 'NONE' && (
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                          <p className="text-xs font-medium text-gray-600">{profile?.divisionName}</p>
-                          {profile?.role === 'DIVISION_ADMIN' && <span className="text-[9px] bg-blue-50 text-blue-500 px-1 rounded font-bold">本部長</span>}
-                        </div>
-                      )}
-                      {profile?.departmentId !== 'NONE' && (
-                        <div className="flex items-center gap-2 pl-3 border-l border-gray-100">
-                          <div className="w-1 h-1 rounded-full bg-gray-300" />
-                          <p className="text-xs font-medium text-gray-600 truncate max-w-[140px]">{profile?.departmentName}</p>
-                          {profile?.role === 'DEPT_ADMIN' && <span className="text-[9px] bg-green-50 text-green-600 px-1 rounded font-bold">部長</span>}
-                        </div>
-                      )}
-                      {profile?.teamId !== 'NONE' && (
-                        <div className="flex items-center gap-2 pl-3 border-l border-gray-100">
-                          <div className="w-1 h-1 rounded-full bg-gray-300" />
-                          <p className="text-xs font-medium text-gray-600 truncate max-w-[140px]">{profile?.teamName}</p>
-                          {profile?.role === 'TEAM_ADMIN' && <span className="text-[9px] bg-orange-50 text-orange-600 px-1 rounded font-bold">リーダー</span>}
-                        </div>
-                      )}
-                    </div>
+                <div className="space-y-2 flex-1 min-w-0">
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase leading-none tracking-wider">My Scope</p>
+                  <div className="space-y-1.5">
+                    {profile?.divisionId !== 'NONE' && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+                        <p className="text-xs font-medium text-slate-200 truncate max-w-[120px]">{profile?.divisionName}</p>
+                        {profile?.role === 'DIVISION_ADMIN' && (
+                          <span className="text-[9px] bg-indigo-900/50 text-indigo-300 px-1 rounded border border-indigo-700/30 font-bold">{t('Division Head (badge)')}</span>
+                        )}
+                      </div>
+                    )}
+                    {profile?.departmentId !== 'NONE' && (
+                      <div className="flex items-center gap-2 pl-3 border-l border-slate-700 flex-wrap">
+                        <div className="w-1 h-1 rounded-full bg-slate-400 flex-shrink-0" />
+                        <p className="text-xs font-medium text-slate-300 truncate max-w-[110px]">{profile?.departmentName}</p>
+                        {profile?.role === 'DEPT_ADMIN' && (
+                          <span className="text-[9px] bg-emerald-900/40 text-emerald-400 px-1 rounded border border-emerald-700/30 font-bold">{t('Dept Head (badge)')}</span>
+                        )}
+                      </div>
+                    )}
+                    {profile?.teamId !== 'NONE' && (
+                      <div className="flex items-center gap-2 pl-3 border-l border-slate-700 flex-wrap">
+                        <div className="w-1 h-1 rounded-full bg-slate-500 flex-shrink-0" />
+                        <p className="text-xs font-medium text-slate-400 truncate max-w-[110px]">{profile?.teamName}</p>
+                        {profile?.role === 'TEAM_ADMIN' && (
+                          <span className="text-[9px] bg-amber-900/40 text-amber-400 px-1 rounded border border-amber-700/30 font-bold">{t('Leader (badge)')}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -118,11 +152,20 @@ export const Sidebar: React.FC = () => {
         </div>
       </nav>
 
-      <div className="p-4 border-t border-gray-50">
-        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-          <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">現在のユーザー</p>
-          <p className="text-xs font-bold text-gray-700 truncate">{profile?.name || "Guest User"}</p>
-        </div>
+      {/* User footer */}
+      <div className="p-4 border-t border-slate-800/60">
+        <Link href="/dashboard/profile" className="block">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 border border-slate-700/50 hover:bg-slate-700/80 transition-colors cursor-pointer">
+            <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarGradient(profile?.name || 'G')} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+              {(profile?.name || "G").charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-white truncate">{profile?.name || "Guest User"}</p>
+              <p className="text-[10px] text-slate-400 truncate mt-0.5">{profile?.role ? t(USER_ROLE_LABELS[profile.role as UserRole] ?? profile.role) : "—"}</p>
+            </div>
+            <ChevronRight size={12} className="text-slate-500 flex-shrink-0" />
+          </div>
+        </Link>
       </div>
     </aside>
   );

@@ -1,7 +1,8 @@
-import { QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { BaseRepository } from "./baseRepository";
 import { UserRecord, UserRecordType, UserEntity } from "@/aws/entities/items/userRecord";
 import { UserRole } from "@task/core";
+
 
 export class UserRepository extends BaseRepository<UserRecordType> {
   constructor(tableName: string) {
@@ -45,6 +46,61 @@ export class UserRepository extends BaseRepository<UserRecordType> {
 
     const items = (response.Items || []) as UserRecordType[];
     return items.map(item => UserRecord.toEntity(item));
+  }
+
+  // チームに所属するユーザー一覧を取得 (主テーブル SK プレフィックスクエリ + companyId フィルタ)
+  async findByTeamId(teamId: string, companyId: string): Promise<UserEntity[]> {
+    const response = await this.docClient.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+        ExpressionAttributeValues: {
+          ":pk": UserRecord.makePk(),
+          ":skPrefix": `Team#${teamId}#`,
+        },
+      })
+    );
+    const items = (response.Items || []) as UserRecordType[];
+    return items.map((item) => UserRecord.toEntity(item)).filter((u) => u.companyId === companyId);
+  }
+
+  // 事業部に所属するユーザーが存在するか確認 (company GSI + フィルタ)
+  async hasUsersByDivisionId(companyId: string, divisionId: string): Promise<boolean> {
+    const users = await this.findByCompanyId(companyId);
+    return users.some((u) => u.divisionId === divisionId);
+  }
+
+  // 部署に所属するユーザーが存在するか確認 (company GSI + フィルタ)
+  async hasUsersByDepartmentId(companyId: string, departmentId: string): Promise<boolean> {
+    const users = await this.findByCompanyId(companyId);
+    return users.some((u) => u.departmentId === departmentId);
+  }
+
+  async updateName(userId: string, name: string): Promise<void> {
+    const entity = await this.findByUserId(userId);
+    if (!entity) throw new Error("User not found");
+    await this.docClient.send(
+      new UpdateCommand({
+        TableName: this.tableName,
+        Key: {
+          pk: UserRecord.makePk(),
+          sk: UserRecord.makeSk(entity.teamId, userId),
+        },
+        UpdateExpression: "SET #name = :name, update_at = :update_at",
+        ExpressionAttributeNames: { "#name": "name" },
+        ExpressionAttributeValues: {
+          ":name": name,
+          ":update_at": new Date().toISOString(),
+        },
+        ConditionExpression: "attribute_exists(pk)",
+      })
+    );
+  }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    const entity = await this.findByUserId(userId);
+    if (!entity) return;
+    await this.delete(UserRecord.makePk(), UserRecord.makeSk(entity.teamId, entity.User));
   }
 
   async create(params: {

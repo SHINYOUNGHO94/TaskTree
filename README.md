@@ -1,20 +1,17 @@
-# TaskTree(ポートフォリオプロジェクト)
+# TaskTree v2 (案件・タスク管理プラットフォーム)
 
-# プロジェクトの目的
-
-実務で学んだ技術を基に, タスク管理用のWebアプリケーションを開発する
+**TaskTree v2**は、組織階層・権限管理をサポートするマルチテナント型の業務・案件管理Webアプリケーションです。単なる個人用TODOアプリにとどまらず、実際のビジネス環境（複数企業間の協業やセキュアなテナント分離）に耐えうるアーキテクチャを目指して設計・実装されました。
 
 ## 🛠️ 技術スタック
 
 ### フロントエンド
-
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![i18next](https://img.shields.io/badge/i18next-26A69A?style=for-the-badge&logo=i18next&logoColor=white)
 
 ### バックエンド & クラウド
-
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![AWS Lambda](https://img.shields.io/badge/AWS_Lambda-FF9900?style=for-the-badge&logo=aws-lambda&logoColor=white)
 ![Amazon API Gateway](https://img.shields.io/badge/API_Gateway-FF9900?style=for-the-badge&logo=amazon-api-gateway&logoColor=white)
@@ -22,122 +19,60 @@
 ![AWS CDK](https://img.shields.io/badge/AWS_CDK-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)
 
 ### ツール & 構成
-
 ![Yarn](https://img.shields.io/badge/Yarn-2C8EBB?style=for-the-badge&logo=yarn&logoColor=white)
 ![Monorepo](https://img.shields.io/badge/Monorepo-Yarn_Workspaces-blue?style=for-the-badge&logo=yarn)
+![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 
 ---
 
-## 📆 開発ログ (ヒストリー)
+## 🌟 主な特徴とアーキテクチャ
 
-- **Monorepo 環境構築 (Yarn Workspaces)**
-  - `packages/task-core`: 共通型定義および共有ロジック
-  - `packages/task-ui`: 共通 UI コンポーネントライブラリ (TailwindCSS)
-  - `packages/task-app`: Next.js ベースのフロントエンドアプリケーション
-  - `packages/task-api`: AWS Lambda を利用したビジネスロジック (API)
-  - `packages/task-infra`: AWS CDK によるインフラ構成管理 (IaC)
+1. **堅牢なテナント分離と3段階認可 (RBAC)**
+   - Cognito IdentityとDBのユーザープロファイルを紐付け、Authentication（認証）、Tenant boundary（企業境界）、Case permission（案件権限）の3段階で不正アクセスを完全にブロックします。
+2. **DynamoDB シングルテーブル設計**
+   - フルテーブルスキャンを排除し、`byCase`, `byAssignee`, `byVisibility` などのGlobal Secondary Index (GSI)を駆使して高速にクエリを実行します。
+3. **安全なインフラ管理と最小権限 (Least Privilege)**
+   - AWS CDKによるInfrastructure as Code (IaC) を採用し、Lambda関数ごとに必要なAPIアクセス権限のみを精密に付与しています。
+4. **モノレポ（Yarn Workspaces）による責務分離**
+   - フロントエンドからAPI、インフラ構築コードまで一貫してTypeScriptで管理し、モジュール間の依存方向を単方向に制限しています。
+5. **企業間協業フロー (B2B)**
+   - 社内の案件（REQUEST / STANDARD / PROJECT）を外部企業へ招待・共有できます。メール招待（未登録企業向け）と会社検索招待の両方に対応し、参加企業ごとに権限を分離します。
+6. **多言語対応 UI（EN / 日 / 한）**
+   - i18next を用いて全画面の文字列を英語・日本語・韓国語に切り替えられます。ヘッダーの言語スイッチャーから即時切替でき、選択言語は `localStorage` に永続化されます。
 
-- **Task 1: DynamoDB の階層構造と共通機能の実装** [[PR #1]](https://github.com/SHINYOUNGHO94/TaskTree/pull/1)
-  - 組織階層（会社 ➔ 事業部 ➔ 部署 ➔ チーム ➔ 社員）に合わせたデータ構造の設計
-  - 共通関数 `createHierarchyRecord` によるデータ変換の自動化
-  - 重複コードを排除し、安全に階層を追加できるロジックを構築
+---
 
-- **Task 2: CI/CD 環境の構築 (ESLint, Prettier, GitHub Actions)** [[PR #2]](https://github.com/SHINYOUNGHO94/TaskTree/pull/2)
-  - ESLintとPrettierによるコード品質の自動管理
-  - GitHub Actionsによる自動ビルドとLintチェックの自動化
-  - 実務で使われる `--immutable` などの設定を適用
+## 📦 パッケージ構造 (Monorepo)
 
-- **Task 3: AWS インフラ構築と API 実装 (DynamoDB / API Gateway)** [[PR #3]](https://github.com/SHINYOUNGHO94/TaskTree/pull/3)
-  - AWS CDKによるDynamoDB、API GatewayのIaC化
-  - `BaseRepository<T>` による共通ロジックの集約と型安全性の確保
-  - 絶対パス（@/）の導入によるプロジェクトの可読性向上
+```text
+packages/
+  ├── task-app    # Next.js App Router (フロントエンド)
+  ├── task-core   # 共通型定義・APIクライアント層
+  ├── task-api    # AWS Lambda ハンドラー & サーバーサイドロジック
+  ├── task-infra  # AWS CDK 定義ファイル
+  └── task-ui     # 共通UIコンポーネント (Tailwind)
+```
 
-- **Task 4: AWS Cognito 連携とログイン画面の実装** [[PR #4]](https://github.com/SHINYOUNGHO94/TaskTree/pull/4)
-  - AWS Cognitoによるユーザー認証基盤の構築
-  - 認証ロジックを `@task/core` に集約し、フロントエンドと分離
-  - `zod` と `react-hook-form` によるバリデーションとエラー表示の実装
-  - ログイン状態に基づいた画面遷移とログアウト機能の実装
+---
 
-- **Task 5: ダッシュボードの実装と API データ連携** [[PR #5]](https://github.com/SHINYOUNGHO94/TaskTree/pull/5)
-  - AWS CDKによるAPI Gateway、DynamoDB、Lambdaのデプロイ
-  - AWS Amplify v6 による自動認証トークン送信の設定
-  - 画面のコンポーネント分割によるメンテナンス性の向上
-  - タスクの新規登録および一覧表示機能の実装
+## 📆 バージョン履歴・開発ログ
 
-- **Task 6: タスク管理機能の完成と組織情報の表示** [[PR #6]](https://github.com/SHINYOUNGHO94/TaskTree/pull/6)
-  - タスクのCRUD機能（作成・表示・編集・削除）をすべて実装
-  - ユーザーの所属組織（会社・部署など）をサイドバーに表示
-  - GSIによる高速なデータ取得とインフラの最適化
+本プロジェクトは大きく2つのフェーズに分けて開発されています。
 
-- **Task 7: ユーザー登録機能の実装と認証フローの改善** [[PR #7]](https://github.com/SHINYOUNGHO94/TaskTree/pull/7)
-  - Cognitoを利用したユーザー新規登録とメール認証機能の実装
-  - ログイン時の画面のちらつきと無限リダイレクト問題を解決
-  - ログアウト時に発生するネットワークエラー（CORS）を防止し、動作を安定化
+- **v1.0.0 (技術検証フェーズ)**: Cognito, DynamoDB, API Gateway, CDK を用いたサーバーレスアーキテクチャと基本的な権限管理・タスク管理の技術的実現性を検証したバージョン。
+- **v2.0.0 (プロダクト品質化フェーズ)**: AIエージェントチーム（Claude / GPT / Gemini）を活用しながら、RBAC・テナント分離・B2B協業フロー・CI/CD自動化・多言語UIを段階的に実装し、実運用に耐えうるプロダクト品質へ引き上げたバージョン。
 
-- **Task 8: 組織管理画面と招待ログインフローの完成** [[PR #8]](https://github.com/SHINYOUNGHO94/TaskTree/pull/8)
-  - 組織図（部署・チーム）をツリー形式で表示するUIへ改善
-  - 管理者からの招待と、初回ログイン時のパスワード変更機能を実装
-  - 組織作成時のバックエンド（AWS Lambda）の権限設定を修正
+これまでの具体的な実装フェーズ・アーキテクチャ設計・テストに関する詳細なログは、以下の別ファイルをご参照ください。
 
-- **Task 9: 階層型アクセス制御の実装** [[PR #9]](https://github.com/SHINYOUNGHO94/TaskTree/pull/9)
-  - 役職（社長・部長・リーダー）に応じた案件の閲覧範囲制御を実装
-  - 下位組織の案件を上位管理者が一括管理できる階層型ロジックの構築
-  - 作成者本人以外の編集・削除を制限するセキュリティガードの強化
+👉 **[詳細な開発履歴・Taskログ (v1.0.0 ~ v2.0.0)](docs/history/development-logs.md)**
 
-- **v1.1.0: 設計の整理とシステムの安定化**
-- １。[[PR #13]](https://github.com/SHINYOUNGHO94/TaskTree/pull/13)
-  - 設計の整理：データのルールを一つにまとめ、管理しやすいコードへ改善
-  - データの重複防止：同じデータが二重に登録されるトラブルを防止し、正確なデータ管理を実現
-  - 登録プロセスの改善：ユーザー登録時に発生していたエラーを修正し、全体の動作を安定化
-  
-- ２。セキュリティパッチと設計の改善を適用[[PR #14]](https://github.com/SHINYOUNGHO94/TaskTree/pull/14)
-  - セキュリティの強化：認証されていないユーザーからの不正なAPIアクセスを完全に遮断
-  - データベース権限の最適化：各機能が本当に必要な最小限の権限のみを持つようにインフラ設定を改善
-  - コード品質の向上：テストがしやすい構造への変更と、フロントエンド・バックエンド間のデータ通信エラーを防止
+---
 
-- ３。認証とデータ構造の安定化[[PR #15]](https://github.com/SHINYOUNGHO94/TaskTree/pull/15)
-  - CognitoをCDKで自動作成できるようにし、手動設定に依存しない構成へ改善
-  - フロントエンドで使う環境変数をデプロイ後に自動更新できるように修正
-  - 組織データの項目名を統一し、フロントエンドとバックエンドのデータずれを解消
+## 📚 主要ドキュメント
 
-- **v1.2.0: テスト環境の構築**
-- １。結合テストとE2Eテストの追加
-  - Vitestを導入し、ユーザー情報APIのレスポンス形式を確認
-  - 日時データや未所属データが安全に処理されることをテストで確認
-  - Playwrightを導入し、ログイン画面と新規登録画面の基本動作を確認
-
-- ２。コードレビューによる可読性の改善
-  - コードから自明なコメントを整理し、全体の見通しを改善
-  - 権限判定など意図が伝わりにくい箇所のコメントは維持
-  - プロファイル取得失敗時の `console.log` を `console.error` に修正
-  
-## 開発メモ
-
-実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。
-認証、権限管理、組織階層、タスク管理の流れを一人で設計・実装しています。
-
-実装中は、公式ドキュメントやAIツールも参考にしました。
-ただし、エラー対応、設計の見直し、動作確認は自分で行いながら改善しました。
-
-## 📸 画面イメージ
-### ログイン
-![ログイン画面](docs/images/login.png)
-
-### 新規登録
-![新規登録画面](docs/images/signup.png)
-
-![認証コード入力画面](docs/images/auth_signup_code.png)
-
-### ダッシュボード
-![ダッシュボード画面](docs/images/task_dashboard.png)
-
-![タスク追加画面](docs/images/create_task.png)
-
-![タスク詳細画面](docs/images/task_dashboard_detail.png)
-
-### 組織管理
-![組織管理画面](docs/images/organization_dashboard.png)
-
-![組織追加画面](docs/images/create_org.png)
-
-![組織メンバー追加画面](docs/images/create_org_user.png)
+開発・設計にあたって策定したコアとなるドキュメント群です。
+- [プロダクトゴールと目標構成 (v2.0.0)](docs/core/product-goal-v2.md)
+- [案件協業モデル（B2B仕様）](docs/core/case-collaboration-model.md)
+- [パッケージ境界と責務](docs/core/package-boundaries.md)
+- [運用品質ベースライン](docs/core/operational-quality-baseline.md)

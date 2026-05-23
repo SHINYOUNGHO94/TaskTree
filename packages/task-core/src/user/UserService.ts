@@ -1,4 +1,4 @@
-import { get, post } from 'aws-amplify/api';
+import { get, post, put, del } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { UserProfile } from '../types/user';
 import { UserRole } from '../types/role';
@@ -88,34 +88,89 @@ export const UserService = {
     }
   },
 
-  inviteUser: async (params: { email: string; name: string; divisionId?: string; departmentId?: string; teamId?: string; role?: string }): Promise<{ userId: string }> => {
-    try {
-      const { tokens } = await fetchAuthSession();
-      const idToken = tokens?.idToken?.toString();
+  deleteUser: async (userId: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
 
-      const restOperation = post({
-        apiName: "TaskApi",
-        path: "user/invite",
-        options: {
-          body: params,
-          headers: {
-            Authorization: idToken || '',
-          }
+    const restOperation = del({
+      apiName: "TaskApi",
+      path: `user/${userId}`,
+      options: {
+        headers: {
+          Authorization: idToken || '',
         }
-      });
-
-      const response = await restOperation.response;
-
-      if (response.statusCode !== 200) {
-        throw new Error(`Failed to invite user (Status: ${response.statusCode})`);
       }
+    });
 
-      const json = await response.body.json();
-      const responseBody = InviteUserResponseSchema.parse(json);
-      return responseBody;
-    } catch (error) {
-      console.error("Failed to invite user", error);
-      throw error;
+    const response = await restOperation.response;
+
+    if (response.statusCode !== 200) {
+      const json = await response.body.json() as { error?: string };
+      throw new Error(json?.error || `Failed to delete user (Status: ${response.statusCode})`);
     }
+  },
+
+  updateProfile: async (params: { name: string }): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: "user/profile",
+      options: {
+        body: params,
+        headers: { Authorization: idToken || '' },
+      }
+    });
+
+    const response = await restOperation.response;
+    if (response.statusCode !== 200) {
+      throw new Error(`Failed to update profile (Status: ${response.statusCode})`);
+    }
+  },
+
+  updateCompanyName: async (params: { name: string }): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: "company",
+      options: {
+        body: params,
+        headers: { Authorization: idToken || '' },
+      }
+    });
+
+    const response = await restOperation.response;
+    if (response.statusCode !== 200) {
+      throw new Error(`Failed to update company name (Status: ${response.statusCode})`);
+    }
+  },
+
+  inviteUser: async (params: { email: string; name: string; divisionId?: string; departmentId?: string; teamId?: string; role?: string }): Promise<{ userId: string }> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+
+    const restOperation = post({
+      apiName: "TaskApi",
+      path: "user/invite",
+      options: {
+        body: params,
+        headers: {
+          Authorization: idToken || '',
+        }
+      }
+    });
+
+    const response = await restOperation.response;
+
+    if (response.statusCode !== 200) {
+      throw new Error(`Failed to invite user (Status: ${response.statusCode})`);
+    }
+
+    const json = await response.body.json();
+    const responseBody = InviteUserResponseSchema.parse(json);
+    return responseBody;
   }
 };

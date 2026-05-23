@@ -4,13 +4,15 @@ node_modules/
 .yarn/unplugged
 .yarn/install-state.gz
 .pnp.*
-
 # Build artifacts
 dist/
 .next/
 out/
 cdk.out/
 build/
+test-results/
+playwright-report/
+blob-report/
 *.tsbuildinfo
 packages/**/*.js
 packages/**/*.d.ts
@@ -25,5 +27,13 @@ Thumbs.db
 # Private Memory (Internal Use)
 .memo/
 .vscode/
+.claude/
+
+# AI analysis artifacts
+cdk-outputs.json
+*_kr.md
+!docs/workflow/*_kr.md
+repomix-output.xml
+diff.xml
 # Lock file (Yarn v4 standard)
 # yarn.lock should NOT be ignored.

@@ -7,9 +7,9 @@ export * from "./types/role";
 export * from "./types/auth";
 export * from "./auth/AuthService";
 
-// タスク関連のエクスポート
-export * from "./types/task";
-export * from "./task/TaskService";
+// ケース関連のエクスポート
+export * from "./types/case";
+export * from "./case/CaseService";
 
 // ユーザー関連のエクスポート
 export * from "./types/user";

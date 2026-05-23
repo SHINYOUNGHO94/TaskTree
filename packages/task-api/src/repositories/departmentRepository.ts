@@ -1,6 +1,6 @@
 import { DepartmentRecord, DepartmentRecordType } from "@/aws/entities/items/departmentRecord";
 import { BaseRepository } from "@/repositories/baseRepository";
-import { QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
   constructor(tableName: string) {
@@ -48,5 +48,53 @@ export class DepartmentRepository extends BaseRepository<DepartmentRecordType> {
       })
     );
     return (response.Items || []) as DepartmentRecordType[];
+  };
+
+  // 事業部に所属する全部署を取得します (主テーブル SK プレフィックスクエリ + companyId フィルタ)
+  findByDivisionId = async (divisionId: string, companyId: string): Promise<DepartmentRecordType[]> => {
+    const response = await this.docClient.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :skPrefix)",
+        ExpressionAttributeValues: {
+          ":pk": DepartmentRecord.makePk(),
+          ":skPrefix": `Division#${divisionId}#`,
+        },
+      })
+    );
+    const items = (response.Items || []) as DepartmentRecordType[];
+    return items.filter((d) => d.companyId === companyId);
+  };
+
+  // 会社内で departmentId により部署を取得します
+  findByIdInCompany = async (companyId: string, departmentId: string): Promise<DepartmentRecordType | undefined> => {
+    const all = await this.findByCompanyId(companyId);
+    return all.find((d) => d.departmentId === departmentId);
+  };
+
+  // 部署名を更新します
+  update = async (divisionId: string, departmentId: string, name: string): Promise<void> => {
+    const pk = DepartmentRecord.makePk();
+    const sk = DepartmentRecord.makeSk(divisionId, departmentId);
+    await this.docClient.send(
+      new UpdateCommand({
+        TableName: this.tableName,
+        Key: { pk, sk },
+        UpdateExpression: "SET #name = :name, update_at = :update_at",
+        ExpressionAttributeNames: { "#name": "name" },
+        ExpressionAttributeValues: {
+          ":name": name,
+          ":update_at": new Date().toISOString(),
+        },
+        ConditionExpression: "attribute_exists(pk)",
+      })
+    );
+  };
+
+  // 部署を削除します
+  deleteById = async (divisionId: string, departmentId: string): Promise<void> => {
+    const pk = DepartmentRecord.makePk();
+    const sk = DepartmentRecord.makeSk(divisionId, departmentId);
+    await this.delete(pk, sk);
   };
 }

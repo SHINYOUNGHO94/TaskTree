@@ -1,4 +1,4 @@
-import { get, post } from 'aws-amplify/api';
+import { get, post, put, del } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { z } from 'zod';
 
@@ -77,25 +77,20 @@ export const OrgService = {
     }
   },
  
-  createDivision: async (name: string, companyId: string): Promise<{ divisionId: string }> => {
-    try {
-      const { tokens } = await fetchAuthSession();
-      const divisionId = `DIV-${Date.now()}`;
-      const restOperation = post({
-        apiName: "TaskApi",
-        path: "division",
-        options: {
-          headers: { Authorization: tokens?.idToken?.toString() || '' },
-          body: { name, companyId, divisionId }
-        }
-      });
-      const response = await restOperation.response;
-      if (response.statusCode !== 201) throw new Error("Failed to create division");
-      return { divisionId };
-    } catch (error) {
-      console.error("Failed to create division", error);
-      throw error;
-    }
+  createDivision: async (name: string): Promise<{ divisionId: string }> => {
+    const { tokens } = await fetchAuthSession();
+    const divisionId = `DIV-${Date.now()}`;
+    const restOperation = post({
+      apiName: "TaskApi",
+      path: "division",
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name, divisionId }
+      }
+    });
+    const response = await restOperation.response;
+    if (response.statusCode !== 201) throw new Error("Failed to create division");
+    return { divisionId };
   },
  
   getDepartments: async (): Promise<Department[]> => {
@@ -117,25 +112,20 @@ export const OrgService = {
     }
   },
 
-  createDepartment: async (name: string, companyId: string, divisionId: string = "NONE"): Promise<{ departmentId: string }> => {
-    try {
-      const { tokens } = await fetchAuthSession();
-      const departmentId = `DEPT-${Date.now()}`;
-      const restOperation = post({
-        apiName: "TaskApi",
-        path: "department",
-        options: {
-          headers: { Authorization: tokens?.idToken?.toString() || '' },
-          body: { name, companyId, divisionId, departmentId }
-        }
-      });
-      const response = await restOperation.response;
-      if (response.statusCode !== 201) throw new Error("Failed to create department");
-      return { departmentId };
-    } catch (error) {
-      console.error("Failed to create department", error);
-      throw error;
-    }
+  createDepartment: async (name: string, divisionId: string = "NONE"): Promise<{ departmentId: string }> => {
+    const { tokens } = await fetchAuthSession();
+    const departmentId = `DEPT-${Date.now()}`;
+    const restOperation = post({
+      apiName: "TaskApi",
+      path: "department",
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name, divisionId, departmentId }
+      }
+    });
+    const response = await restOperation.response;
+    if (response.statusCode !== 201) throw new Error("Failed to create department");
+    return { departmentId };
   },
 
   getTeams: async (): Promise<Team[]> => {
@@ -157,24 +147,94 @@ export const OrgService = {
     }
   },
 
-  createTeam: async (name: string, companyId: string, departmentId: string, divisionId: string = "NONE"): Promise<{ teamId: string }> => {
-    try {
-      const { tokens } = await fetchAuthSession();
-      const teamId = `TEAM-${Date.now()}`;
-      const restOperation = post({
-        apiName: "TaskApi",
-        path: "team",
-        options: {
-          headers: { Authorization: tokens?.idToken?.toString() || '' },
-          body: { name, companyId, divisionId, departmentId, teamId }
-        }
-      });
-      const response = await restOperation.response;
-      if (response.statusCode !== 201) throw new Error("Failed to create team");
-      return { teamId };
-    } catch (error) {
-      console.error("Failed to create team", error);
-      throw error;
-    }
-  }
+  createTeam: async (name: string, departmentId: string, divisionId: string = "NONE"): Promise<{ teamId: string }> => {
+    const { tokens } = await fetchAuthSession();
+    const teamId = `TEAM-${Date.now()}`;
+    const restOperation = post({
+      apiName: "TaskApi",
+      path: "team",
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name, divisionId, departmentId, teamId }
+      }
+    });
+    const response = await restOperation.response;
+    if (response.statusCode !== 201) throw new Error("Failed to create team");
+    return { teamId };
+  },
+
+  updateDivision: async (divisionId: string, name: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: `division/${divisionId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name },
+      },
+    });
+    await restOperation.response;
+  },
+
+  deleteDivision: async (divisionId: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = del({
+      apiName: "TaskApi",
+      path: `division/${divisionId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+      },
+    });
+    await restOperation.response;
+  },
+
+  updateDepartment: async (departmentId: string, name: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: `department/${departmentId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name },
+      },
+    });
+    await restOperation.response;
+  },
+
+  deleteDepartment: async (departmentId: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = del({
+      apiName: "TaskApi",
+      path: `department/${departmentId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+      },
+    });
+    await restOperation.response;
+  },
+
+  updateTeam: async (teamId: string, name: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: `team/${teamId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+        body: { name },
+      },
+    });
+    await restOperation.response;
+  },
+
+  deleteTeam: async (teamId: string): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const restOperation = del({
+      apiName: "TaskApi",
+      path: `team/${teamId}`,
+      options: {
+        headers: { Authorization: tokens?.idToken?.toString() || '' },
+      },
+    });
+    await restOperation.response;
+  },
 };

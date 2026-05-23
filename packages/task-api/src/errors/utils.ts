@@ -28,6 +28,24 @@ export const invalidRequestBody = (): TaskApiError => ({
   }),
 });
 
+export const unauthorized = (message: string = "Unauthorized"): TaskApiError => ({
+  statusCode: 401,
+  headers: COMMON_HEADERS,
+  body: JSON.stringify({
+    code: "UNAUTHORIZED",
+    message,
+  }),
+});
+
+export const forbidden = (message: string = "Access denied"): TaskApiError => ({
+  statusCode: 403,
+  headers: COMMON_HEADERS,
+  body: JSON.stringify({
+    code: "FORBIDDEN",
+    message,
+  }),
+});
+
 export const internalServerError = (message: string = "Internal server error"): TaskApiError => ({
   statusCode: 500,
   headers: COMMON_HEADERS,
@@ -44,4 +62,13 @@ export const notFound = (message: string = "Resource not found"): TaskApiError =
     code: "NOT_FOUND",
     message: message,
   })
+});
+
+export const badRequest = (message: string = "Bad request"): TaskApiError => ({
+  statusCode: 400,
+  headers: COMMON_HEADERS,
+  body: JSON.stringify({
+    code: "BAD_REQUEST",
+    message,
+  }),
 });
