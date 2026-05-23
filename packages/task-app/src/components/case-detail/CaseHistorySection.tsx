@@ -45,7 +45,7 @@ export const CaseHistorySection = ({
   const { t } = useTranslation("ui");
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+    <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 shadow-sm">
       <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-3 mb-4">{t("History")}</h3>
 
       {isLoading ? (

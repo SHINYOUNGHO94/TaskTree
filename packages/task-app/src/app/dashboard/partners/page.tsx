@@ -178,8 +178,9 @@ export default function PartnersPage() {
             {pending.map((inv) => (
               <div
                 key={`${inv.participantCompany.caseId}-${inv.participantCompany.companyId}`}
-                className="bg-white border border-slate-200 rounded-lg p-4 flex items-start gap-4"
+                className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4"
               >
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className="flex-shrink-0 w-9 h-9 rounded-md bg-slate-100 flex items-center justify-center">
                   <Building2 size={16} className="text-slate-500" />
                 </div>
@@ -197,7 +198,8 @@ export default function PartnersPage() {
                     {new Date(inv.participantCompany.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                </div>
+                <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
                   <button
                     onClick={() => handleAction(inv, CaseParticipantCompanyStatus.REJECTED)}
                     disabled={!!actionLoading}
@@ -227,8 +229,8 @@ export default function PartnersPage() {
           <div className="flex items-center gap-2 mb-4">
             <h3 className="text-sm font-bold text-slate-700">{t("Collaboration History")}</h3>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-left">
                   <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide">{t("Case (header)")}</th>

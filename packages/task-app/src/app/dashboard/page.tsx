@@ -299,7 +299,8 @@ const DashboardPage = () => {
       {/* Case section */}
       <div className="mb-10">
         {/* Area tabs */}
-        <div className="flex gap-0.5 mb-5 bg-slate-100 p-1 rounded-md border border-slate-200 w-fit">
+        <div className="overflow-x-auto mb-5">
+        <div className="flex gap-0.5 bg-slate-100 p-1 rounded-md border border-slate-200 w-fit">
           {(["MY", "OPEN", "ORG", "PROJECT"] as CaseAreaTab[]).map((tab) => {
             const count = filterByArea(cases, tab, user.id).length;
             const isActive = activeTab === tab;
@@ -322,6 +323,7 @@ const DashboardPage = () => {
               </button>
             );
           })}
+        </div>
         </div>
 
         <p className="text-xs text-slate-600 mb-4 leading-relaxed">{TAB_DESCRIPTIONS[activeTab]}</p>
@@ -459,8 +461,8 @@ const DashboardPage = () => {
         ) : viewMode === "board" ? (
           <CaseBoardView cases={filteredCases} onCaseClick={handleCaseClick} />
         ) : (
-          <div className="border border-slate-200 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full min-w-[580px] text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-left">
                   <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-24">{t("Type")}</th>

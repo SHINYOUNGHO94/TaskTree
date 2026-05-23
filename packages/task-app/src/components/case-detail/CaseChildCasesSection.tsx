@@ -82,7 +82,7 @@ export const CaseChildCasesSection = ({
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+      <div className="p-4 md:p-6 border-b border-gray-100 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-bold text-gray-800">{t("Sub-cases")}</h3>
           <p className="text-xs text-gray-400 mt-0.5">{t("Hierarchical structure of related sub-cases")}</p>
@@ -111,7 +111,7 @@ export const CaseChildCasesSection = ({
         />
       )}
 
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         {isChildCasesLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
@@ -130,7 +130,7 @@ export const CaseChildCasesSection = ({
                 <li key={standardChild.caseId} className="border border-blue-100 rounded-xl overflow-hidden shadow-sm">
                   <div
                     onClick={() => onNavigate(standardChild.caseId)}
-                    className="flex items-center gap-3 p-4 bg-blue-50/20 hover:bg-blue-50/50 transition-colors cursor-pointer"
+                    className="flex items-start gap-2 p-4 bg-blue-50/20 hover:bg-blue-50/50 transition-colors cursor-pointer flex-wrap"
                   >
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_STYLES[standardChild.status]}`}>
                       {t(CASE_STATUS_LABELS[standardChild.status])}
@@ -138,7 +138,7 @@ export const CaseChildCasesSection = ({
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap bg-blue-100 text-blue-700 border border-blue-200">
                       {t(CASE_TYPE_LABELS[CaseType.STANDARD])}
                     </span>
-                    <span className="text-sm font-bold text-gray-800 flex-1 truncate">{standardChild.title}</span>
+                    <span className="text-sm font-bold text-gray-800 flex-1 truncate min-w-[100px]">{standardChild.title}</span>
                     {standardChild.dueDate && (
                       <span className="text-xs text-gray-400 flex items-center gap-1 whitespace-nowrap">
                         <Calendar size={12} />

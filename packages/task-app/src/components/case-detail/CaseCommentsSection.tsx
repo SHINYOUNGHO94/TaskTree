@@ -55,12 +55,12 @@ export const CaseCommentsSection = ({
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-4 md:p-6 border-b border-gray-100">
         <h3 className="text-sm font-bold text-gray-800">{t("Comments")}</h3>
         <p className="text-xs text-gray-400 mt-0.5">{t("Discussion about this case")}</p>
       </div>
 
-      <div className="p-6 border-b border-gray-100 bg-gray-50/30">
+      <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50/30">
         <div className="space-y-3">
           {commentSubmitError && <ErrorAlert message={commentSubmitError} />}
           <textarea
@@ -82,7 +82,7 @@ export const CaseCommentsSection = ({
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
