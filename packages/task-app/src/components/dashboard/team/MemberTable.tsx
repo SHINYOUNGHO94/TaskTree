@@ -2,6 +2,7 @@
 
 import { UserProfile, Division, Department, Team } from "@task/core";
 import { Mail, Shield, Building, Layers, Trash2 } from "lucide-react";
+import { USER_ROLE_LABELS } from "../caseLabels";
 
 type MemberTableProps = {
   isLoading: boolean;
@@ -12,6 +13,33 @@ type MemberTableProps = {
   canDeleteMember: (member: UserProfile) => boolean;
   isMutating: boolean;
   onDeleteMember: (member: UserProfile) => void;
+};
+
+const AVATAR_GRADIENTS = [
+  "from-violet-400 to-purple-500",
+  "from-indigo-400 to-blue-500",
+  "from-emerald-400 to-teal-500",
+  "from-rose-400 to-pink-500",
+  "from-amber-400 to-orange-500",
+  "from-cyan-400 to-sky-500",
+  "from-fuchsia-400 to-pink-500",
+  "from-blue-400 to-indigo-500",
+];
+
+const getAvatarGradient = (name: string): string => {
+  const hash = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length];
+};
+
+const getRoleBadgeClass = (role: string): string => {
+  switch (role) {
+    case "COMPANY_ADMIN":  return "bg-violet-100 text-violet-700 ring-1 ring-violet-200/80";
+    case "DIVISION_ADMIN": return "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200/80";
+    case "DEPT_ADMIN":     return "bg-blue-100 text-blue-700 ring-1 ring-blue-200/80";
+    case "TEAM_ADMIN":     return "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200/80";
+    case "USER":           return "bg-slate-100 text-slate-600 ring-1 ring-slate-200/80";
+    default:               return "bg-gray-100 text-gray-500 ring-1 ring-gray-200/80";
+  }
 };
 
 export function MemberTable({
@@ -32,61 +60,82 @@ export function MemberTable({
     id ? (teams.find((t) => t.teamId === id)?.name || id) : "---";
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+        <table className="w-full table-fixed text-sm text-left">
+          <thead className="text-xs text-slate-400 uppercase bg-slate-50/80 border-b border-slate-100">
             <tr>
-              <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[200px] w-[25%]">メンバー</th>
-              <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[100px] w-[15%]">権限</th>
-              <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[220px] w-[40%]">所属</th>
-              <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[130px] w-[15%]">登録日</th>
-              <th className="px-6 py-4 font-semibold whitespace-nowrap min-w-[80px] w-[5%]">操作</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[200px]">メンバー</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[140px]">権限</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[220px]">所属</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[130px]">登録日</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[80px]">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-slate-100/80">
             {isLoading ? (
-              <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-400 whitespace-nowrap">
-                  <div className="flex justify-center mb-2">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-                  </div>
-                  読み込み中...
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-slate-200 flex-shrink-0" />
+                      <div className="space-y-2 flex-1">
+                        <div className="h-3.5 bg-slate-200 rounded-full w-24" />
+                        <div className="h-2.5 bg-slate-100 rounded-full w-32" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4"><div className="h-6 bg-slate-100 rounded-full w-24" /></td>
+                  <td className="px-6 py-4">
+                    <div className="space-y-2">
+                      <div className="h-2.5 bg-slate-100 rounded-full w-28" />
+                      <div className="h-2 bg-slate-100 rounded-full w-20 ml-4" />
+                    </div>
+                  </td>
+                  <td className="px-6 py-4"><div className="h-2.5 bg-slate-100 rounded-full w-20" /></td>
+                  <td className="px-6 py-4" />
+                </tr>
+              ))
             ) : members.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-400 whitespace-nowrap">
-                  メンバーがいません。
+                <td colSpan={5} className="px-6 py-14 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                      <Shield size={20} className="text-slate-300" />
+                    </div>
+                    <p className="text-slate-400 text-sm">メンバーがいません。</p>
+                  </div>
                 </td>
               </tr>
             ) : (
               members.map((member) => (
-                <tr key={member.userId} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={member.userId} className="group hover:bg-indigo-50/40 transition-all duration-200">
                   <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold uppercase flex-shrink-0">
+                      <div
+                        className={`w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarGradient(member.name)} flex items-center justify-center text-white font-bold text-sm uppercase flex-shrink-0 shadow-sm`}
+                      >
                         {member.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-gray-900 truncate">{member.name}</div>
-                        <div className="text-gray-500 text-xs flex items-center gap-1 mt-0.5 truncate">
-                          <Mail size={12} className="flex-shrink-0" />
+                        <div className="font-semibold text-slate-800 truncate">{member.name}</div>
+                        <div className="text-slate-400 text-xs flex items-center gap-1 mt-0.5 truncate">
+                          <Mail size={11} className="flex-shrink-0" />
                           <span className="truncate">{member.email}</span>
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap min-w-[100px]">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-                      <Shield size={12} className="flex-shrink-0" />
-                      {member.role}
+                  <td className="px-6 py-4 whitespace-nowrap min-w-[140px]">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(member.role)}`}>
+                      <Shield size={10} className="flex-shrink-0" />
+                      {USER_ROLE_LABELS[member.role as keyof typeof USER_ROLE_LABELS] ?? member.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-600 whitespace-nowrap min-w-[220px]">
+                  <td className="px-6 py-4 whitespace-nowrap min-w-[220px]">
                     <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5 text-xs font-medium text-gray-700 whitespace-nowrap flex-nowrap">
-                        <Building size={12} className="text-gray-400 flex-shrink-0" />
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600 whitespace-nowrap flex-nowrap">
+                        <Building size={11} className="text-slate-300 flex-shrink-0" />
                         <span className="truncate">
                           {member.divisionId && member.divisionId !== "NONE"
                             ? `${getDivName(member.divisionId)} / `
@@ -96,15 +145,17 @@ export function MemberTable({
                             : getDeptName(member.departmentId)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500 ml-4 border-l border-gray-200 pl-2 whitespace-nowrap flex-nowrap">
-                        <Layers size={10} className="text-gray-400 flex-shrink-0" />
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 ml-4 border-l border-slate-100 pl-2 whitespace-nowrap flex-nowrap">
+                        <Layers size={9} className="text-slate-300 flex-shrink-0" />
                         <span className="truncate">
-                          {!member.teamId || member.teamId === "NONE" ? "未配属" : getTeamName(member.teamId)}
+                          {!member.teamId || member.teamId === "NONE"
+                            ? "未配属"
+                            : getTeamName(member.teamId)}
                         </span>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-500 whitespace-nowrap min-w-[130px]">
+                  <td className="px-6 py-4 text-slate-400 text-xs whitespace-nowrap min-w-[130px]">
                     {member.createdAt ? new Date(member.createdAt).toLocaleDateString() : "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap min-w-[80px]">
@@ -113,7 +164,7 @@ export function MemberTable({
                         type="button"
                         onClick={() => onDeleteMember(member)}
                         disabled={isMutating}
-                        className="p-2 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 rounded"
+                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-200 disabled:opacity-50 rounded-lg opacity-0 group-hover:opacity-100"
                         title="削除"
                       >
                         <Trash2 size={14} />

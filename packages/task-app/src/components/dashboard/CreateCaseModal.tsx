@@ -18,7 +18,7 @@ import {
   UserRole,
   UserService,
 } from '@task/core';
-import { CASE_DELIVERY_TYPE_LABELS, CASE_TYPE_LABELS } from './caseLabels';
+import { CASE_DELIVERY_TYPE_LABELS, CASE_TYPE_LABELS, USER_ROLE_LABELS } from './caseLabels';
 
 interface CreateCaseModalProps {
   isOpen: boolean;
@@ -44,14 +44,6 @@ const ROLE_RANK: Record<UserRole, number> = {
   [UserRole.COMPANY_ADMIN]: 6,
 };
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  [UserRole.GUEST]: 'GUEST',
-  [UserRole.USER]: 'USER',
-  [UserRole.TEAM_ADMIN]: 'TEAM_ADMIN',
-  [UserRole.DEPT_ADMIN]: 'DEPT_ADMIN',
-  [UserRole.DIVISION_ADMIN]: 'DIVISION_ADMIN',
-  [UserRole.COMPANY_ADMIN]: 'COMPANY_ADMIN',
-};
 
 const ALLOWED_TARGET_SCOPES_BY_ROLE: Record<UserRole, CaseTargetScope[]> = {
   [UserRole.COMPANY_ADMIN]: [
@@ -322,8 +314,21 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     }
   }, [targetScope, userRole, profile, userId, isOrgUser, filterDivisionId, filterDepartmentId, filterTeamId, selectedUserId]);
 
+  // For OPEN delivery: if no specific unit is selected, fall back to company-wide scope.
+  // DIRECT delivery always requires an explicit target.
+  const effectiveSubmitScope = useMemo<{ scope: CaseTargetScope; scopeId: string }>(() => {
+    if (
+      deliveryType === CaseDeliveryType.OPEN &&
+      !computedTargetScopeId &&
+      targetScope !== CaseTargetScope.USER
+    ) {
+      return { scope: CaseTargetScope.COMPANY, scopeId: profile?.companyId ?? '' };
+    }
+    return { scope: targetScope, scopeId: computedTargetScopeId };
+  }, [deliveryType, computedTargetScopeId, targetScope, profile]);
+
   // requiredRole: forced to USER when targeting a specific user
-  const effectiveRequiredRole = targetScope === CaseTargetScope.USER ? UserRole.USER : requiredRole;
+  const effectiveRequiredRole = effectiveSubmitScope.scope === CaseTargetScope.USER ? UserRole.USER : requiredRole;
 
   const allowedRequiredRoles = useMemo<UserRole[]>(() => {
     const creatorRank = ROLE_RANK[userRole] ?? 2;
@@ -334,29 +339,38 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
   // ── Human-readable target summary for confirmation ────────────────────────
   const targetSummaryText = useMemo<string>(() => {
-    const id = computedTargetScopeId;
-    switch (targetScope) {
+    const { scope: effScope, scopeId: effId } = effectiveSubmitScope;
+    const isOpenFallback =
+      deliveryType === CaseDeliveryType.OPEN &&
+      effScope === CaseTargetScope.COMPANY &&
+      targetScope !== CaseTargetScope.COMPANY;
+
+    switch (effScope) {
       case CaseTargetScope.COMPANY:
-        return id ? `${profile?.companyName ?? '自社全体'}（全社）` : '';
+        if (!effId) return '';
+        return isOpenFallback
+          ? `${profile?.companyName ?? '自社全体'}（全社公開・スコープ未選択のため）`
+          : `${profile?.companyName ?? '自社全体'}（全社）`;
       case CaseTargetScope.DIVISION: {
-        if (!id) return '';
-        const div = divisions.find((d) => d.divisionId === id);
-        const name = div?.name ?? profile?.divisionName ?? id;
+        if (!effId) return '';
+        const div = divisions.find((d) => d.divisionId === effId);
+        const name = div?.name ?? profile?.divisionName ?? effId;
         return `${name}（部門）`;
       }
       case CaseTargetScope.DEPARTMENT: {
-        if (!id) return '';
-        const dept = departments.find((d) => d.departmentId === id);
-        const name = dept?.name ?? profile?.departmentName ?? id;
+        if (!effId) return '';
+        const dept = departments.find((d) => d.departmentId === effId);
+        const name = dept?.name ?? profile?.departmentName ?? effId;
         return `${name}（部署）`;
       }
       case CaseTargetScope.TEAM: {
-        if (!id) return '';
-        const team = teams.find((t) => t.teamId === id);
-        const name = team?.name ?? profile?.teamName ?? id;
+        if (!effId) return '';
+        const team = teams.find((t) => t.teamId === effId);
+        const name = team?.name ?? profile?.teamName ?? effId;
         return `${name}（チーム）`;
       }
       case CaseTargetScope.USER: {
+        const id = computedTargetScopeId;
         if (!id) return '';
         if (isOrgUser) return `${profile?.name ?? '自分'}（自分）`;
         const u = companyUsers.find((u) => u.userId === id);
@@ -365,7 +379,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
       default:
         return '';
     }
-  }, [targetScope, computedTargetScopeId, profile, divisions, departments, teams, companyUsers, isOrgUser]);
+  }, [effectiveSubmitScope, targetScope, deliveryType, computedTargetScopeId, profile, divisions, departments, teams, companyUsers, isOrgUser]);
 
   // ── Selector visibility flags ─────────────────────────────────────────────
 
@@ -434,7 +448,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   const onSubmit = async (data: FormValues) => {
     setSubmitError(null);
 
-    if (!computedTargetScopeId) {
+    const { scope: submitScope, scopeId: submitScopeId } = effectiveSubmitScope;
+
+    if (!submitScopeId) {
       setSubmitError(getScopeRequiredError(targetScope));
       return;
     }
@@ -444,8 +460,8 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
       description: data.description.trim(),
       caseType: data.caseType,
       deliveryType,
-      targetScope,
-      targetScopeId: computedTargetScopeId,
+      targetScope: submitScope,
+      targetScopeId: submitScopeId,
       requiredRole: effectiveRequiredRole,
       dueDate: data.dueDate || null,
     };
@@ -465,25 +481,27 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100"
+            className="w-full max-w-lg bg-white rounded-lg shadow-xl overflow-hidden border border-slate-200"
           >
+            {/* Accent strip */}
+            <div className="h-0.5 bg-indigo-600" />
             {/* ── Header ── */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100/80 bg-gray-50/50">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
               <div>
-                <h2 className="text-base font-bold text-gray-900">
+                <h2 className="text-sm font-bold text-slate-900">
                   {selectedCaseType === CaseType.PROJECT
                     ? `${CASE_TYPE_LABELS[CaseType.PROJECT]}作成`
                     : selectedCaseType === CaseType.STANDARD
                       ? `${CASE_TYPE_LABELS[CaseType.STANDARD]}作成`
                       : `${CASE_TYPE_LABELS[CaseType.REQUEST]}作成`}
                 </h2>
-                <p className="text-[11px] text-gray-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   {selectedCaseType === CaseType.PROJECT
                     ? `複数の${CASE_TYPE_LABELS[CaseType.STANDARD]}に分解できる大型案件`
                     : selectedCaseType === CaseType.STANDARD
@@ -493,9 +511,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               </div>
               <button
                 onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-100 rounded-lg transition-all"
+                className="text-slate-400 hover:text-slate-700 p-1.5 hover:bg-slate-100 rounded-md transition-colors"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
@@ -510,12 +528,12 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                   <CheckCircle size={28} className="text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-base font-bold text-gray-900">案件を作成しました</p>
-                  <p className="text-xs text-gray-400 mt-1">ダッシュボードの一覧に追加されました。</p>
+                  <p className="text-base font-bold text-slate-900">案件を作成しました</p>
+                  <p className="text-xs text-slate-500 mt-1">ダッシュボードの一覧に追加されました。</p>
                 </div>
                 <button
                   onClick={handleClose}
-                  className="mt-4 px-6 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-all shadow-sm"
+                  className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
                 >
                   閉じる
                 </button>
@@ -526,25 +544,27 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 className="p-6 space-y-5 max-h-[82vh] overflow-y-auto"
               >
                 {submitError && (
-                  <div className="p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 font-medium flex items-center gap-2">
-                    <AlertCircle size={14} className="shrink-0" />
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs text-red-700 font-medium flex items-center gap-2">
+                    <AlertCircle size={13} className="shrink-0" />
                     {submitError}
                   </div>
                 )}
 
                 {/* ── Case type ── */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">案件タイプ</label>
-                  <div className="bg-gray-100 p-1 rounded-xl flex gap-1 border border-gray-200/20">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700">案件タイプ</label>
+                  <div className="bg-slate-100 p-1 rounded-md flex gap-1 border border-slate-200">
                     {([CaseType.REQUEST, CaseType.STANDARD, CaseType.PROJECT] as CaseType[]).map((ct) => (
                       <label
                         key={ct}
-                        className={`flex-1 flex items-center justify-center py-2 rounded-lg cursor-pointer transition-all text-xs font-bold select-none ${
+                        className={`flex-1 flex items-center justify-center py-2 rounded-sm cursor-pointer transition-colors text-xs font-semibold select-none ${
                           selectedCaseType === ct
                             ? ct === CaseType.PROJECT
-                              ? 'bg-purple-600 text-white shadow-sm'
-                              : 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
-                            : 'hover:text-gray-900 text-gray-500 hover:bg-gray-50/50'
+                              ? 'bg-violet-700 text-white'
+                              : ct === CaseType.STANDARD
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-amber-600 text-white'
+                            : 'text-slate-700 hover:text-slate-900 hover:bg-white'
                         }`}
                       >
                         <input
@@ -561,79 +581,82 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
                 {/* ── Title ── */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">タイトル</label>
+                  <label className="text-xs font-semibold text-slate-700">タイトル</label>
                   <input
                     {...register('title', {
                       required: 'タイトルを入力してください。',
                       validate: (v) => v.trim().length > 0 || 'タイトルを入力してください。',
                     })}
                     placeholder="案件のタイトルを入力"
-                    className="w-full border border-gray-200/80 rounded-xl px-3.5 py-2.5 text-xs focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm bg-white"
+                    className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors bg-white placeholder:text-slate-400"
                   />
                   {errors.title && (
-                    <p className="text-[11px] text-red-500 font-medium">{errors.title.message}</p>
+                    <p className="text-xs text-red-600">{errors.title.message}</p>
                   )}
                 </div>
 
                 {/* ── Description ── */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">内容</label>
+                  <label className="text-xs font-semibold text-slate-700">内容</label>
                   <textarea
                     {...register('description', {
                       required: '内容を入力してください。',
                       validate: (v) => v.trim().length > 0 || '内容を入力してください。',
                     })}
                     placeholder="案件の詳細を入力..."
-                    className="w-full border border-gray-200/80 rounded-xl px-3.5 py-2.5 text-xs focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all h-24 resize-none shadow-sm bg-white"
+                    className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors h-24 resize-none bg-white placeholder:text-slate-400"
                   />
                   {errors.description && (
-                    <p className="text-[11px] text-red-500 font-medium">{errors.description.message}</p>
+                    <p className="text-xs text-red-600">{errors.description.message}</p>
                   )}
                 </div>
 
                 {/* ── Delivery type ── */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">配信方式</label>
-                  <div className="bg-gray-100 p-1 rounded-xl flex gap-1 border border-gray-200/20">
-                    {([CaseDeliveryType.DIRECT, CaseDeliveryType.OPEN] as CaseDeliveryType[]).map((dt) => (
-                      <label
-                        key={dt}
-                        className={`flex-1 flex flex-col items-center justify-center py-2 rounded-lg transition-all select-none ${
-                          targetScope === CaseTargetScope.USER
-                            ? 'opacity-40 cursor-not-allowed'
-                            : 'cursor-pointer'
-                        } ${
-                          deliveryType === dt
-                            ? 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
-                            : 'hover:text-gray-900 text-gray-500 hover:bg-gray-50/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          className="sr-only"
-                          checked={deliveryType === dt}
-                          onChange={() => {
-                            if (targetScope !== CaseTargetScope.USER) setDeliveryType(dt);
-                          }}
-                          disabled={targetScope === CaseTargetScope.USER}
-                        />
-                        <span className="text-xs font-bold">{CASE_DELIVERY_TYPE_LABELS[dt]}</span>
-                        <span className="text-[10px] text-gray-400 mt-0.5">
-                          {dt === CaseDeliveryType.DIRECT ? '特定の相手へ直接' : '権限範囲内に公開'}
-                        </span>
-                      </label>
-                    ))}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700">配信方式</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([CaseDeliveryType.DIRECT, CaseDeliveryType.OPEN] as CaseDeliveryType[]).map((dt) => {
+                      const isSelected = deliveryType === dt;
+                      const isDirect = dt === CaseDeliveryType.DIRECT;
+                      const isDisabled = targetScope === CaseTargetScope.USER;
+                      return (
+                        <label
+                          key={dt}
+                          className={`flex flex-col px-3 py-2.5 rounded-md border-2 transition-colors select-none ${
+                            isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                          } ${
+                            isSelected
+                              ? isDirect
+                                ? 'border-slate-800 bg-slate-800 text-white'
+                                : 'border-indigo-600 bg-indigo-600 text-white'
+                              : 'border-slate-200 bg-white hover:border-slate-400'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            className="sr-only"
+                            checked={isSelected}
+                            onChange={() => { if (!isDisabled) setDeliveryType(dt); }}
+                            disabled={isDisabled}
+                          />
+                          <span className="text-sm font-semibold">{CASE_DELIVERY_TYPE_LABELS[dt]}</span>
+                          <span className={`text-xs mt-0.5 ${isSelected ? 'text-white/70' : 'text-slate-500'}`}>
+                            {isDirect ? '特定の相手へ直接' : '権限範囲内に公開'}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                   {targetScope === CaseTargetScope.USER && (
-                    <p className="text-[10px] text-amber-600 font-medium">
-                      ユーザー宛ての案件は DIRECT に固定されます。
+                    <p className="text-xs text-amber-700">
+                      ユーザー宛ての案件は 지명 に固定されます。
                     </p>
                   )}
                 </div>
 
                 {/* ── Target scope buttons ── */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">送信先スコープ</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700">送信先スコープ</label>
                   {allowedScopes.length > 1 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {allowedScopes.map((scope) => (
@@ -641,10 +664,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           key={scope}
                           type="button"
                           onClick={() => setTargetScope(scope)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors border ${
                             targetScope === scope
-                              ? 'bg-gray-900 text-white shadow-sm'
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-white text-slate-600 border-slate-300 hover:border-slate-600 hover:text-slate-900'
                           }`}
                         >
                           {SCOPE_LABELS[scope]}
@@ -652,7 +675,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                    <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
                       {SCOPE_LABELS[allowedScopes[0] ?? CaseTargetScope.USER]}（固定）
                     </p>
                   )}
@@ -662,7 +685,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 {needsOrgData && !isOrgUser && (
                   <>
                     {orgLoading && (
-                      <div className="flex items-center gap-2 text-xs text-gray-400 py-2 px-1">
+                      <div className="flex items-center gap-2 text-xs text-slate-400 py-2 px-1">
                         <Loader2 size={14} className="animate-spin" />
                         組織情報を読み込み中...
                       </div>
@@ -692,14 +715,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
                     {/* COMPANY: auto label */}
                     {targetScope === CaseTargetScope.COMPANY && (
-                      <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-600">
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
                         送信先（自動）: <span className="font-bold">{profile?.companyName ?? '自社全体'}</span>
                       </div>
                     )}
 
                     {/* DIVISION auto label (DIVISION_ADMIN own scope) */}
                     {showDivisionAutoLabel && (
-                      <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-600">
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
                         送信先（自動）: <span className="font-bold">{profile?.divisionName ?? profile?.divisionId}</span>（部門）
                       </div>
                     )}
@@ -707,19 +730,23 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {/* Division selector — only COMPANY_ADMIN */}
                     {showDivisionSelector && (
                       <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-gray-500">
-                          {targetScope === CaseTargetScope.DIVISION
+                        <label className="text-xs font-semibold text-slate-700">
+                          {targetScope === CaseTargetScope.DIVISION && deliveryType === CaseDeliveryType.DIRECT
                             ? '送信先の部門 *'
+                            : targetScope === CaseTargetScope.DIVISION
+                            ? '公開範囲の部門（任意・未選択で全社公開）'
                             : '部門（絞り込み・任意）'}
                         </label>
                         <select
                           value={filterDivisionId}
                           onChange={(e) => setFilterDivisionId(e.target.value)}
-                          className="w-full border border-gray-200/80 rounded-xl px-3 py-2 text-xs bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm"
+                          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
                         >
                           <option value="">
-                            {targetScope === CaseTargetScope.DIVISION
+                            {targetScope === CaseTargetScope.DIVISION && deliveryType === CaseDeliveryType.DIRECT
                               ? '-- 部門を選択してください --'
+                              : targetScope === CaseTargetScope.DIVISION
+                              ? '-- 全社公開（絞り込みなし）--'
                               : '-- すべての部門 --'}
                           </option>
                           {filteredDivisions.map((d) => (
@@ -729,14 +756,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           ))}
                         </select>
                         {filteredDivisions.length === 0 && !orgLoading && (
-                          <p className="text-[10px] text-gray-400">部門データがありません。</p>
+                          <p className="text-[10px] text-slate-500">部門データがありません。</p>
                         )}
                       </div>
                     )}
 
                     {/* DEPARTMENT auto label (DEPT_ADMIN own scope) */}
                     {showDeptAutoLabel && (
-                      <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-600">
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
                         送信先（自動）: <span className="font-bold">{profile?.departmentName ?? profile?.departmentId}</span>（部署）
                       </div>
                     )}
@@ -744,19 +771,23 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {/* Department selector */}
                     {showDeptSelector && (
                       <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-gray-500">
-                          {targetScope === CaseTargetScope.DEPARTMENT
+                        <label className="text-xs font-semibold text-slate-700">
+                          {targetScope === CaseTargetScope.DEPARTMENT && deliveryType === CaseDeliveryType.DIRECT
                             ? '送信先の部署 *'
+                            : targetScope === CaseTargetScope.DEPARTMENT
+                            ? '公開範囲の部署（任意・未選択で全社公開）'
                             : '部署（絞り込み・任意）'}
                         </label>
                         <select
                           value={filterDepartmentId}
                           onChange={(e) => setFilterDepartmentId(e.target.value)}
-                          className="w-full border border-gray-200/80 rounded-xl px-3 py-2 text-xs bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm"
+                          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
                         >
                           <option value="">
-                            {targetScope === CaseTargetScope.DEPARTMENT
+                            {targetScope === CaseTargetScope.DEPARTMENT && deliveryType === CaseDeliveryType.DIRECT
                               ? '-- 部署を選択してください --'
+                              : targetScope === CaseTargetScope.DEPARTMENT
+                              ? '-- 全社公開（絞り込みなし）--'
                               : '-- すべての部署 --'}
                           </option>
                           {filteredDepartments.map((d) => (
@@ -766,7 +797,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           ))}
                         </select>
                         {filteredDepartments.length === 0 && !orgLoading && (
-                          <p className="text-[10px] text-gray-400">
+                          <p className="text-[10px] text-slate-500">
                             {filterDivisionId ? '選択した部門に部署データがありません。' : '部署データがありません。'}
                           </p>
                         )}
@@ -775,7 +806,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
                     {/* TEAM auto label (TEAM_ADMIN own scope) */}
                     {showTeamAutoLabel && (
-                      <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-600">
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
                         送信先（自動）: <span className="font-bold">{profile?.teamName ?? profile?.teamId}</span>（チーム）
                       </div>
                     )}
@@ -783,19 +814,23 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {/* Team selector */}
                     {showTeamSelector && (
                       <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-gray-500">
-                          {targetScope === CaseTargetScope.TEAM
+                        <label className="text-xs font-semibold text-slate-700">
+                          {targetScope === CaseTargetScope.TEAM && deliveryType === CaseDeliveryType.DIRECT
                             ? '送信先のチーム *'
+                            : targetScope === CaseTargetScope.TEAM
+                            ? '公開範囲のチーム（任意・未選択で全社公開）'
                             : 'チーム（絞り込み・任意）'}
                         </label>
                         <select
                           value={filterTeamId}
                           onChange={(e) => setFilterTeamId(e.target.value)}
-                          className="w-full border border-gray-200/80 rounded-xl px-3 py-2 text-xs bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm"
+                          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
                         >
                           <option value="">
-                            {targetScope === CaseTargetScope.TEAM
+                            {targetScope === CaseTargetScope.TEAM && deliveryType === CaseDeliveryType.DIRECT
                               ? '-- チームを選択してください --'
+                              : targetScope === CaseTargetScope.TEAM
+                              ? '-- 全社公開（絞り込みなし）--'
                               : '-- すべてのチーム --'}
                           </option>
                           {filteredTeams.map((t) => (
@@ -805,7 +840,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           ))}
                         </select>
                         {filteredTeams.length === 0 && !orgLoading && (
-                          <p className="text-[10px] text-gray-400">
+                          <p className="text-[10px] text-slate-500">
                             {filterDepartmentId ? '選択した部署にチームデータがありません。' : 'チームデータがありません。'}
                           </p>
                         )}
@@ -814,7 +849,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
                     {/* USER auto label (USER/GUEST) */}
                     {targetScope === CaseTargetScope.USER && isOrgUser && (
-                      <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-600">
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
                         送信先（自動）: <span className="font-bold">{profile?.name ?? '自分'}（自分のみ）</span>
                       </div>
                     )}
@@ -822,13 +857,13 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {/* User selector (admins) */}
                     {showUserSelector && (
                       <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-gray-500">
+                        <label className="text-xs font-semibold text-slate-700">
                           送信先のユーザー *
                         </label>
                         <select
                           value={selectedUserId}
                           onChange={(e) => setSelectedUserId(e.target.value)}
-                          className="w-full border border-gray-200/80 rounded-xl px-3 py-2 text-xs bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm"
+                          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
                         >
                           <option value="">-- ユーザーを選択してください --</option>
                           {filteredUsers.map((u) => (
@@ -838,7 +873,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           ))}
                         </select>
                         {filteredUsers.length === 0 && !orgLoading && (
-                          <p className="text-[10px] text-gray-400">
+                          <p className="text-[10px] text-slate-500">
                             {filterTeamId
                               ? '選択したチームにユーザーがいません。'
                               : filterDepartmentId
@@ -854,7 +889,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 {/* ── Required role (only when scope is not USER) ── */}
                 {targetScope !== CaseTargetScope.USER && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <label className="text-xs font-semibold text-slate-700">
                       閲覧に必要な権限
                       {deliveryType === CaseDeliveryType.OPEN && (
                         <span className="ml-1 text-amber-500 font-normal normal-case">（公募案件では重要）</span>
@@ -863,15 +898,15 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     <select
                       value={requiredRole}
                       onChange={(e) => setRequiredRole(e.target.value as UserRole)}
-                      className="w-full border border-gray-200/80 rounded-xl px-3.5 py-2.5 text-xs bg-white focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm"
+                      className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
                     >
                       {allowedRequiredRoles.map((r) => (
                         <option key={r} value={r}>
-                          {ROLE_LABELS[r]}
+                          {USER_ROLE_LABELS[r]}
                         </option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-gray-400">
+                    <p className="text-[10px] text-slate-500">
                       選択した送信先内でこの権限以上のユーザーが閲覧できます。
                     </p>
                   </div>
@@ -879,32 +914,28 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
                 {/* ── Due date ── */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                    <Calendar size={12} className="text-gray-400" /> 期限（任意）
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <Calendar size={12} className="text-slate-400" /> 期限（任意）
                   </label>
                   <input
                     type="date"
                     {...register('dueDate')}
-                    className="w-full border border-gray-200/80 rounded-xl px-3.5 py-2.5 text-xs focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 outline-none transition-all shadow-sm bg-white"
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15 outline-none transition-all shadow-sm bg-white"
                   />
                 </div>
 
                 {/* ── Send summary confirmation ── */}
                 {targetSummaryText && (
-                  <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1.5">
-                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">
-                      送信先確認
-                    </span>
-                    <div className="text-xs font-bold text-indigo-800">{targetSummaryText}</div>
-                    <div className="text-[10px] text-indigo-400 space-x-2">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-md space-y-1">
+                    <span className="text-xs font-semibold text-slate-600 block">送信先確認</span>
+                    <div className="text-sm font-semibold text-slate-900">{targetSummaryText}</div>
+                    <div className="text-xs text-slate-500 space-x-3">
                       <span>
-                        配信:{' '}
-                        <span className="font-semibold text-indigo-600">{deliveryType}</span>
+                        配信: <span className="font-medium text-slate-700">{deliveryType}</span>
                       </span>
                       {targetScope !== CaseTargetScope.USER && (
                         <span>
-                          閲覧権限:{' '}
-                          <span className="font-semibold text-indigo-600">{effectiveRequiredRole}以上</span>
+                          閲覧権限: <span className="font-medium text-slate-700">{effectiveRequiredRole}以上</span>
                         </span>
                       )}
                     </div>
@@ -912,18 +943,18 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 )}
 
                 {/* ── Actions ── */}
-                <div className="flex gap-3 pt-3 border-t border-gray-100">
+                <div className="flex gap-2 pt-3 border-t border-slate-200">
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-all"
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                   >
                     キャンセル
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800 disabled:opacity-50 transition-all shadow-sm hover:shadow"
+                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                   >
                     {isSubmitting ? '送信中...' : '案件を作成する'}
                   </button>

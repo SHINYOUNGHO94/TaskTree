@@ -5,6 +5,7 @@ import {
   CaseTargetScope,
   CaseTaskStatus,
   CaseType,
+  UserRole,
 } from "@task/core";
 
 export const CASE_TYPE_LABELS: Record<CaseType, string> = {
@@ -49,6 +50,15 @@ export const CASE_TASK_STATUS_LABELS: Record<CaseTaskStatus, string> = {
   [CaseTaskStatus.DONE]: "完了",
   [CaseTaskStatus.ON_HOLD]: "保留",
   [CaseTaskStatus.CANCELED]: "キャンセル",
+};
+
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  [UserRole.GUEST]:          "ゲスト",
+  [UserRole.USER]:           "一般メンバー",
+  [UserRole.TEAM_ADMIN]:     "チームリーダー",
+  [UserRole.DEPT_ADMIN]:     "部長",
+  [UserRole.DIVISION_ADMIN]: "本部長",
+  [UserRole.COMPANY_ADMIN]:  "全体管理者",
 };
 
 export function shortId(id: string): string {

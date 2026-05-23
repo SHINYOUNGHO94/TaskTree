@@ -6,6 +6,7 @@ import {
   UserProfile,
   UserRole,
 } from "@task/core";
+export { USER_ROLE_LABELS } from "../dashboard/caseLabels";
 
 export const CHILD_CASE_ROLE_RANK: Partial<Record<UserRole, number>> = {
   [UserRole.GUEST]: 1,
@@ -36,14 +37,6 @@ export const CHILD_CASE_ALLOWED_SCOPES_BY_ROLE: Partial<Record<UserRole, CaseTar
   [UserRole.GUEST]: [CaseTargetScope.USER],
 };
 
-export const USER_ROLE_LABELS: Partial<Record<UserRole, string>> = {
-  [UserRole.GUEST]: "ゲスト",
-  [UserRole.USER]: "ユーザー",
-  [UserRole.TEAM_ADMIN]: "チームリーダー",
-  [UserRole.DEPT_ADMIN]: "部署管理者",
-  [UserRole.DIVISION_ADMIN]: "事業部管理者",
-  [UserRole.COMPANY_ADMIN]: "会社管理者",
-};
 
 export const canManageCaseOwner = (profile: UserProfile | null, caseDetail: CaseDetail): boolean => {
   if (!profile) return false;

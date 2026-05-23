@@ -36,6 +36,7 @@ import {
   CASE_STATUS_LABELS,
   CASE_TARGET_SCOPE_LABELS,
   CASE_TYPE_LABELS,
+  USER_ROLE_LABELS,
   resolveDisplayName,
   shortId,
 } from "../../../../components/dashboard/caseLabels";
@@ -58,37 +59,35 @@ const UPDATABLE_STATUSES: CaseStatus[] = [
 ];
 
 const STATUS_STYLES: Record<CaseStatus, string> = {
-  [CaseStatus.WAITING]: "bg-gray-100 text-gray-700 border border-gray-200",
-  [CaseStatus.IN_PROGRESS]: "bg-blue-50 text-blue-700 border border-blue-100",
-  [CaseStatus.REVIEW_REQUESTED]: "bg-purple-50 text-purple-700 border border-purple-100",
-  [CaseStatus.COMPLETED]: "bg-green-50 text-green-700 border border-green-100",
-  [CaseStatus.ON_HOLD]: "bg-yellow-50 text-yellow-700 border border-yellow-100",
-  [CaseStatus.CANCELED]: "bg-red-50 text-red-700 border border-red-100",
-  [CaseStatus.REOPENED]: "bg-orange-50 text-orange-700 border border-orange-100",
+  [CaseStatus.WAITING]:           "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80",
+  [CaseStatus.IN_PROGRESS]:       "bg-sky-50 text-sky-700 ring-1 ring-sky-200/80",
+  [CaseStatus.REVIEW_REQUESTED]:  "bg-violet-50 text-violet-700 ring-1 ring-violet-200/80",
+  [CaseStatus.COMPLETED]:         "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80",
+  [CaseStatus.ON_HOLD]:           "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80",
+  [CaseStatus.CANCELED]:          "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80",
+  [CaseStatus.REOPENED]:          "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80",
 };
 
 const CASE_TYPE_STYLES: Record<CaseType, string> = {
-  [CaseType.REQUEST]: "bg-orange-50 text-orange-700 border border-orange-100",
-  [CaseType.STANDARD]: "bg-blue-50 text-blue-700 border border-blue-100",
-  [CaseType.PROJECT]: "bg-purple-50 text-purple-700 border border-purple-100",
+  [CaseType.REQUEST]:  "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80",
+  [CaseType.STANDARD]: "bg-blue-50 text-blue-700 ring-1 ring-blue-200/80",
+  [CaseType.PROJECT]:  "bg-violet-50 text-violet-700 ring-1 ring-violet-200/80",
+};
+
+const CASE_TYPE_GRADIENT: Record<CaseType, string> = {
+  [CaseType.REQUEST]:  "from-amber-400 to-orange-500",
+  [CaseType.STANDARD]: "from-blue-400 to-sky-500",
+  [CaseType.PROJECT]:  "from-violet-500 to-purple-600",
 };
 
 const OWNER_TYPE_LABELS: Record<CaseOwnerType, string> = {
-  [CaseOwnerType.USER]: "個人",
-  [CaseOwnerType.TEAM]: "チーム",
+  [CaseOwnerType.USER]:       "個人",
+  [CaseOwnerType.TEAM]:       "チーム",
   [CaseOwnerType.DEPARTMENT]: "部署",
-  [CaseOwnerType.DIVISION]: "事業部",
-  [CaseOwnerType.COMPANY]: "会社",
+  [CaseOwnerType.DIVISION]:   "事業部",
+  [CaseOwnerType.COMPANY]:    "会社",
 };
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  [UserRole.GUEST]: "ゲスト",
-  [UserRole.USER]: "ユーザー",
-  [UserRole.TEAM_ADMIN]: "チームリーダー",
-  [UserRole.DEPT_ADMIN]: "部長",
-  [UserRole.DIVISION_ADMIN]: "事業部長",
-  [UserRole.COMPANY_ADMIN]: "社長",
-};
 
 const resolveErrorType = (error: unknown): ErrorType => {
   if (typeof error === "object" && error !== null) {
@@ -120,20 +119,20 @@ const CaseDetailPage = () => {
 
   const buildBackUrl = () => {
     const params = new URLSearchParams();
-    const caseView = searchParams.get("caseView");
-    const caseType = searchParams.get("caseType");
-    const status = searchParams.get("status");
+    const caseView    = searchParams.get("caseView");
+    const caseType    = searchParams.get("caseType");
+    const status      = searchParams.get("status");
     const deliveryType = searchParams.get("deliveryType");
-    const ownership = searchParams.get("ownership");
-    const sort = searchParams.get("sort");
-    const q = searchParams.get("q");
-    if (caseView) params.set("caseView", caseView);
-    if (caseType) params.set("caseType", caseType);
-    if (status) params.set("status", status);
+    const ownership   = searchParams.get("ownership");
+    const sort        = searchParams.get("sort");
+    const q           = searchParams.get("q");
+    if (caseView)     params.set("caseView", caseView);
+    if (caseType)     params.set("caseType", caseType);
+    if (status)       params.set("status", status);
     if (deliveryType) params.set("deliveryType", deliveryType);
-    if (ownership) params.set("ownership", ownership);
-    if (sort) params.set("sort", sort);
-    if (q) params.set("q", q);
+    if (ownership)    params.set("ownership", ownership);
+    if (sort)         params.set("sort", sort);
+    if (q)            params.set("q", q);
     const qs = params.toString();
     return qs ? `/dashboard?${qs}` : "/dashboard";
   };
@@ -196,7 +195,7 @@ const CaseDetailPage = () => {
       const map = new Map(users.map((u) => [u.userId, { name: u.name, email: u.email }]));
       setUserMap(map);
     } catch {
-      // display name resolution is best-effort; silent failure is acceptable
+      // display name resolution is best-effort
     }
   }, []);
 
@@ -312,7 +311,6 @@ const CaseDetailPage = () => {
       setNestedChildCasesError(null);
       return;
     }
-
     setIsNestedLoading(true);
     setNestedChildCasesError(null);
     try {
@@ -383,9 +381,7 @@ const CaseDetailPage = () => {
         if (typeof sub === "string") setCurrentUserId(sub);
       })
       .catch(() => undefined);
-    UserService.getUserProfile()
-      .then(setCurrentProfile)
-      .catch(() => undefined);
+    UserService.getUserProfile().then(setCurrentProfile).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -409,47 +405,78 @@ const CaseDetailPage = () => {
       setIsNestedLoading(false);
       return;
     }
-
     void fetchNestedRequestChildren(childCases);
   }, [id, caseDetail, childCases, fetchNestedRequestChildren]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      <div className="animate-pulse">
+        <div className="h-6 w-16 bg-slate-200 rounded-lg mb-8" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-md shadow-slate-100/60">
+              <div className="h-1.5 bg-slate-200" />
+              <div className="p-8 space-y-5">
+                <div className="flex gap-2">
+                  <div className="h-6 w-20 bg-slate-100 rounded-full" />
+                  <div className="h-6 w-20 bg-slate-100 rounded-full" />
+                </div>
+                <div className="h-8 bg-slate-200 rounded-xl w-3/4" />
+                <div className="space-y-2 pt-4 border-t border-slate-100">
+                  <div className="h-3 bg-slate-100 rounded w-full" />
+                  <div className="h-3 bg-slate-100 rounded w-5/6" />
+                  <div className="h-3 bg-slate-100 rounded w-4/6" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-100 h-40 shadow-sm" />
+          </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
+              <div className="h-4 bg-slate-200 rounded-lg w-24" />
+              <div className="h-10 bg-slate-100 rounded-xl" />
+              <div className="h-10 bg-slate-200 rounded-xl" />
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
+              <div className="h-4 bg-slate-200 rounded-lg w-16 mb-2" />
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="w-7 h-7 bg-slate-100 rounded-lg flex-shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-2.5 bg-slate-100 rounded w-12" />
+                    <div className="h-3.5 bg-slate-200 rounded w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (errorType) {
     const errorConfig = {
-      notFound: {
-        title: "案件が見つかりません",
-        message: "この案件は存在しないか、すでに削除されています。",
-      },
-      forbidden: {
-        title: "アクセス権限がありません",
-        message: "この案件を閲覧する権限がありません。",
-      },
-      error: {
-        title: "エラーが発生しました",
-        message: "案件の取得に失敗しました。再度お試しください。",
-      },
+      notFound: { title: "案件が見つかりません", message: "この案件は存在しないか、すでに削除されています。" },
+      forbidden: { title: "アクセス権限がありません", message: "この案件を閲覧する権限がありません。" },
+      error: { title: "エラーが発生しました", message: "案件の取得に失敗しました。再度お試しください。" },
     }[errorType];
 
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
         <button
           onClick={() => router.push(buildBackUrl())}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium mb-8"
+          className="group flex items-center gap-2 text-slate-400 hover:text-slate-700 transition-all text-sm font-medium mb-8"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
           戻る
         </button>
-        <div className="text-center py-20 bg-white border border-gray-200 rounded-2xl shadow-sm">
-          <FileText size={48} className="mx-auto mb-4 text-gray-300 animate-pulse" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">{errorConfig.title}</h2>
-          <p className="text-gray-500 text-sm">{errorConfig.message}</p>
+        <div className="text-center py-24 bg-white border border-slate-100 rounded-2xl shadow-lg shadow-slate-200/50">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <FileText size={28} className="text-slate-300" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">{errorConfig.title}</h2>
+          <p className="text-slate-400 text-sm">{errorConfig.message}</p>
         </div>
       </div>
     );
@@ -458,50 +485,49 @@ const CaseDetailPage = () => {
   if (!caseDetail) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Back Button */}
+    <div>
+      {/* Back button */}
       <div className="flex items-center mb-8">
         <button
           onClick={() => router.push(buildBackUrl())}
-          className="group flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
+          className="group flex items-center gap-2 text-slate-400 hover:text-slate-700 transition-all duration-200 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-slate-100"
         >
-          <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+          <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
           戻る
         </button>
       </div>
 
-      {/* Main Grid: 2 Columns */}
+      {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Side: Main Contents (2/3 width) */}
+
+        {/* Left: main content */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Main Case Info Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+          {/* Main case info card */}
+          <div className="bg-white border border-slate-100 rounded-2xl shadow-lg shadow-slate-200/50 overflow-hidden">
+            <div className={`h-1.5 w-full bg-gradient-to-r ${CASE_TYPE_GRADIENT[caseDetail.caseType]}`} />
             <div className="p-8">
-              {/* Badges */}
               <div className="flex flex-wrap items-center gap-2.5 mb-5">
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_STYLES[caseDetail.status]}`}>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[caseDetail.status]}`}>
                   {CASE_STATUS_LABELS[caseDetail.status]}
                 </span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${CASE_TYPE_STYLES[caseDetail.caseType]}`}>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${CASE_TYPE_STYLES[caseDetail.caseType]}`}>
                   {CASE_TYPE_LABELS[caseDetail.caseType]}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200">
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-600 ring-1 ring-slate-200/80">
                   {CASE_DELIVERY_TYPE_LABELS[caseDetail.deliveryType]}
                 </span>
               </div>
 
-              {/* Title */}
-              <h1 className="text-2xl lg:text-3xl font-extrabold text-gray-950 mb-6 leading-tight">
+              <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 mb-6 leading-tight">
                 {caseDetail.title}
               </h1>
 
-              {/* Description Section */}
-              <div className="border-t border-gray-100 pt-6">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">詳細内容</h3>
-                <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap min-h-[100px] bg-gray-50/50 rounded-xl p-4 border border-gray-100">
+              <div className="border-t border-slate-100 pt-6">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">詳細内容</h3>
+                <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap min-h-[100px] bg-slate-50/60 rounded-xl p-4 border border-slate-100">
                   {caseDetail.description || (
-                    <span className="text-gray-400 italic">内容なし</span>
+                    <span className="text-slate-300 italic">内容なし</span>
                   )}
                 </div>
               </div>
@@ -542,32 +568,34 @@ const CaseDetailPage = () => {
             userMap={userMap}
             onRefresh={fetchCaseComments}
           />
-
         </div>
 
-        {/* Right Side: Sidebar (1/3 width) */}
+        {/* Right: sidebar panels */}
         <div className="space-y-6">
 
-          {/* Status Update Panel */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-800 mb-4">ステータス更新</h3>
+          {/* Status update */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
+            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <Clock size={12} className="text-indigo-500" />
+              </div>
+              ステータス更新
+            </h3>
             <div className="space-y-3">
               <select
                 value={selectedStatus ?? caseDetail.status}
                 onChange={(e) => setSelectedStatus(e.target.value as CaseStatus)}
                 disabled={isUpdating}
-                className="w-full text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-50 transition-all"
+                className="w-full text-sm font-medium border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 disabled:opacity-50 transition-all cursor-pointer hover:border-slate-300"
               >
                 {UPDATABLE_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                          {CASE_STATUS_LABELS[s]}
-                  </option>
+                  <option key={s} value={s}>{CASE_STATUS_LABELS[s]}</option>
                 ))}
               </select>
               <button
                 onClick={handleStatusUpdate}
                 disabled={isUpdating || selectedStatus === caseDetail.status}
-                className="w-full text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="w-full text-sm font-bold px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 transition-all duration-200 shadow-md shadow-indigo-300/20"
               >
                 {isUpdating ? "更新中..." : "ステータス更新"}
               </button>
@@ -575,84 +603,84 @@ const CaseDetailPage = () => {
             </div>
           </div>
 
-          {/* Details & Specs Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4.5">
-            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-3">案件仕様</h3>
-
+          {/* Details & specs */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
+            <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5">案件仕様</h3>
             <div className="space-y-4">
+
               <div className="flex items-start gap-3">
-                <Calendar size={16} className="text-gray-400 mt-0.5" />
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Calendar size={13} className="text-slate-400" />
+                </div>
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">期限</span>
-                  <span className="text-sm font-semibold text-gray-700">{caseDetail.dueDate ?? "期限なし"}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">期限</span>
+                  <span className="text-sm font-semibold text-slate-700">{caseDetail.dueDate ?? "期限なし"}</span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Clock size={16} className="text-gray-400 mt-0.5" />
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock size={13} className="text-slate-400" />
+                </div>
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">作成日時</span>
-                  <span className="text-sm font-semibold text-gray-700">
-                    {new Date(caseDetail.createdAt).toLocaleDateString("ja-JP")}
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">作成日時</span>
+                  <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.createdAt).toLocaleDateString("ja-JP")}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock size={13} className="text-slate-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">最終更新</span>
+                  <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.updatedAt).toLocaleDateString("ja-JP")}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Tag size={13} className="text-slate-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">公開範囲</span>
+                  <span className="text-sm font-semibold text-slate-700">{CASE_TARGET_SCOPE_LABELS[caseDetail.targetScope]}</span>
+                  <span className="text-xs text-slate-500 block mt-0.5 max-w-[180px] truncate" title={caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}>
+                    {caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Clock size={16} className="text-gray-400 mt-0.5" />
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Shield size={13} className="text-slate-400" />
+                </div>
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">最終更新</span>
-                  <span className="text-sm font-semibold text-gray-700">
-                    {new Date(caseDetail.updatedAt).toLocaleDateString("ja-JP")}
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">最低権限</span>
+                  <span className="text-sm font-semibold text-slate-700">{USER_ROLE_LABELS[caseDetail.requiredRole]}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <User size={13} className="text-slate-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">担当</span>
+                  <span className="text-sm font-semibold text-slate-700">{OWNER_TYPE_LABELS[caseDetail.ownerType]}</span>
+                  <span className="text-xs text-slate-500 block mt-0.5 max-w-[180px] truncate" title={caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}>
+                    {caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Tag size={16} className="text-gray-400 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">公開範囲</span>
-                  <span className="text-sm font-semibold text-gray-700">{CASE_TARGET_SCOPE_LABELS[caseDetail.targetScope]}</span>
-                  <span
-                    className="text-xs text-gray-600 block mt-0.5 max-w-[180px] truncate"
-                    title={caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}
-                  >
-                    {caseDetail.targetScope === CaseTargetScope.USER
-                      ? resolveDisplayName(caseDetail.targetScopeId, userMap)
-                      : shortId(caseDetail.targetScopeId)}
-                  </span>
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <User size={13} className="text-slate-400" />
                 </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Shield size={16} className="text-gray-400 mt-0.5" />
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">最低権限</span>
-                  <span className="text-sm font-semibold text-gray-700">{ROLE_LABELS[caseDetail.requiredRole]}</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <User size={16} className="text-gray-400 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">担当</span>
-                  <span className="text-sm font-semibold text-gray-700">{OWNER_TYPE_LABELS[caseDetail.ownerType]}</span>
-                  <span
-                    className="text-xs text-gray-600 block mt-0.5 max-w-[180px] truncate"
-                    title={caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}
-                  >
-                    {caseDetail.ownerType === CaseOwnerType.USER
-                      ? resolveDisplayName(caseDetail.ownerId, userMap)
-                      : shortId(caseDetail.ownerId)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <User size={16} className="text-gray-400 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">作成者</span>
-                  <span className="text-xs text-gray-600 block max-w-[180px] truncate mt-0.5" title={resolveDisplayName(caseDetail.creatorId, userMap)}>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">作成者</span>
+                  <span className="text-xs text-slate-500 block max-w-[180px] truncate mt-0.5" title={resolveDisplayName(caseDetail.creatorId, userMap)}>
                     {resolveDisplayName(caseDetail.creatorId, userMap)}
                   </span>
                 </div>
@@ -660,10 +688,12 @@ const CaseDetailPage = () => {
 
               {caseDetail.projectId && (
                 <div className="flex items-start gap-3">
-                  <FileText size={16} className="text-gray-400 mt-0.5" />
+                  <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileText size={13} className="text-slate-400" />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">プロジェクト</span>
-                    <span className="text-xs text-gray-500 font-mono bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.projectId}>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">プロジェクト</span>
+                    <span className="text-xs text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.projectId}>
                       {caseDetail.projectId}
                     </span>
                   </div>
@@ -672,10 +702,12 @@ const CaseDetailPage = () => {
 
               {caseDetail.parentCaseId && (
                 <div className="flex items-start gap-3">
-                  <FileText size={16} className="text-gray-400 mt-0.5" />
+                  <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileText size={13} className="text-slate-400" />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">親案件</span>
-                    <span className="text-xs text-gray-500 font-mono bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.parentCaseId}>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">親案件</span>
+                    <span className="text-xs text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.parentCaseId}>
                       {caseDetail.parentCaseId}
                     </span>
                   </div>
@@ -684,7 +716,7 @@ const CaseDetailPage = () => {
             </div>
           </div>
 
-          {/* Participant Companies (Conditional on OPEN delivery) */}
+          {/* Participant companies */}
           {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
             <CaseParticipantCompanySection
               caseId={id as string}
@@ -697,14 +729,14 @@ const CaseDetailPage = () => {
             />
           )}
 
-          {/* Claims (Conditional on OPEN delivery) */}
+          {/* Claims */}
           {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-3 mb-4">担当希望</h3>
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
+              <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-4">担当希望</h3>
 
               {isClaimsLoading ? (
                 <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900" />
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500" />
                 </div>
               ) : claimsError ? (
                 <ErrorAlert message={claimsError} />
@@ -713,45 +745,38 @@ const CaseDetailPage = () => {
                   {claimActionError && <ErrorAlert message={claimActionError} />}
 
                   {claimRequests.length > 0 && (
-                    <ul className="space-y-3.5">
+                    <ul className="space-y-3">
                       {claimRequests.map((req) => (
-                        <li key={req.claimRequestId} className="border border-gray-150 rounded-xl p-3 bg-gray-50/20 shadow-sm">
+                        <li key={req.claimRequestId} className="border border-slate-100 rounded-xl p-3 bg-slate-50/40">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] text-gray-600 font-medium truncate max-w-[120px]" title={resolveDisplayName(req.requesterId, userMap)}>
+                            <span className="text-[10px] text-slate-600 font-semibold truncate max-w-[120px]" title={resolveDisplayName(req.requesterId, userMap)}>
                               {resolveDisplayName(req.requesterId, userMap)}
                             </span>
-                            <span
-                              className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
-                                req.status === CaseClaimRequestStatus.PENDING
-                                  ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                                  : req.status === CaseClaimRequestStatus.APPROVED
-                                    ? "bg-green-50 text-green-700 border border-green-200"
-                                    : "bg-red-50 text-red-700 border border-red-200"
-                              }`}
-                            >
-                              {req.status === CaseClaimRequestStatus.PENDING
-                                ? "申請中"
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                              req.status === CaseClaimRequestStatus.PENDING
+                                ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80"
                                 : req.status === CaseClaimRequestStatus.APPROVED
-                                  ? "承認済"
-                                  : "却下"}
+                                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80"
+                                  : "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80"
+                            }`}>
+                              {req.status === CaseClaimRequestStatus.PENDING ? "申請中" : req.status === CaseClaimRequestStatus.APPROVED ? "承認済" : "却下"}
                             </span>
                           </div>
                           {req.message && (
-                            <p className="text-xs text-gray-700 bg-white p-2 rounded-lg border border-gray-100 mb-2 leading-relaxed">{req.message}</p>
+                            <p className="text-xs text-slate-700 bg-white p-2 rounded-lg border border-slate-100 mb-2 leading-relaxed">{req.message}</p>
                           )}
                           {req.rejectReason && (
-                            <p className="text-[10px] text-red-500 bg-red-50 p-2 rounded-lg border border-red-100 mb-2">却下理由: {req.rejectReason}</p>
+                            <p className="text-[10px] text-rose-500 bg-rose-50 p-2 rounded-lg border border-rose-100 mb-2">却下理由: {req.rejectReason}</p>
                           )}
                           {req.status === CaseClaimRequestStatus.PENDING &&
                             currentUserId &&
                             (caseDetail.creatorId === currentUserId ||
-                              (caseDetail.ownerType === CaseOwnerType.USER &&
-                                caseDetail.ownerId === currentUserId)) && (
+                              (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId)) && (
                               <div className="flex gap-2 mt-3 justify-end">
                                 <button
                                   onClick={() => handleClaimAction(req.claimRequestId, "APPROVED")}
                                   disabled={isProcessingClaimAction}
-                                  className="text-[10px] font-bold px-2.5 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                  className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                   承認
                                 </button>
@@ -763,7 +788,7 @@ const CaseDetailPage = () => {
                                     }
                                   }}
                                   disabled={isProcessingClaimAction}
-                                  className="text-[10px] font-bold px-2.5 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                  className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                   却下
                                 </button>
@@ -774,32 +799,23 @@ const CaseDetailPage = () => {
                     </ul>
                   )}
 
-                  {/* Submission Form */}
                   {currentUserId &&
                     caseDetail.creatorId !== currentUserId &&
-                    !(
-                      caseDetail.ownerType === CaseOwnerType.USER &&
-                      caseDetail.ownerId === currentUserId
-                    ) &&
-                    (claimsAccessDenied ||
-                      !claimRequests.some(
-                        (r) =>
-                          r.requesterId === currentUserId &&
-                          r.status === CaseClaimRequestStatus.PENDING,
-                      )) && (
-                      <div className="space-y-2 border-t border-gray-100 pt-3">
+                    !(caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId) &&
+                    (claimsAccessDenied || !claimRequests.some((r) => r.requesterId === currentUserId && r.status === CaseClaimRequestStatus.PENDING)) && (
+                      <div className="space-y-2 border-t border-slate-100 pt-4">
                         {claimSubmitError && <ErrorAlert message={claimSubmitError} />}
                         <textarea
                           value={claimMessage}
                           onChange={(e) => setClaimMessage(e.target.value)}
                           placeholder="担当したい理由（任意）..."
-                          rows={2.5}
-                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                          rows={2}
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 resize-none transition-all"
                         />
                         <button
                           onClick={handleSubmitClaim}
                           disabled={isSubmittingClaim}
-                          className="w-full text-xs font-bold py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="w-full text-xs font-bold py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 transition-all duration-200 shadow-md shadow-indigo-300/20"
                         >
                           {isSubmittingClaim ? "送信中..." : "担当を希望する"}
                         </button>
@@ -807,9 +823,7 @@ const CaseDetailPage = () => {
                     )}
 
                   {claimRequests.length === 0 && !claimsAccessDenied && (
-                    <p className="text-xs text-gray-400 text-center py-4">
-                      担当希望はまだありません。
-                    </p>
+                    <p className="text-xs text-slate-400 text-center py-4">担当希望はまだありません。</p>
                   )}
                 </div>
               )}
@@ -822,7 +836,6 @@ const CaseDetailPage = () => {
             error={historyError}
             userMap={userMap}
           />
-
         </div>
       </div>
     </div>

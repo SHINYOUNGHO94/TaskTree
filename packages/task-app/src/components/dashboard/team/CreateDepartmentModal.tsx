@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 import { Division } from "@task/core";
 import { extractOrgError } from "./orgError";
 
@@ -33,22 +34,33 @@ export function CreateDepartmentModal({ divisions, onSubmit, onClose }: CreateDe
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-        <div className="p-5 border-b border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900">部署を追加</h3>
+    <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+        <div className="h-1 bg-gradient-to-r from-blue-500 to-sky-500" />
+        <div className="p-5 border-b border-slate-100 flex justify-between items-start">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">部署を追加</h3>
+            <p className="text-xs text-slate-500 mt-0.5">本部配下に新しい部署を作成します</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+          >
+            <X size={16} />
+          </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
             <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{error}</div>
           )}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">上位の本部</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">上位の本部</label>
             <select
               required
               value={divisionId}
               onChange={(e) => setDivisionId(e.target.value)}
-              className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm bg-white"
+              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-400 transition-all bg-white"
             >
               <option value="" disabled>本部を選択してください</option>
               {divisions.map((d) => (
@@ -57,13 +69,13 @@ export function CreateDepartmentModal({ divisions, onSubmit, onClose }: CreateDe
             </select>
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">部署名</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">部署名</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-2.5 border border-gray-200 rounded-xl outline-none focus:border-gray-900 focus:ring-1 transition-all text-sm"
+              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-400 transition-all placeholder:text-slate-300"
               placeholder="例: 開発部"
             />
           </div>
@@ -71,14 +83,14 @@ export function CreateDepartmentModal({ divisions, onSubmit, onClose }: CreateDe
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl transition-all"
+              className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
             >
               キャンセル
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all disabled:opacity-50 flex justify-center items-center"
+              className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-sky-500 rounded-xl hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-200/60 disabled:opacity-50 transition-all shadow-md shadow-blue-300/20 flex justify-center items-center"
             >
               {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : "追加する"}
             </button>
