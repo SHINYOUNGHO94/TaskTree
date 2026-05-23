@@ -979,6 +979,14 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 5. B社代表が取引先タブ「メール招待」セクションで確認 → 「参加する」
 6. `POST /company/email-invitations/{id}/accept` → `participantCompany` record 生成（ACTIVE） + invitation ACCEPTED
 
+**補足: postAuthentication Cognito trigger**
+
+- `AdminCreateUserCommand` で作成されたユーザー（メール招待経由）は `postConfirmation` が発火しない
+- `postAuthentication` trigger を追加し、初回ログイン後に DynamoDB user record が未作成のユーザーを補完する
+- 既存 user record がある場合は即時 return（冪等）
+- 会社・事業部・部署・ユーザー record を `ConditionalCheckFailedException` で重複防止しながら生成
+- `PostAuthenticationFunction` Lambda を CDK に追加し、Cognito user pool の `postAuthentication` trigger に接続
+
 **新規 Lambda・API route:**
 
 | Lambda | route | 権限 |
@@ -1061,6 +1069,9 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 - `.github/workflows/deploy.yml` — 新規（OIDC CD）
 - `.github/workflows/release.yml` — 新規（自動リリース）
 - `.gitignore` — `repomix-output.xml`・`diff.xml` 追加
+- `packages/task-api/src/aws/handlers/auth/postAuthentication.ts` — 新規（Cognito postAuthentication trigger。メール招待ユーザーの初回ログイン時に user / company / division / department record を補完）
+- `packages/task-api/src/services/casePermissionService.ts` — `canReadCaseAsParticipant` 追加（外部会社が ACTIVE participant である場合のみ Case 読み取りを許可する判定ロジック）
+- `tests/e2e/login.spec.ts` — 削除（メール招待フロー導入後の旧ログイン E2E と非互換のため除去）
 
 **検証:**
 
