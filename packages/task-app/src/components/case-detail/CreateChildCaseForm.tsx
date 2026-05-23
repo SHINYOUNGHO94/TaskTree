@@ -241,7 +241,7 @@ export const CreateChildCaseForm = ({
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none"
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Delivery Type")}</label>
             <select
@@ -450,7 +450,7 @@ export const CreateChildCaseForm = ({
             )}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Required Role")}</label>
             <select

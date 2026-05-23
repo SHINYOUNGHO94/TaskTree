@@ -488,7 +488,7 @@ const CaseDetailPage = () => {
   return (
     <div>
       {/* Back button */}
-      <div className="flex items-center mb-8">
+      <div className="flex items-center mb-4 md:mb-8">
         <button
           onClick={() => router.push(buildBackUrl())}
           className="group flex items-center gap-2 text-slate-400 hover:text-slate-700 transition-all duration-200 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-slate-100"
@@ -507,7 +507,7 @@ const CaseDetailPage = () => {
           {/* Main case info card */}
           <div className="bg-white border border-slate-100 rounded-2xl shadow-lg shadow-slate-200/50 overflow-hidden">
             <div className={`h-1.5 w-full bg-gradient-to-r ${CASE_TYPE_GRADIENT[caseDetail.caseType]}`} />
-            <div className="p-8">
+            <div className="p-4 md:p-8">
               <div className="flex flex-wrap items-center gap-2.5 mb-5">
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[caseDetail.status]}`}>
                   {t(CASE_STATUS_LABELS[caseDetail.status])}
