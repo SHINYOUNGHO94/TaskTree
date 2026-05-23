@@ -460,7 +460,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
             {/* Accent strip */}
             <div className="h-0.5 bg-indigo-600" />
             {/* ── Header ── */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
+            <div className="flex justify-between items-center px-4 md:px-6 py-3 md:py-4 border-b border-slate-200">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">
                   {selectedCaseType === CaseType.PROJECT
@@ -509,7 +509,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
             ) : (
               <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="p-6 space-y-5 max-h-[82vh] overflow-y-auto"
+                className="p-4 md:p-6 space-y-5 max-h-[82vh] overflow-y-auto"
               >
                 {submitError && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs text-red-700 font-medium flex items-center gap-2">

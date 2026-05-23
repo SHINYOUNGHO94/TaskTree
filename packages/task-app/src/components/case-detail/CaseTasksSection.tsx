@@ -153,7 +153,7 @@ export const CaseTasksSection = ({
   return (
     <>
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+        <div className="p-4 md:p-6 border-b border-gray-100 flex items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-gray-800">{t("Tasks")}</h3>
             <p className="text-xs text-gray-400 mt-0.5">{t("Checklist of tasks to complete")}</p>
@@ -170,7 +170,7 @@ export const CaseTasksSection = ({
         </div>
 
         {showTaskForm && (
-          <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+          <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50/50">
             <div className="space-y-4">
               {taskCreateError && <ErrorAlert message={taskCreateError} />}
               <div>
@@ -212,7 +212,7 @@ export const CaseTasksSection = ({
           </div>
         )}
 
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {isTasksLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
@@ -231,60 +231,62 @@ export const CaseTasksSection = ({
                 return (
                   <li
                     key={task.taskId}
-                    className="flex items-center gap-3.5 p-3.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 transition-all shadow-sm"
+                    className="p-3.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 transition-all shadow-sm"
                   >
-                    <div className="flex-shrink-0">
-                      {isCompleted ? (
-                        <CheckSquare className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <Square className="w-5 h-5 text-gray-300" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold text-gray-800 truncate ${isCompleted ? "line-through text-gray-400 font-normal" : ""}`}>
-                        {task.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {task.description && (
-                          <p className="text-xs text-gray-400 truncate">{task.description}</p>
-                        )}
-                        {task.assigneeId && (
-                          <span className="text-xs text-gray-400 whitespace-nowrap flex items-center gap-1">
-                            <User size={10} />
-                            {resolveDisplayName(task.assigneeId, userMap)}
-                          </span>
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        {isCompleted ? (
+                          <CheckSquare className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <Square className="w-5 h-5 text-gray-300" />
                         )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${TASK_STATUS_STYLES[task.status]}`}>
-                        {t(CASE_TASK_STATUS_LABELS[task.status])}
-                      </span>
-                      {task.dueDate && (
-                        <span className="text-xs text-gray-400 flex items-center gap-1 whitespace-nowrap">
-                          <Calendar size={12} />
-                          {task.dueDate}
-                        </span>
-                      )}
-                      {canManageTask && (
-                        <>
-                          <button
-                            onClick={() => openEditTask(task)}
-                            className="text-xs text-gray-400 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors font-medium whitespace-nowrap"
-                          >
-                            {t("Edit")}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setDeletingTaskId(task.taskId);
-                              setDeleteTaskError(null);
-                            }}
-                            className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors font-medium whitespace-nowrap"
-                          >
-                            {t("Delete")}
-                          </button>
-                        </>
-                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-bold text-gray-800 truncate ${isCompleted ? "line-through text-gray-400 font-normal" : ""}`}>
+                          {task.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {task.description && (
+                            <p className="text-xs text-gray-400 truncate max-w-[200px]">{task.description}</p>
+                          )}
+                          {task.assigneeId && (
+                            <span className="text-xs text-gray-400 whitespace-nowrap flex items-center gap-1">
+                              <User size={10} />
+                              {resolveDisplayName(task.assigneeId, userMap)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${TASK_STATUS_STYLES[task.status]}`}>
+                            {t(CASE_TASK_STATUS_LABELS[task.status])}
+                          </span>
+                          {task.dueDate && (
+                            <span className="text-xs text-gray-400 flex items-center gap-1 whitespace-nowrap">
+                              <Calendar size={12} />
+                              {task.dueDate}
+                            </span>
+                          )}
+                          {canManageTask && (
+                            <>
+                              <button
+                                onClick={() => openEditTask(task)}
+                                className="text-xs text-gray-400 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors font-medium whitespace-nowrap"
+                              >
+                                {t("Edit")}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setDeletingTaskId(task.taskId);
+                                  setDeleteTaskError(null);
+                                }}
+                                className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors font-medium whitespace-nowrap"
+                              >
+                                {t("Delete")}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </li>
                 );

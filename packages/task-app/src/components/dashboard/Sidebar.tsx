@@ -9,6 +9,7 @@ import {
   Layers,
   Users,
   Handshake,
+  X,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +31,12 @@ const getAvatarGradient = (name: string) => {
   return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length];
 };
 
-export const Sidebar: React.FC = () => {
+export interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const pathname = usePathname();
   const { profile } = useUser();
   const { t } = useTranslation('ui');
@@ -43,16 +49,25 @@ export const Sidebar: React.FC = () => {
       : []),
   ];
 
-  return (
-    <aside className="w-64 h-screen bg-slate-900 flex flex-col sticky top-0 shadow-xl shadow-black/20">
+  const navContent = (mobile: boolean) => (
+    <>
       {/* Logo */}
-      <div className="p-6 border-b border-slate-800/60">
+      <div className="p-6 border-b border-slate-800/60 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-600 p-2 rounded-lg">
             <TreeDeciduous className="text-white" size={18} />
           </div>
           <span className="text-lg font-bold text-white tracking-tight">TaskTree</span>
         </div>
+        {mobile && onClose && (
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -66,6 +81,7 @@ export const Sidebar: React.FC = () => {
             <Link
               key={item.id}
               href={item.href}
+              onClick={mobile ? onClose : undefined}
               className={clsx(
                 "flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors group",
                 isActive
@@ -154,7 +170,7 @@ export const Sidebar: React.FC = () => {
 
       {/* User footer */}
       <div className="p-4 border-t border-slate-800/60">
-        <Link href="/dashboard/profile" className="block">
+        <Link href="/dashboard/profile" className="block" onClick={mobile ? onClose : undefined}>
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 border border-slate-700/50 hover:bg-slate-700/80 transition-colors cursor-pointer">
             <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarGradient(profile?.name || 'G')} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
               {(profile?.name || "G").charAt(0).toUpperCase()}
@@ -167,6 +183,25 @@ export const Sidebar: React.FC = () => {
           </div>
         </Link>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop: always visible sticky sidebar */}
+      <aside className="hidden md:flex w-64 h-screen bg-slate-900 flex-col sticky top-0 shadow-xl shadow-black/20">
+        {navContent(false)}
+      </aside>
+
+      {/* Mobile: slide-in drawer */}
+      <aside
+        className={clsx(
+          "fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 flex flex-col shadow-xl shadow-black/40 transition-transform duration-300 ease-in-out md:hidden",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {navContent(true)}
+      </aside>
+    </>
   );
 };
