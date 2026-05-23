@@ -2,6 +2,7 @@
 
 import { Division, Department, Team } from "@task/core";
 import { Shield, Layers, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { OrgTarget } from "./orgPermissions";
 
 type OrgTreeProps = {
@@ -29,6 +30,8 @@ export function OrgTree({
   onEdit,
   onDeleteConfirm,
 }: OrgTreeProps) {
+  const { t } = useTranslation("ui");
+
   if (isLoading) {
     return (
       <div className="space-y-4 animate-pulse">
@@ -53,7 +56,7 @@ export function OrgTree({
         <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
           <Shield size={18} className="text-slate-300" />
         </div>
-        <p className="text-xs text-slate-400">組織データがありません</p>
+        <p className="text-xs text-slate-400">{t("No org data")}</p>
       </div>
     );
   }
@@ -75,7 +78,7 @@ export function OrgTree({
                   onClick={() => onEdit({ type: "division", id: div.divisionId, name: div.name })}
                   disabled={isOrgMutating}
                   className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-150 disabled:opacity-50 rounded-lg"
-                  title="名前を変更"
+                  title={t("Rename tooltip")}
                 >
                   <Pencil size={11} />
                 </button>
@@ -83,7 +86,7 @@ export function OrgTree({
                   onClick={() => onDeleteConfirm({ type: "division", id: div.divisionId, name: div.name })}
                   disabled={isOrgMutating}
                   className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-150 disabled:opacity-50 rounded-lg"
-                  title="削除"
+                  title={t("Delete tooltip")}
                 >
                   <Trash2 size={11} />
                 </button>
@@ -106,7 +109,7 @@ export function OrgTree({
                           onClick={() => onEdit({ type: "department", id: dept.departmentId, name: dept.name })}
                           disabled={isOrgMutating}
                           className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150 disabled:opacity-50 rounded-lg"
-                          title="名前を変更"
+                          title={t("Rename tooltip")}
                         >
                           <Pencil size={10} />
                         </button>
@@ -114,7 +117,7 @@ export function OrgTree({
                           onClick={() => onDeleteConfirm({ type: "department", id: dept.departmentId, name: dept.name })}
                           disabled={isOrgMutating}
                           className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-150 disabled:opacity-50 rounded-lg"
-                          title="削除"
+                          title={t("Delete tooltip")}
                         >
                           <Trash2 size={10} />
                         </button>
@@ -123,7 +126,7 @@ export function OrgTree({
                   </div>
                   <div className="pl-3 border-l border-blue-100 ml-2 space-y-1">
                     {teams
-                      .filter((t) => t.departmentId === dept.departmentId)
+                      .filter((tm) => tm.departmentId === dept.departmentId)
                       .map((team) => (
                         <div key={team.teamId} className="group flex items-center justify-between gap-1 min-w-0 px-2 py-1 rounded-lg hover:bg-emerald-50/50 transition-all duration-200 -mx-1">
                           <div className="flex items-center gap-2 text-[11px] font-medium text-emerald-700 min-w-0">
@@ -136,7 +139,7 @@ export function OrgTree({
                                 onClick={() => onEdit({ type: "team", id: team.teamId, name: team.name })}
                                 disabled={isOrgMutating}
                                 className="p-1.5 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-150 disabled:opacity-50 rounded-lg"
-                                title="名前を変更"
+                                title={t("Rename tooltip")}
                               >
                                 <Pencil size={9} />
                               </button>
@@ -144,7 +147,7 @@ export function OrgTree({
                                 onClick={() => onDeleteConfirm({ type: "team", id: team.teamId, name: team.name })}
                                 disabled={isOrgMutating}
                                 className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-150 disabled:opacity-50 rounded-lg"
-                                title="削除"
+                                title={t("Delete tooltip")}
                               >
                                 <Trash2 size={9} />
                               </button>
@@ -161,7 +164,7 @@ export function OrgTree({
 
       {departments.filter((d) => d.divisionId === "NONE").length > 0 && (
         <div className="pt-4 border-t border-slate-100">
-          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-2 px-1">部署（本部なし）</p>
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-2 px-1">{t("Depts without division")}</p>
           {departments
             .filter((d) => d.divisionId === "NONE")
             .map((dept) => (
@@ -177,7 +180,7 @@ export function OrgTree({
                         onClick={() => onEdit({ type: "department", id: dept.departmentId, name: dept.name })}
                         disabled={isOrgMutating}
                         className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150 disabled:opacity-50 rounded-lg"
-                        title="名前を変更"
+                        title={t("Rename tooltip")}
                       >
                         <Pencil size={10} />
                       </button>
@@ -185,7 +188,7 @@ export function OrgTree({
                         onClick={() => onDeleteConfirm({ type: "department", id: dept.departmentId, name: dept.name })}
                         disabled={isOrgMutating}
                         className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-150 disabled:opacity-50 rounded-lg"
-                        title="削除"
+                        title={t("Delete tooltip")}
                       >
                         <Trash2 size={10} />
                       </button>

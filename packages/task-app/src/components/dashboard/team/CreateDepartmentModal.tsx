@@ -13,7 +13,7 @@ type CreateDepartmentModalProps = {
 };
 
 export function CreateDepartmentModal({ divisions, onSubmit, onClose }: CreateDepartmentModalProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("ui");
   const [name, setName] = useState("");
   const [divisionId, setDivisionId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +27,7 @@ export function CreateDepartmentModal({ divisions, onSubmit, onClose }: CreateDe
       setError(null);
       await onSubmit(name.trim(), divisionId);
     } catch (err) {
-      setError(t(extractOrgError(err)));
+      setError(extractOrgError(err));
     } finally {
       setIsLoading(false);
     }
@@ -39,8 +39,8 @@ export function CreateDepartmentModal({ divisions, onSubmit, onClose }: CreateDe
         <div className="h-1 bg-gradient-to-r from-blue-500 to-sky-500" />
         <div className="p-5 border-b border-slate-100 flex justify-between items-start">
           <div>
-            <h3 className="text-base font-bold text-slate-900">部署を追加</h3>
-            <p className="text-xs text-slate-500 mt-0.5">本部配下に新しい部署を作成します</p>
+            <h3 className="text-base font-bold text-slate-900">{t("Add Department")}</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{t("Add Department desc")}</p>
           </div>
           <button
             type="button"
@@ -55,28 +55,28 @@ export function CreateDepartmentModal({ divisions, onSubmit, onClose }: CreateDe
             <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{error}</div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">上位の本部</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("Parent Division")}</label>
             <select
               required
               value={divisionId}
               onChange={(e) => setDivisionId(e.target.value)}
               className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-400 transition-all bg-white"
             >
-              <option value="" disabled>本部を選択してください</option>
+              <option value="" disabled>{t("Select parent division")}</option>
               {divisions.map((d) => (
                 <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">部署名</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("Department Name")}</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-400 transition-all placeholder:text-slate-300"
-              placeholder="例: 開発部"
+              placeholder={t("Department name placeholder")}
             />
           </div>
           <div className="pt-2 flex gap-3">
@@ -85,14 +85,14 @@ export function CreateDepartmentModal({ divisions, onSubmit, onClose }: CreateDe
               onClick={onClose}
               className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
             >
-              キャンセル
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isLoading}
               className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-sky-500 rounded-xl hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-200/60 disabled:opacity-50 transition-all shadow-md shadow-blue-300/20 flex justify-center items-center"
             >
-              {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : "追加する"}
+              {isLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : t("Add (action)")}
             </button>
           </div>
         </form>

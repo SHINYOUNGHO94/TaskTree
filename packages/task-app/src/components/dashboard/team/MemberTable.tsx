@@ -2,6 +2,7 @@
 
 import { UserProfile, Division, Department, Team } from "@task/core";
 import { Mail, Shield, Building, Layers, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { USER_ROLE_LABELS } from "../caseLabels";
 
 type MemberTableProps = {
@@ -52,12 +53,14 @@ export function MemberTable({
   isMutating,
   onDeleteMember,
 }: MemberTableProps) {
+  const { t } = useTranslation("ui");
+
   const getDivName = (id?: string) =>
     id ? (divisions.find((d) => d.divisionId === id)?.name || id) : "---";
   const getDeptName = (id?: string) =>
     id ? (departments.find((d) => d.departmentId === id)?.name || id) : "---";
   const getTeamName = (id?: string) =>
-    id ? (teams.find((t) => t.teamId === id)?.name || id) : "---";
+    id ? (teams.find((tm) => tm.teamId === id)?.name || id) : "---";
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
@@ -65,11 +68,11 @@ export function MemberTable({
         <table className="w-full table-fixed text-sm text-left">
           <thead className="text-xs text-slate-400 uppercase bg-slate-50/80 border-b border-slate-100">
             <tr>
-              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[200px]">メンバー</th>
-              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[140px]">権限</th>
-              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[220px]">所属</th>
-              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[130px]">登録日</th>
-              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[80px]">操作</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[200px]">{t("Member (table header)")}</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[140px]">{t("Permission (header)")}</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[220px]">{t("Affiliation")}</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[130px]">{t("Registered Date")}</th>
+              <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[80px]">{t("Actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100/80">
@@ -103,7 +106,7 @@ export function MemberTable({
                     <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
                       <Shield size={20} className="text-slate-300" />
                     </div>
-                    <p className="text-slate-400 text-sm">メンバーがいません。</p>
+                    <p className="text-slate-400 text-sm">{t("No members.")}</p>
                   </div>
                 </td>
               </tr>
@@ -129,7 +132,7 @@ export function MemberTable({
                   <td className="px-6 py-4 whitespace-nowrap min-w-[140px]">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${getRoleBadgeClass(member.role)}`}>
                       <Shield size={10} className="flex-shrink-0" />
-                      {USER_ROLE_LABELS[member.role as keyof typeof USER_ROLE_LABELS] ?? member.role}
+                      {t(USER_ROLE_LABELS[member.role as keyof typeof USER_ROLE_LABELS] ?? member.role)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap min-w-[220px]">
@@ -141,7 +144,7 @@ export function MemberTable({
                             ? `${getDivName(member.divisionId)} / `
                             : ""}
                           {!member.departmentId || member.departmentId === "NONE"
-                            ? "未配属"
+                            ? t("Unassigned")
                             : getDeptName(member.departmentId)}
                         </span>
                       </div>
@@ -149,7 +152,7 @@ export function MemberTable({
                         <Layers size={9} className="text-slate-300 flex-shrink-0" />
                         <span className="truncate">
                           {!member.teamId || member.teamId === "NONE"
-                            ? "未配属"
+                            ? t("Unassigned")
                             : getTeamName(member.teamId)}
                         </span>
                       </div>
@@ -165,7 +168,7 @@ export function MemberTable({
                         onClick={() => onDeleteMember(member)}
                         disabled={isMutating}
                         className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-200 disabled:opacity-50 rounded-lg opacity-0 group-hover:opacity-100"
-                        title="削除"
+                        title={t("Delete tooltip")}
                       >
                         <Trash2 size={14} />
                       </button>

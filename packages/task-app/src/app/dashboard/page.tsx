@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { FileText, LayoutGrid, List, Plus, RefreshCw, Search, Mail, X } from "lucide-react";
 import {
   CaseDeliveryType,
@@ -25,35 +26,6 @@ type DeliveryTypeFilter = "ALL" | CaseDeliveryType;
 type OwnershipFilter = "ALL" | "CREATED_BY_ME" | "OWNED_BY_ME";
 type SortKey = "updatedAt_desc" | "createdAt_desc" | "dueDate_asc" | "status" | "caseType";
 type CaseAreaTab = "MY" | "OPEN" | "ORG" | "PROJECT";
-
-const SORT_LABELS: Record<SortKey, string> = {
-  updatedAt_desc: "更新日 (新しい順)",
-  createdAt_desc: "作成日 (新しい順)",
-  dueDate_asc: "期限 (近い順)",
-  status: "ステータス",
-  caseType: "案件種別",
-};
-
-const TAB_LABELS: Record<CaseAreaTab, string> = {
-  MY: "自分の案件",
-  OPEN: "公開案件",
-  ORG: "組織案件",
-  PROJECT: "プロジェクト",
-};
-
-const TAB_EMPTY_MESSAGES: Record<CaseAreaTab, string> = {
-  MY: "自分が作成または担当している案件はありません。",
-  OPEN: "公募中の案件はありません。",
-  ORG: "組織向けの案件はありません。",
-  PROJECT: "プロジェクト案件はありません。",
-};
-
-const TAB_DESCRIPTIONS: Record<CaseAreaTab, string> = {
-  MY: "自分が作成・担当する案件（案件 = 業務依頼・協業単位）",
-  OPEN: "権限範囲内で担当希望できる公開案件",
-  ORG: "組織・部署・チームへ向けた案件",
-  PROJECT: "複数案件をまとめるプロジェクト",
-};
 
 const STATUS_ORDER: Record<CaseStatus, number> = {
   [CaseStatus.IN_PROGRESS]: 0,
@@ -149,6 +121,36 @@ const DashboardPage = () => {
   const { user, profile } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation("ui");
+
+  const SORT_LABELS: Record<SortKey, string> = useMemo(() => ({
+    updatedAt_desc: t("Updated (newest)"),
+    createdAt_desc: t("Created (newest)"),
+    dueDate_asc:    t("Due Date (earliest)"),
+    status:         t("By Status"),
+    caseType:       t("By Case Type"),
+  }), [t]);
+
+  const TAB_LABELS: Record<CaseAreaTab, string> = useMemo(() => ({
+    MY:      t("My Cases"),
+    OPEN:    t("Open Cases"),
+    ORG:     t("Org Cases"),
+    PROJECT: t("Projects"),
+  }), [t]);
+
+  const TAB_EMPTY_MESSAGES: Record<CaseAreaTab, string> = useMemo(() => ({
+    MY:      t("No cases (MY)"),
+    OPEN:    t("No cases (OPEN)"),
+    ORG:     t("No cases (ORG)"),
+    PROJECT: t("No cases (PROJECT)"),
+  }), [t]);
+
+  const TAB_DESCRIPTIONS: Record<CaseAreaTab, string> = useMemo(() => ({
+    MY:      t("My Cases description"),
+    OPEN:    t("Open Cases description"),
+    ORG:     t("Org Cases description"),
+    PROJECT: t("Projects description"),
+  }), [t]);
 
   const [cases, setCases] = useState<CaseDetail[]>([]);
   const [casesLoading, setCasesLoading] = useState(true);
@@ -185,7 +187,7 @@ const DashboardPage = () => {
       setCases(data);
     } catch (error) {
       console.error("Failed to fetch cases", error);
-      setCasesError("案件の取得に失敗しました。再度お試しください。");
+      setCasesError(t("Failed to load cases."));
     } finally {
       setCasesLoading(false);
     }
@@ -199,7 +201,7 @@ const DashboardPage = () => {
       setInvitations(data);
     } catch (error) {
       console.error("Failed to fetch invitations", error);
-      setInvitationsError("招待の取得に失敗しました。");
+      setInvitationsError(t("Failed to load invitations."));
     } finally {
       setInvitationsLoading(false);
     }
@@ -223,7 +225,7 @@ const DashboardPage = () => {
       console.error("Failed to process invitation action", error);
       setInvitationActionErrors((prev) => ({
         ...prev,
-        [key]: "処理に失敗しました。再度お試しください。",
+        [key]: t("Failed to process."),
       }));
     } finally {
       setProcessingInvitation(null);
@@ -273,16 +275,14 @@ const DashboardPage = () => {
       {/* Page header */}
       <div className="flex justify-between items-center mb-6 gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">ダッシュボード</h2>
-          <p className="text-slate-600 text-sm mt-1">
-            案件（業務依頼・協業単位）と配下タスク（実作業）を管理します
-          </p>
+          <h2 className="text-xl font-bold text-slate-900">{t("Cases")}</h2>
+          <p className="text-slate-600 text-sm mt-1">{t("Manage cases and tasks")}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <button
             onClick={() => { fetchCases(); fetchInvitations(); }}
             className="p-2 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors text-slate-400"
-            title="更新"
+            title={t("Refresh")}
           >
             <RefreshCw size={15} className={casesLoading ? "animate-spin" : ""} />
           </button>
@@ -290,7 +290,7 @@ const DashboardPage = () => {
             className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
             onClick={() => setIsCaseModalOpen(true)}
           >
-            <Plus size={15} /> 案件作成
+            <Plus size={15} /> {t("Create Case")}
           </button>
         </div>
       </div>
@@ -331,7 +331,7 @@ const DashboardPage = () => {
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="タイトル・説明・ID で検索"
+              placeholder={t("Search cases...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
@@ -348,30 +348,24 @@ const DashboardPage = () => {
 
           {[
             { value: caseTypeFilter, onChange: setCaseTypeFilter as (v: string) => void, options: [
-              { value: "ALL", label: "種別: すべて" },
-              { value: CaseType.REQUEST, label: CASE_TYPE_LABELS[CaseType.REQUEST] },
-              { value: CaseType.STANDARD, label: CASE_TYPE_LABELS[CaseType.STANDARD] },
-              { value: CaseType.PROJECT, label: CASE_TYPE_LABELS[CaseType.PROJECT] },
+              { value: "ALL", label: `${t("Type")}: ${t("All")}` },
+              { value: CaseType.REQUEST, label: t(CASE_TYPE_LABELS[CaseType.REQUEST]) },
+              { value: CaseType.STANDARD, label: t(CASE_TYPE_LABELS[CaseType.STANDARD]) },
+              { value: CaseType.PROJECT, label: t(CASE_TYPE_LABELS[CaseType.PROJECT]) },
             ]},
             { value: statusFilter, onChange: setStatusFilter as (v: string) => void, options: [
-              { value: "ALL", label: "状態: すべて" },
-              { value: CaseStatus.WAITING, label: "待機中" },
-              { value: CaseStatus.IN_PROGRESS, label: "対応中" },
-              { value: CaseStatus.REVIEW_REQUESTED, label: "レビュー依頼" },
-              { value: CaseStatus.COMPLETED, label: "完了" },
-              { value: CaseStatus.ON_HOLD, label: "保留" },
-              { value: CaseStatus.CANCELED, label: "キャンセル" },
-              { value: CaseStatus.REOPENED, label: "再開" },
+              { value: "ALL", label: `${t("Status")}: ${t("All")}` },
+              ...Object.values(CaseStatus).map((s) => ({ value: s, label: t(CASE_STATUS_LABELS[s]) })),
             ]},
             { value: deliveryTypeFilter, onChange: setDeliveryTypeFilter as (v: string) => void, options: [
-              { value: "ALL", label: "配信: すべて" },
-              { value: CaseDeliveryType.DIRECT, label: CASE_DELIVERY_TYPE_LABELS[CaseDeliveryType.DIRECT] },
-              { value: CaseDeliveryType.OPEN, label: CASE_DELIVERY_TYPE_LABELS[CaseDeliveryType.OPEN] },
+              { value: "ALL", label: `${t("Delivery")}: ${t("All")}` },
+              { value: CaseDeliveryType.DIRECT, label: t(CASE_DELIVERY_TYPE_LABELS[CaseDeliveryType.DIRECT]) },
+              { value: CaseDeliveryType.OPEN, label: t(CASE_DELIVERY_TYPE_LABELS[CaseDeliveryType.OPEN]) },
             ]},
             { value: ownershipFilter, onChange: setOwnershipFilter as (v: string) => void, options: [
-              { value: "ALL", label: "担当: すべて" },
-              { value: "CREATED_BY_ME", label: "自分が作成" },
-              { value: "OWNED_BY_ME", label: "自分が担当" },
+              { value: "ALL", label: `${t("Ownership")}: ${t("All")}` },
+              { value: "CREATED_BY_ME", label: t("Created by me") },
+              { value: "OWNED_BY_ME", label: t("Assigned to me") },
             ]},
             { value: sortKey, onChange: setSortKey as (v: string) => void, options: (Object.keys(SORT_LABELS) as SortKey[]).map((k) => ({ value: k, label: SORT_LABELS[k] })) },
           ].map((select, i) => (
@@ -391,14 +385,12 @@ const DashboardPage = () => {
             <button
               onClick={() => setViewMode("board")}
               className={`p-1.5 transition-colors ${viewMode === "board" ? "bg-indigo-600 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}
-              title="ボード表示"
             >
               <LayoutGrid size={14} />
             </button>
             <button
               onClick={() => setViewMode("list")}
               className={`p-1.5 border-l border-slate-200 transition-colors ${viewMode === "list" ? "bg-indigo-600 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}
-              title="リスト表示"
             >
               <List size={14} />
             </button>
@@ -409,7 +401,7 @@ const DashboardPage = () => {
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600 flex items-center justify-between gap-4">
             <span>{casesError}</span>
             <button onClick={fetchCases} className="text-xs font-bold underline text-red-600 hover:text-red-800 shrink-0">
-              再試行
+              {t("Retry")}
             </button>
           </div>
         )}
@@ -446,7 +438,7 @@ const DashboardPage = () => {
                 onClick={() => setIsCaseModalOpen(true)}
                 className="mt-3 px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-medium hover:bg-indigo-700 transition-colors"
               >
-                案件を作成する
+                {t("Create Case")}
               </button>
             )}
           </div>
@@ -455,12 +447,12 @@ const DashboardPage = () => {
             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mb-3">
               <Search size={20} className="text-slate-400" />
             </div>
-            <p className="text-sm text-slate-500 mb-1">条件に一致する案件がありません</p>
+            <p className="text-sm text-slate-500 mb-1">{t("No results matching filters")}</p>
             <button
               onClick={resetFilters}
               className="mt-3 px-4 py-1.5 border border-slate-200 bg-white text-slate-600 rounded-md hover:bg-slate-50 transition-colors text-xs font-medium"
             >
-              フィルターをリセット
+              {t("Reset filters")}
             </button>
           </div>
         ) : viewMode === "board" ? (
@@ -470,11 +462,11 @@ const DashboardPage = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-left">
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-24">種別</th>
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide">タイトル</th>
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-32">ステータス</th>
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">期限</th>
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">更新日</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-24">{t("Type")}</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide">{t("Title")}</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-32">{t("Status")}</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">{t("Due Date (optional)")}</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">{t("Updated")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -486,7 +478,7 @@ const DashboardPage = () => {
                   >
                     <td className="px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${CASE_TYPE_BADGE[c.caseType]}`}>
-                        {CASE_TYPE_LABELS[c.caseType]}
+                        {t(CASE_TYPE_LABELS[c.caseType])}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -498,11 +490,11 @@ const DashboardPage = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[c.status]}`} />
-                        <span className="text-xs font-medium text-slate-700">{CASE_STATUS_LABELS[c.status]}</span>
+                        <span className="text-xs font-medium text-slate-700">{t(CASE_STATUS_LABELS[c.status])}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs font-medium text-slate-600">{c.dueDate ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{new Date(c.updatedAt).toLocaleDateString('ja-JP')}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{new Date(c.updatedAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -520,13 +512,13 @@ const DashboardPage = () => {
                 <Mail size={14} className="text-amber-600" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-slate-800">外部案件招待</h2>
-                <p className="text-slate-500 text-xs mt-0.5">他社から受け取った案件参加招待</p>
+                <h2 className="text-sm font-semibold text-slate-800">{t("External Case Invitations")}</h2>
+                <p className="text-slate-500 text-xs mt-0.5">{t("Case invitations from other companies")}</p>
               </div>
             </div>
             {invitations.length > 0 && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                {invitations.length} 件
+                {invitations.length}
               </span>
             )}
           </div>
@@ -534,7 +526,7 @@ const DashboardPage = () => {
           {invitationsError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600 flex items-center justify-between gap-4">
               <span>{invitationsError}</span>
-              <button onClick={fetchInvitations} className="text-xs font-medium underline text-red-600 hover:text-red-800 shrink-0">再試行</button>
+              <button onClick={fetchInvitations} className="text-xs font-medium underline text-red-600 hover:text-red-800 shrink-0">{t("Retry")}</button>
             </div>
           )}
 
@@ -546,7 +538,7 @@ const DashboardPage = () => {
             </div>
           ) : invitations.length === 0 ? (
             <div className="py-8 text-center text-slate-400 border border-dashed border-slate-200 rounded-md bg-slate-50/40">
-              <p className="text-sm">外部案件の招待はありません</p>
+              <p className="text-sm">{t("No external invitations.")}</p>
             </div>
           ) : (
             <ul className="space-y-2">
@@ -564,15 +556,15 @@ const DashboardPage = () => {
                               ? "bg-amber-50 text-amber-700 border border-amber-200"
                               : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                           }`}>
-                            {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED ? "招待中" : "参加中"}
+                            {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED ? t("Invited (status)") : t("Active (status)")}
                           </span>
                           <span className="text-[10px] text-slate-500 px-1.5 py-0.5 bg-white rounded border border-slate-200">
-                            {CASE_TYPE_LABELS[inv.caseSummary.caseType]} / {CASE_STATUS_LABELS[inv.caseSummary.status]}
+                            {t(CASE_TYPE_LABELS[inv.caseSummary.caseType])} / {t(CASE_STATUS_LABELS[inv.caseSummary.status])}
                           </span>
                         </div>
                         <p className="text-sm font-medium text-slate-800 truncate mb-0.5">{inv.caseSummary.title}</p>
                         <p className="text-xs text-slate-500">
-                          招待者: <span className="font-medium text-slate-700">{inv.participantCompany.invitedBy}</span>
+                          {t("Invited by (colon)")} <span className="font-medium text-slate-700">{inv.participantCompany.invitedBy}</span>
                         </p>
                         {invActionError && <p className="text-xs text-red-600 mt-1">{invActionError}</p>}
                       </div>
@@ -582,7 +574,7 @@ const DashboardPage = () => {
                             onClick={() => router.push(`/dashboard/cases/${inv.caseSummary.caseId}`)}
                             className="text-xs font-medium px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 transition-colors"
                           >
-                            詳細を見る
+                            {t("View Details")}
                           </button>
                         )}
                         {inv.participantCompany.status === CaseParticipantCompanyStatus.INVITED && (
@@ -592,14 +584,14 @@ const DashboardPage = () => {
                               disabled={isProcessing}
                               className="text-xs font-medium px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
-                              {isProcessing ? "処理中..." : "承認"}
+                              {isProcessing ? t("Processing...") : t("Approve")}
                             </button>
                             <button
                               onClick={() => handleInvitationAction(inv, CaseParticipantCompanyStatus.REJECTED)}
                               disabled={isProcessing}
                               className="text-xs font-medium px-3 py-1.5 rounded-md bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
-                              {isProcessing ? "処理中..." : "拒否"}
+                              {isProcessing ? t("Processing...") : t("Reject")}
                             </button>
                           </>
                         )}

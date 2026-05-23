@@ -7,62 +7,63 @@ import {
   CaseType,
   UserRole,
 } from "@task/core";
+import i18n from "../../i18n";
 
 export const CASE_TYPE_LABELS: Record<CaseType, string> = {
-  [CaseType.REQUEST]: "依頼",
-  [CaseType.STANDARD]: "通常案件",
-  [CaseType.PROJECT]: "プロジェクト",
+  [CaseType.REQUEST]: "Request",
+  [CaseType.STANDARD]: "Standard Case",
+  [CaseType.PROJECT]: "Project",
 };
 
 export const CASE_DELIVERY_TYPE_LABELS: Record<CaseDeliveryType, string> = {
-  [CaseDeliveryType.DIRECT]: "指名",
-  [CaseDeliveryType.OPEN]: "公募",
+  [CaseDeliveryType.DIRECT]: "Direct",
+  [CaseDeliveryType.OPEN]: "Open Recruitment",
 };
 
 export const CASE_STATUS_LABELS: Record<CaseStatus, string> = {
-  [CaseStatus.WAITING]: "待機中",
-  [CaseStatus.IN_PROGRESS]: "対応中",
-  [CaseStatus.REVIEW_REQUESTED]: "レビュー依頼",
-  [CaseStatus.COMPLETED]: "完了",
-  [CaseStatus.ON_HOLD]: "保留",
-  [CaseStatus.CANCELED]: "キャンセル",
-  [CaseStatus.REOPENED]: "再開",
+  [CaseStatus.WAITING]: "Waiting",
+  [CaseStatus.IN_PROGRESS]: "In Progress",
+  [CaseStatus.REVIEW_REQUESTED]: "Review Requested",
+  [CaseStatus.COMPLETED]: "Completed",
+  [CaseStatus.ON_HOLD]: "On Hold",
+  [CaseStatus.CANCELED]: "Canceled",
+  [CaseStatus.REOPENED]: "Reopened",
 };
 
 export const CASE_TARGET_SCOPE_LABELS: Record<CaseTargetScope, string> = {
-  [CaseTargetScope.COMPANY]: "会社",
-  [CaseTargetScope.DIVISION]: "本部",
-  [CaseTargetScope.DEPARTMENT]: "部署",
-  [CaseTargetScope.TEAM]: "チーム",
-  [CaseTargetScope.USER]: "ユーザー",
+  [CaseTargetScope.COMPANY]: "Company",
+  [CaseTargetScope.DIVISION]: "Division",
+  [CaseTargetScope.DEPARTMENT]: "Department",
+  [CaseTargetScope.TEAM]: "Team",
+  [CaseTargetScope.USER]: "User",
 };
 
 export const CLAIM_STATUS_LABELS: Record<CaseClaimRequestStatus, string> = {
-  [CaseClaimRequestStatus.PENDING]: "申請中",
-  [CaseClaimRequestStatus.APPROVED]: "承認済み",
-  [CaseClaimRequestStatus.REJECTED]: "却下",
+  [CaseClaimRequestStatus.PENDING]: "Pending",
+  [CaseClaimRequestStatus.APPROVED]: "Approved",
+  [CaseClaimRequestStatus.REJECTED]: "Rejected",
 };
 
 export const CASE_TASK_STATUS_LABELS: Record<CaseTaskStatus, string> = {
-  [CaseTaskStatus.TODO]: "未対応",
-  [CaseTaskStatus.IN_PROGRESS]: "対応中",
-  [CaseTaskStatus.REVIEW_REQUESTED]: "レビュー依頼",
-  [CaseTaskStatus.DONE]: "完了",
-  [CaseTaskStatus.ON_HOLD]: "保留",
-  [CaseTaskStatus.CANCELED]: "キャンセル",
+  [CaseTaskStatus.TODO]: "Todo",
+  [CaseTaskStatus.IN_PROGRESS]: "In Progress",
+  [CaseTaskStatus.REVIEW_REQUESTED]: "Review Requested",
+  [CaseTaskStatus.DONE]: "Done",
+  [CaseTaskStatus.ON_HOLD]: "On Hold",
+  [CaseTaskStatus.CANCELED]: "Canceled",
 };
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
-  [UserRole.GUEST]:          "ゲスト",
-  [UserRole.USER]:           "一般メンバー",
-  [UserRole.TEAM_ADMIN]:     "チームリーダー",
-  [UserRole.DEPT_ADMIN]:     "部長",
-  [UserRole.DIVISION_ADMIN]: "本部長",
-  [UserRole.COMPANY_ADMIN]:  "全体管理者",
+  [UserRole.GUEST]:          "Guest",
+  [UserRole.USER]:           "Member",
+  [UserRole.TEAM_ADMIN]:     "Team Leader",
+  [UserRole.DEPT_ADMIN]:     "Dept Head",
+  [UserRole.DIVISION_ADMIN]: "Division Head",
+  [UserRole.COMPANY_ADMIN]:  "Company Admin",
 };
 
 export function shortId(id: string): string {
-  if (!id) return "不明なユーザー";
+  if (!id) return i18n.t("Unknown User", { ns: "ui" });
   return id.length > 8 ? `${id.slice(0, 8)}…` : id;
 }
 

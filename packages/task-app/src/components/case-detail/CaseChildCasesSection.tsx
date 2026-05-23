@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertCircle, Calendar, CornerDownRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   CaseDetail,
   CaseOwnerType,
@@ -63,6 +64,7 @@ export const CaseChildCasesSection = ({
   onCreated,
   onNavigate,
 }: CaseChildCasesSectionProps) => {
+  const { t } = useTranslation("ui");
   const [showChildCaseForm, setShowChildCaseForm] = useState(false);
 
   const canCreate =
@@ -82,8 +84,8 @@ export const CaseChildCasesSection = ({
     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
       <div className="p-6 border-b border-gray-100 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-bold text-gray-800">子案件</h3>
-          <p className="text-xs text-gray-400 mt-0.5">関連するサブ案件の階層構造</p>
+          <h3 className="text-sm font-bold text-gray-800">{t("Sub-cases")}</h3>
+          <p className="text-xs text-gray-400 mt-0.5">{t("Hierarchical structure of related sub-cases")}</p>
         </div>
         {canCreate && (
           <button
@@ -91,10 +93,10 @@ export const CaseChildCasesSection = ({
             className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
           >
             {showChildCaseForm
-              ? "キャンセル"
+              ? t("Cancel")
               : caseDetail.caseType === CaseType.PROJECT
-                ? "+ 標準案件を作成"
-                : "+ 依頼案件を作成"}
+                ? t("+ Create Standard Case")
+                : t("+ Create Request Case")}
           </button>
         )}
       </div>
@@ -118,7 +120,7 @@ export const CaseChildCasesSection = ({
           <ErrorAlert message={childCasesError} />
         ) : childCases.length === 0 ? (
           <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
-            <p className="text-sm text-gray-400">子案件はまだありません。</p>
+            <p className="text-sm text-gray-400">{t("No sub-cases yet.")}</p>
           </div>
         ) : caseDetail.caseType === CaseType.PROJECT ? (
           <>
@@ -131,10 +133,10 @@ export const CaseChildCasesSection = ({
                     className="flex items-center gap-3 p-4 bg-blue-50/20 hover:bg-blue-50/50 transition-colors cursor-pointer"
                   >
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_STYLES[standardChild.status]}`}>
-                      {CASE_STATUS_LABELS[standardChild.status]}
+                      {t(CASE_STATUS_LABELS[standardChild.status])}
                     </span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap bg-blue-100 text-blue-700 border border-blue-200">
-                      {CASE_TYPE_LABELS[CaseType.STANDARD]}
+                      {t(CASE_TYPE_LABELS[CaseType.STANDARD])}
                     </span>
                     <span className="text-sm font-bold text-gray-800 flex-1 truncate">{standardChild.title}</span>
                     {standardChild.dueDate && (
@@ -147,7 +149,7 @@ export const CaseChildCasesSection = ({
                   {isNestedLoading ? (
                     <div className="px-6 py-4 flex items-center gap-2 border-t border-gray-50">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
-                      <span className="text-xs text-gray-400">ロード中...</span>
+                      <span className="text-xs text-gray-400">{t("Loading...")}</span>
                     </div>
                   ) : (requestChildrenByStandard[standardChild.caseId] ?? []).length > 0 ? (
                     <ul className="divide-y divide-gray-50 border-t border-gray-50 bg-gray-50/30">
@@ -159,10 +161,10 @@ export const CaseChildCasesSection = ({
                         >
                           <CornerDownRight size={14} className="text-gray-300 group-hover:text-gray-400 transition-colors" />
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_STYLES[requestChild.status]}`}>
-                            {CASE_STATUS_LABELS[requestChild.status]}
+                            {t(CASE_STATUS_LABELS[requestChild.status])}
                           </span>
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap bg-orange-100 text-orange-700 border border-orange-200">
-                            {CASE_TYPE_LABELS[CaseType.REQUEST]}
+                            {t(CASE_TYPE_LABELS[CaseType.REQUEST])}
                           </span>
                           <span className="text-sm text-gray-700 flex-1 truncate">{requestChild.title}</span>
                           {requestChild.dueDate && (
@@ -188,10 +190,10 @@ export const CaseChildCasesSection = ({
                 className="flex items-center gap-3 p-3.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 transition-all cursor-pointer shadow-sm"
               >
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_STYLES[child.status]}`}>
-                  {CASE_STATUS_LABELS[child.status]}
+                  {t(CASE_STATUS_LABELS[child.status])}
                 </span>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${CASE_TYPE_STYLES[child.caseType]}`}>
-                  {CASE_TYPE_LABELS[child.caseType]}
+                  {t(CASE_TYPE_LABELS[child.caseType])}
                 </span>
                 <span className="text-sm font-bold text-gray-800 flex-1 truncate">{child.title}</span>
                 {child.dueDate && (

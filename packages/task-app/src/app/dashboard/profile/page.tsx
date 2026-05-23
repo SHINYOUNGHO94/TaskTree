@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { UserService, UserRole } from "@task/core";
 import { useUser } from "../../../components/providers/UserProvider";
 import { User, Building2, Check, X, Pencil } from "lucide-react";
 
 export default function ProfilePage() {
   const { profile, refreshUser } = useUser();
+  const { t } = useTranslation("ui");
 
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -32,7 +34,7 @@ export default function ProfilePage() {
   };
 
   const saveName = async () => {
-    if (!nameInput.trim()) { setNameError("名前を入力してください。"); return; }
+    if (!nameInput.trim()) { setNameError(t("Please enter your name.")); return; }
     setNameLoading(true);
     setNameError(null);
     try {
@@ -40,7 +42,7 @@ export default function ProfilePage() {
       await refreshUser();
       setEditingName(false);
     } catch {
-      setNameError("更新に失敗しました。");
+      setNameError(t("Update failed."));
     } finally {
       setNameLoading(false);
     }
@@ -58,7 +60,7 @@ export default function ProfilePage() {
   };
 
   const saveCompany = async () => {
-    if (!companyInput.trim()) { setCompanyError("会社名を入力してください。"); return; }
+    if (!companyInput.trim()) { setCompanyError(t("Please enter the company name.")); return; }
     setCompanyLoading(true);
     setCompanyError(null);
     try {
@@ -66,7 +68,7 @@ export default function ProfilePage() {
       await refreshUser();
       setEditingCompany(false);
     } catch {
-      setCompanyError("更新に失敗しました。");
+      setCompanyError(t("Update failed."));
     } finally {
       setCompanyLoading(false);
     }
@@ -87,9 +89,9 @@ export default function ProfilePage() {
           <div className="w-8 h-8 rounded-md bg-indigo-600 flex items-center justify-center">
             <User size={15} className="text-white" />
           </div>
-          プロフィール設定
+          {t("Profile Settings")}
         </h2>
-        <p className="text-slate-600 text-sm mt-1">名前や会社情報を編集できます。</p>
+        <p className="text-slate-600 text-sm mt-1">{t("Edit name and company info.")}</p>
       </div>
 
       <div className="space-y-4">
@@ -98,7 +100,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
               <User size={13} className="text-slate-400" />
-              名前
+              {t("Name")}
             </h3>
             {!editingName && (
               <button
@@ -106,7 +108,7 @@ export default function ProfilePage() {
                 className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 <Pencil size={11} />
-                編集
+                {t("Edit")}
               </button>
             )}
           </div>
@@ -129,7 +131,7 @@ export default function ProfilePage() {
                   className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
                 >
                   <Check size={12} />
-                  {nameLoading ? "保存中..." : "保存"}
+                  {nameLoading ? t("Saving...") : t("Save")}
                 </button>
                 <button
                   onClick={cancelEditName}
@@ -137,7 +139,7 @@ export default function ProfilePage() {
                   className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
                 >
                   <X size={12} />
-                  キャンセル
+                  {t("Cancel")}
                 </button>
               </div>
             </div>
@@ -148,13 +150,13 @@ export default function ProfilePage() {
 
         {/* Email (read-only) */}
         <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-700 mb-3">メールアドレス</h3>
+          <h3 className="text-sm font-bold text-slate-700 mb-3">{t("Email Address")}</h3>
           <p className="text-sm text-slate-500">{profile.email}</p>
         </div>
 
         {/* Role (read-only) */}
         <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-700 mb-3">ロール</h3>
+          <h3 className="text-sm font-bold text-slate-700 mb-3">{t("Role")}</h3>
           <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
             {profile.role}
           </span>
@@ -166,7 +168,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                 <Building2 size={13} className="text-slate-400" />
-                会社名
+                {t("Company Name")}
               </h3>
               {!editingCompany && (
                 <button
@@ -174,7 +176,7 @@ export default function ProfilePage() {
                   className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   <Pencil size={11} />
-                  編集
+                  {t("Edit")}
                 </button>
               )}
             </div>
@@ -197,7 +199,7 @@ export default function ProfilePage() {
                     className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
                   >
                     <Check size={12} />
-                    {companyLoading ? "保存中..." : "保存"}
+                    {companyLoading ? t("Saving...") : t("Save")}
                   </button>
                   <button
                     onClick={cancelEditCompany}
@@ -205,7 +207,7 @@ export default function ProfilePage() {
                     className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
                   >
                     <X size={12} />
-                    キャンセル
+                    {t("Cancel")}
                   </button>
                 </div>
               </div>

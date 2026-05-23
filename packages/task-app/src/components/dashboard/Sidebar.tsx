@@ -11,17 +11,10 @@ import {
   Handshake,
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { useUser } from '../providers/UserProvider';
 import { USER_ROLE_LABELS } from './caseLabels';
 import { UserRole } from '@task/core';
-
-const getMenuItems = (role?: string) => [
-  { id: 'dashboard', label: 'ダッシュボード', icon: LayoutDashboard, href: '/dashboard' },
-  { id: 'partners', label: '取引先', icon: Handshake, href: '/dashboard/partners' },
-  ...(role === 'COMPANY_ADMIN' || role === 'DIVISION_ADMIN' || role === 'DEPT_ADMIN' || role === 'TEAM_ADMIN'
-    ? [{ id: 'team', label: '組織管理', icon: Users, href: '/dashboard/team' }]
-    : []),
-];
 
 const AVATAR_GRADIENTS = [
   "from-violet-500 to-purple-600",
@@ -40,6 +33,15 @@ const getAvatarGradient = (name: string) => {
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { profile } = useUser();
+  const { t } = useTranslation('ui');
+
+  const getMenuItems = (role?: string) => [
+    { id: 'dashboard', label: t('Dashboard'), icon: LayoutDashboard, href: '/dashboard' },
+    { id: 'partners', label: t('Partners'), icon: Handshake, href: '/dashboard/partners' },
+    ...(role === 'COMPANY_ADMIN' || role === 'DIVISION_ADMIN' || role === 'DEPT_ADMIN' || role === 'TEAM_ADMIN'
+      ? [{ id: 'team', label: t('Org Management'), icon: Users, href: '/dashboard/team' }]
+      : []),
+  ];
 
   return (
     <aside className="w-64 h-screen bg-slate-900 flex flex-col sticky top-0 shadow-xl shadow-black/20">
@@ -56,7 +58,7 @@ export const Sidebar: React.FC = () => {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-3">
-          メインメニュー
+          {t('Main Menu')}
         </div>
         {getMenuItems(profile?.role).map((item) => {
           const isActive = pathname === item.href;
@@ -89,7 +91,7 @@ export const Sidebar: React.FC = () => {
         {/* Org Hierarchy */}
         <div className="mt-8 pt-6 border-t border-slate-800/50">
           <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-3">
-            組織階層
+            {t('Org Hierarchy')}
           </div>
           <div className="px-3 space-y-4">
             <div className="flex items-start gap-3">
@@ -98,10 +100,10 @@ export const Sidebar: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] text-slate-400 font-semibold uppercase leading-none mb-1 tracking-wider">Company</p>
-                <p className="text-xs font-semibold text-white truncate">{profile?.companyName || "Loading..."}</p>
+                <p className="text-xs font-semibold text-white truncate">{profile?.companyName || t('Loading...')}</p>
                 {profile?.role === 'COMPANY_ADMIN' && (
                   <span className="inline-block mt-1.5 px-1.5 py-0.5 bg-indigo-900/50 text-indigo-300 text-[9px] font-bold rounded border border-indigo-700/30">
-                    全体管理者
+                    {t('Overall Admin')}
                   </span>
                 )}
               </div>
@@ -120,7 +122,7 @@ export const Sidebar: React.FC = () => {
                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
                         <p className="text-xs font-medium text-slate-200 truncate max-w-[120px]">{profile?.divisionName}</p>
                         {profile?.role === 'DIVISION_ADMIN' && (
-                          <span className="text-[9px] bg-indigo-900/50 text-indigo-300 px-1 rounded border border-indigo-700/30 font-bold">本部長</span>
+                          <span className="text-[9px] bg-indigo-900/50 text-indigo-300 px-1 rounded border border-indigo-700/30 font-bold">{t('Division Head (badge)')}</span>
                         )}
                       </div>
                     )}
@@ -129,7 +131,7 @@ export const Sidebar: React.FC = () => {
                         <div className="w-1 h-1 rounded-full bg-slate-400 flex-shrink-0" />
                         <p className="text-xs font-medium text-slate-300 truncate max-w-[110px]">{profile?.departmentName}</p>
                         {profile?.role === 'DEPT_ADMIN' && (
-                          <span className="text-[9px] bg-emerald-900/40 text-emerald-400 px-1 rounded border border-emerald-700/30 font-bold">部長</span>
+                          <span className="text-[9px] bg-emerald-900/40 text-emerald-400 px-1 rounded border border-emerald-700/30 font-bold">{t('Dept Head (badge)')}</span>
                         )}
                       </div>
                     )}
@@ -138,7 +140,7 @@ export const Sidebar: React.FC = () => {
                         <div className="w-1 h-1 rounded-full bg-slate-500 flex-shrink-0" />
                         <p className="text-xs font-medium text-slate-400 truncate max-w-[110px]">{profile?.teamName}</p>
                         {profile?.role === 'TEAM_ADMIN' && (
-                          <span className="text-[9px] bg-amber-900/40 text-amber-400 px-1 rounded border border-amber-700/30 font-bold">リーダー</span>
+                          <span className="text-[9px] bg-amber-900/40 text-amber-400 px-1 rounded border border-amber-700/30 font-bold">{t('Leader (badge)')}</span>
                         )}
                       </div>
                     )}
@@ -159,7 +161,7 @@ export const Sidebar: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-white truncate">{profile?.name || "Guest User"}</p>
-              <p className="text-[10px] text-slate-400 truncate mt-0.5">{profile?.role ? (USER_ROLE_LABELS[profile.role as UserRole] ?? profile.role) : "—"}</p>
+              <p className="text-[10px] text-slate-400 truncate mt-0.5">{profile?.role ? t(USER_ROLE_LABELS[profile.role as UserRole] ?? profile.role) : "—"}</p>
             </div>
             <ChevronRight size={12} className="text-slate-500 flex-shrink-0" />
           </div>

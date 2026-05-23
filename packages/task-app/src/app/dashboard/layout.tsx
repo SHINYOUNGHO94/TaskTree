@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { AuthService } from "@task/core";
 import { useUser } from "../../components/providers/UserProvider";
 import { Sidebar } from "../../components/dashboard/Sidebar";
@@ -15,6 +16,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { user, profile, isLoading } = useUser();
+  const { t } = useTranslation("ui");
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -36,7 +38,7 @@ export default function DashboardLayout({
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center animate-pulse" />
-          <p className="text-xs text-slate-500 animate-pulse tracking-widest uppercase">読み込み中...</p>
+          <p className="text-xs text-slate-500 animate-pulse tracking-widest uppercase">{t("Loading...")}</p>
         </div>
       );
     }
@@ -53,9 +55,9 @@ export default function DashboardLayout({
         <DashboardHeader userName={displayName} onSignOut={handleSignOut} />
         {isProfileIncomplete && (
           <div className="bg-amber-50 border-b border-amber-200 px-8 py-2.5 flex items-center gap-2 text-sm">
-            <span className="text-amber-700">プロフィールが未設定です。</span>
+            <span className="text-amber-700">{t("Profile not configured.")}</span>
             <Link href="/dashboard/profile" className="text-amber-800 font-semibold underline">
-              今すぐ設定する →
+              {t("Set up now →")}
             </Link>
           </div>
         )}

@@ -1083,6 +1083,63 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 
 ---
 
+### Task 27: UI 多言語対応（EN / 日 / 한）
+
+**目的:** 画面上のすべての文字列を EN・日本語・韓国語で切り替えられるようにする。デフォルト日本語、`localStorage` で選択言語を永続化。
+
+**設計方針:**
+
+- 既存の `src/i18n/`（エラーメッセージ専用）は変更せず、`src/locales/` を新規追加。
+- `i18next` の `addResourceBundle` で `"ui"` namespace を追加。
+- キーは英語文字列、値は各言語訳。呼び出しは `useTranslation("ui")` → `t("English key")`。
+- 非コンポーネントの関数（`caseLabels.ts` 等）は値を英語キーに変更し、呼び出し側で `t()` を適用。
+- エラー文字列は英語キーを state に保持し、描画時に `t(errorKey)` で翻訳。
+- 動的ラベルには i18next interpolation（`{{variable}}`）を使用。
+
+**変更ファイル:**
+
+- `packages/task-app/src/locales/en.ts` — 新規（英語）
+- `packages/task-app/src/locales/ja.ts` — 新規（日本語）
+- `packages/task-app/src/locales/ko.ts` — 新規（韓国語）
+- `packages/task-app/src/locales/index.ts` — 新規（i18n 登録・言語切替・localStorage 連携）
+- `packages/task-app/src/components/dashboard/DashboardHeader.tsx` — 言語スイッチャー UI（EN / 日 / 한）追加
+- `packages/task-app/src/components/providers/I18nProvider.tsx` — 初期言語ロード
+- `packages/task-app/src/components/dashboard/caseLabels.ts` — ラベル値を英語キーに変更
+- `packages/task-app/src/components/dashboard/team/orgPermissions.ts` — `orgTypeLabel` を英語キー返却に変更
+- `packages/task-app/src/app/dashboard/cases/[id]/page.tsx` — Case 詳細全文字列翻訳
+- `packages/task-app/src/app/dashboard/page.tsx` — Dashboard 全文字列翻訳
+- `packages/task-app/src/app/dashboard/layout.tsx` — レイアウト文字列翻訳
+- `packages/task-app/src/app/dashboard/team/page.tsx` — 組織管理ページ翻訳
+- `packages/task-app/src/app/dashboard/partners/page.tsx` — 取引先ページ翻訳
+- `packages/task-app/src/app/dashboard/profile/page.tsx` — プロフィールページ翻訳
+- `packages/task-app/src/components/dashboard/CreateCaseModal.tsx` — Case 作成モーダル翻訳
+- `packages/task-app/src/components/dashboard/Sidebar.tsx` — サイドバー翻訳
+- `packages/task-app/src/components/dashboard/CaseBoardView.tsx` — ボードビュー翻訳
+- `packages/task-app/src/components/dashboard/CaseCard.tsx` — Case カード翻訳
+- `packages/task-app/src/components/case-detail/CaseTasksSection.tsx` — タスクセクション翻訳
+- `packages/task-app/src/components/case-detail/CaseCommentsSection.tsx` — コメントセクション翻訳
+- `packages/task-app/src/components/case-detail/CaseHistorySection.tsx` — 履歴セクション翻訳
+- `packages/task-app/src/components/case-detail/CaseChildCasesSection.tsx` — 子案件セクション翻訳
+- `packages/task-app/src/components/case-detail/CaseParticipantCompanySection.tsx` — 参加会社セクション翻訳
+- `packages/task-app/src/components/case-detail/CreateChildCaseForm.tsx` — 子案件作成フォーム翻訳
+- `packages/task-app/src/components/dashboard/team/CreateDivisionModal.tsx` — 本部作成モーダル翻訳
+- `packages/task-app/src/components/dashboard/team/CreateDepartmentModal.tsx` — 部署作成モーダル翻訳
+- `packages/task-app/src/components/dashboard/team/CreateTeamModal.tsx` — チーム作成モーダル翻訳
+- `packages/task-app/src/components/dashboard/team/OrgEditModal.tsx` — 組織リネームモーダル翻訳
+- `packages/task-app/src/components/dashboard/team/OrgDeleteConfirmModal.tsx` — 組織削除確認モーダル翻訳
+- `packages/task-app/src/components/dashboard/team/MemberDeleteConfirmModal.tsx` — メンバー削除確認モーダル翻訳
+- `packages/task-app/src/components/dashboard/team/MemberTable.tsx` — メンバーテーブル翻訳
+- `packages/task-app/src/components/dashboard/team/OrgTree.tsx` — 組織ツリー翻訳
+- `packages/task-app/src/components/dashboard/team/InviteMemberModal.tsx` — メンバー招待モーダル翻訳
+
+**検証:**
+
+- `npx tsc --noEmit` (task-app) — クリーン
+
+**API / デプロイ影響:** なし。フロントエンドのみ変更。
+
+---
+
 ## 開発メモ
 
 実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。

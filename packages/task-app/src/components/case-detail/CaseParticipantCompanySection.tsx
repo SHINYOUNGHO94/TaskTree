@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { AlertCircle, Search, X, Building2, Plus, Mail } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   CaseDetail,
   CaseOwnerType,
@@ -18,11 +19,11 @@ const PARTICIPANT_STATUS_STYLES: Record<CaseParticipantCompanyStatus, string> = 
   [CaseParticipantCompanyStatus.REMOVED]: "bg-slate-50 text-slate-500 border border-slate-200",
 };
 
-const PARTICIPANT_STATUS_LABELS: Record<CaseParticipantCompanyStatus, string> = {
-  [CaseParticipantCompanyStatus.INVITED]: "招待中",
-  [CaseParticipantCompanyStatus.ACTIVE]: "参加中",
-  [CaseParticipantCompanyStatus.REJECTED]: "拒否",
-  [CaseParticipantCompanyStatus.REMOVED]: "削除",
+const PARTICIPANT_STATUS_KEY: Record<CaseParticipantCompanyStatus, string> = {
+  [CaseParticipantCompanyStatus.INVITED]: "Invited (status)",
+  [CaseParticipantCompanyStatus.ACTIVE]: "Active (status)",
+  [CaseParticipantCompanyStatus.REJECTED]: "Rejected (status)",
+  [CaseParticipantCompanyStatus.REMOVED]: "Removed (status)",
 };
 
 export interface CaseParticipantCompanySectionProps {
@@ -44,6 +45,7 @@ export const CaseParticipantCompanySection = ({
   currentUserId,
   onRefresh,
 }: CaseParticipantCompanySectionProps) => {
+  const { t } = useTranslation("ui");
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteTab, setInviteTab] = useState<"search" | "email">("search");
   const [searchQuery, setSearchQuery] = useState("");
@@ -107,7 +109,7 @@ export const CaseParticipantCompanySection = ({
       setShowInviteForm(false);
       await onRefresh();
     } catch {
-      setInviteError("招待に失敗しました。もう一度お試しください。");
+      setInviteError(t("Failed to invite. Please try again."));
     } finally {
       setIsInviting(false);
     }
@@ -115,7 +117,7 @@ export const CaseParticipantCompanySection = ({
 
   const handleInviteByEmail = async () => {
     if (!emailInput.trim()) {
-      setInviteError("メールアドレスを入力してください。");
+      setInviteError(t("Please enter an email address."));
       return;
     }
     setIsInviting(true);
@@ -125,7 +127,7 @@ export const CaseParticipantCompanySection = ({
       setShowInviteForm(false);
       await onRefresh();
     } catch {
-      setInviteError("招待に失敗しました。メールアドレスを確認してください。");
+      setInviteError(t("Failed to invite. Please check the email address."));
     } finally {
       setIsInviting(false);
     }
@@ -136,7 +138,7 @@ export const CaseParticipantCompanySection = ({
       <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
           <Building2 size={14} className="text-slate-500" />
-          参加会社
+          {t("Participant Companies")}
         </h3>
         {canInvite && !showInviteForm && (
           <button
@@ -144,7 +146,7 @@ export const CaseParticipantCompanySection = ({
             className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <Plus size={12} />
-            招待
+            {t("Invite")}
           </button>
         )}
       </div>
@@ -157,13 +159,13 @@ export const CaseParticipantCompanySection = ({
                 onClick={() => { setInviteTab("search"); setInviteError(null); }}
                 className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${inviteTab === "search" ? "bg-white border border-slate-300 text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >
-                <Search size={11} /> 会社検索
+                <Search size={11} /> {t("Company Search")}
               </button>
               <button
                 onClick={() => { setInviteTab("email"); setInviteError(null); }}
                 className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${inviteTab === "email" ? "bg-white border border-slate-300 text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >
-                <Mail size={11} /> メール招待
+                <Mail size={11} /> {t("Email Invitation")}
               </button>
             </div>
             <button onClick={() => setShowInviteForm(false)} className="text-slate-400 hover:text-slate-600">
@@ -186,7 +188,7 @@ export const CaseParticipantCompanySection = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setSelectedCompany(null); }}
-                  placeholder="会社名で検索..."
+                  placeholder={t("Search by company name...")}
                   className="w-full border border-slate-300 rounded-md pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                 />
                 {isSearching && (
@@ -225,12 +227,12 @@ export const CaseParticipantCompanySection = ({
                 disabled={!selectedCompany || isInviting}
                 className="w-full text-xs font-semibold py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {isInviting ? "招待中..." : "招待する"}
+                {isInviting ? t("Inviting...") : t("Invite Company")}
               </button>
             </>
           ) : (
             <>
-              <p className="text-[11px] text-slate-500">まだ登録していない会社のメールアドレスを入力してください。招待メールが届きます。</p>
+              <p className="text-[11px] text-slate-500">{t("Unregistered company email invitation")}</p>
               <div className="relative">
                 <Mail size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -246,7 +248,7 @@ export const CaseParticipantCompanySection = ({
                 disabled={!emailInput.trim() || isInviting}
                 className="w-full text-xs font-semibold py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {isInviting ? "送信中..." : "招待メールを送る"}
+                {isInviting ? t("Inviting...") : t("Send Invitation Email")}
               </button>
             </>
           )}
@@ -263,7 +265,7 @@ export const CaseParticipantCompanySection = ({
           <span>{participantsError}</span>
         </div>
       ) : participantCompanies.length === 0 ? (
-        <p className="text-xs text-slate-400 text-center py-6">参加会社はまだありません。</p>
+        <p className="text-xs text-slate-400 text-center py-6">{t("No participant companies yet.")}</p>
       ) : (
         <ul className="space-y-2">
           {participantCompanies.map((p) => (
@@ -273,7 +275,7 @@ export const CaseParticipantCompanySection = ({
                 <span className="text-[10px] text-slate-400 font-mono block truncate mt-0.5">{p.companyId}</span>
               </div>
               <span className={`px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap ml-3 ${PARTICIPANT_STATUS_STYLES[p.status]}`}>
-                {PARTICIPANT_STATUS_LABELS[p.status]}
+                {t(PARTICIPANT_STATUS_KEY[p.status])}
               </span>
             </li>
           ))}

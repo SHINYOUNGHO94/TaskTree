@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { OrgTarget, orgTypeLabel } from "./orgPermissions";
 
 type OrgDeleteConfirmModalProps = {
@@ -16,6 +17,8 @@ export function OrgDeleteConfirmModal({
   onConfirm,
   onClose,
 }: OrgDeleteConfirmModalProps) {
+  const { t } = useTranslation("ui");
+
   return (
     <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
@@ -25,7 +28,7 @@ export function OrgDeleteConfirmModal({
             <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center">
               <AlertTriangle size={14} className="text-rose-500" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">{orgTypeLabel(deleteTarget.type)}を削除</h3>
+            <h3 className="text-base font-bold text-slate-900">{t("Delete X", { x: t(orgTypeLabel(deleteTarget.type)) })}</h3>
           </div>
           <button
             type="button"
@@ -37,10 +40,10 @@ export function OrgDeleteConfirmModal({
         </div>
         <div className="p-5 space-y-4">
           <p className="text-sm text-slate-700">
-            <span className="font-bold text-slate-900">{deleteTarget.name}</span> を削除しますか？この操作は元に戻せません。
+            {t("Confirm delete org", { name: deleteTarget.name })}
           </p>
           <p className="text-xs text-slate-500 bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-2.5">
-            所属メンバーや下位組織が存在する場合は削除できません。
+            {t("Cannot delete with members")}
           </p>
           <div className="pt-2 flex gap-3">
             <button
@@ -48,7 +51,7 @@ export function OrgDeleteConfirmModal({
               onClick={onClose}
               className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
             >
-              キャンセル
+              {t("Cancel")}
             </button>
             <button
               type="button"
@@ -59,7 +62,7 @@ export function OrgDeleteConfirmModal({
               {isOrgMutating ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               ) : (
-                "削除する"
+                t("Delete (confirm)")
               )}
             </button>
           </div>

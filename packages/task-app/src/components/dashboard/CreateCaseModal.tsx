@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Calendar, CheckCircle, Loader2, RefreshCw, X } from 'lucide-react';
 import {
@@ -70,11 +71,11 @@ const ALLOWED_TARGET_SCOPES_BY_ROLE: Record<UserRole, CaseTargetScope[]> = {
 };
 
 const SCOPE_LABELS: Record<CaseTargetScope, string> = {
-  [CaseTargetScope.COMPANY]: '全社',
-  [CaseTargetScope.DIVISION]: '部門',
-  [CaseTargetScope.DEPARTMENT]: '部署',
-  [CaseTargetScope.TEAM]: 'チーム',
-  [CaseTargetScope.USER]: 'ユーザー',
+  [CaseTargetScope.COMPANY]: 'Company',
+  [CaseTargetScope.DIVISION]: 'Division',
+  [CaseTargetScope.DEPARTMENT]: 'Department',
+  [CaseTargetScope.TEAM]: 'Team',
+  [CaseTargetScope.USER]: 'User',
 };
 
 function getDefaultScope(role: UserRole): CaseTargetScope {
@@ -84,16 +85,11 @@ function getDefaultScope(role: UserRole): CaseTargetScope {
 
 function getScopeRequiredError(scope: CaseTargetScope): string {
   switch (scope) {
-    case CaseTargetScope.DIVISION:
-      return '送信先の部門を選択してください。';
-    case CaseTargetScope.DEPARTMENT:
-      return '送信先の部署を選択してください。';
-    case CaseTargetScope.TEAM:
-      return '送信先のチームを選択してください。';
-    case CaseTargetScope.USER:
-      return '送信先のユーザーを選択してください。';
-    default:
-      return '送信先を選択してください。';
+    case CaseTargetScope.DIVISION:   return 'Please select a target division.';
+    case CaseTargetScope.DEPARTMENT: return 'Please select a target department.';
+    case CaseTargetScope.TEAM:       return 'Please select a target team.';
+    case CaseTargetScope.USER:       return 'Please select a target user.';
+    default:                         return 'Please select a target.';
   }
 }
 
@@ -104,6 +100,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   profile,
   userId,
 }) => {
+  const { t } = useTranslation('ui');
   const userRole = profile?.role ?? UserRole.USER;
   const allowedScopes = ALLOWED_TARGET_SCOPES_BY_ROLE[userRole] ?? [CaseTargetScope.USER];
   const isOrgUser = userRole === UserRole.USER || userRole === UserRole.GUEST;
@@ -148,7 +145,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [succeeded, setSucceeded] = useState(false);
 
-  // Org data fetch — no per-promise error swallowing
+  // Org data fetch
   const fetchOrgData = useCallback(async () => {
     setOrgLoading(true);
     setOrgError(null);
@@ -164,7 +161,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
       setTeams(tms);
       setCompanyUsers(usrs);
     } catch {
-      setOrgError('組織情報の取得に失敗しました。再試行してください。');
+      setOrgError('Failed to load org info. Please retry.');
     } finally {
       setOrgLoading(false);
     }
@@ -217,15 +214,12 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
   const filteredDepartments = useMemo<Department[]>(() => {
     let result = departments;
-    // DEPT_ADMIN: only own dept
     if (userRole === UserRole.DEPT_ADMIN && profile?.departmentId && profile.departmentId !== 'NONE') {
       return result.filter((d) => d.departmentId === profile.departmentId);
     }
-    // DIVISION_ADMIN: scope to own division (no extra filter needed)
     if (userRole === UserRole.DIVISION_ADMIN && profile?.divisionId && profile.divisionId !== 'NONE') {
       result = result.filter((d) => d.divisionId === profile.divisionId);
     }
-    // COMPANY_ADMIN with division filter applied
     if (filterDivisionId) {
       result = result.filter((d) => d.divisionId === filterDivisionId);
     }
@@ -234,17 +228,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
   const filteredTeams = useMemo<Team[]>(() => {
     let result = teams;
-    // TEAM_ADMIN: only own team
     if (userRole === UserRole.TEAM_ADMIN && profile?.teamId && profile.teamId !== 'NONE') {
       return result.filter((t) => t.teamId === profile.teamId);
     }
-    // DEPT_ADMIN: scope to own dept
     if (userRole === UserRole.DEPT_ADMIN && profile?.departmentId && profile.departmentId !== 'NONE') {
       result = result.filter((t) => t.departmentId === profile.departmentId);
     } else if (userRole === UserRole.DIVISION_ADMIN && profile?.divisionId && profile.divisionId !== 'NONE') {
       result = result.filter((t) => t.divisionId === profile.divisionId);
     }
-    // Additional narrowing from department/division filter
     if (filterDepartmentId) {
       result = result.filter((t) => t.departmentId === filterDepartmentId);
     } else if (filterDivisionId) {
@@ -273,49 +264,34 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     return result;
   }, [companyUsers, isOrgUser, userRole, profile, filterDivisionId, filterDepartmentId, filterTeamId]);
 
-  // ── targetScopeId: no auto fallback except for "own scope" cases ─────────
-  //
-  // Auto: role's own scope (no explicit selection needed)
-  // Required: selecting into another org unit — must be explicitly chosen
-  //
+  // ── targetScopeId ─────────────────────────────────────────────────────────
   const computedTargetScopeId = useMemo<string>(() => {
     switch (targetScope) {
       case CaseTargetScope.COMPANY:
         return profile?.companyId ?? '';
-
       case CaseTargetScope.DIVISION:
-        // DIVISION_ADMIN → auto own division; others must pick
         if (userRole === UserRole.DIVISION_ADMIN && profile?.divisionId && profile.divisionId !== 'NONE') {
           return profile.divisionId;
         }
         return filterDivisionId;
-
       case CaseTargetScope.DEPARTMENT:
-        // DEPT_ADMIN → auto own dept; others must pick
         if (userRole === UserRole.DEPT_ADMIN && profile?.departmentId && profile.departmentId !== 'NONE') {
           return profile.departmentId;
         }
         return filterDepartmentId;
-
       case CaseTargetScope.TEAM:
-        // TEAM_ADMIN → auto own team; others must pick
         if (userRole === UserRole.TEAM_ADMIN && profile?.teamId && profile.teamId !== 'NONE') {
           return profile.teamId;
         }
         return filterTeamId;
-
       case CaseTargetScope.USER:
-        // USER/GUEST → auto self; admins must explicitly pick a user
         if (isOrgUser) return userId;
         return selectedUserId;
-
       default:
         return '';
     }
   }, [targetScope, userRole, profile, userId, isOrgUser, filterDivisionId, filterDepartmentId, filterTeamId, selectedUserId]);
 
-  // For OPEN delivery: if no specific unit is selected, fall back to company-wide scope.
-  // DIRECT delivery always requires an explicit target.
   const effectiveSubmitScope = useMemo<{ scope: CaseTargetScope; scopeId: string }>(() => {
     if (
       deliveryType === CaseDeliveryType.OPEN &&
@@ -327,7 +303,6 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     return { scope: targetScope, scopeId: computedTargetScopeId };
   }, [deliveryType, computedTargetScopeId, targetScope, profile]);
 
-  // requiredRole: forced to USER when targeting a specific user
   const effectiveRequiredRole = effectiveSubmitScope.scope === CaseTargetScope.USER ? UserRole.USER : requiredRole;
 
   const allowedRequiredRoles = useMemo<UserRole[]>(() => {
@@ -337,7 +312,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
       .sort((a, b) => ROLE_RANK[a] - ROLE_RANK[b]);
   }, [userRole]);
 
-  // ── Human-readable target summary for confirmation ────────────────────────
+  // ── Human-readable target summary ─────────────────────────────────────────
   const targetSummaryText = useMemo<string>(() => {
     const { scope: effScope, scopeId: effId } = effectiveSubmitScope;
     const isOpenFallback =
@@ -349,37 +324,37 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
       case CaseTargetScope.COMPANY:
         if (!effId) return '';
         return isOpenFallback
-          ? `${profile?.companyName ?? '自社全体'}（全社公開・スコープ未選択のため）`
-          : `${profile?.companyName ?? '自社全体'}（全社）`;
+          ? `${profile?.companyName ?? t('own company')} ${t('(company-wide, no scope)')}`
+          : `${profile?.companyName ?? t('own company')} ${t('(company-wide)')}`;
       case CaseTargetScope.DIVISION: {
         if (!effId) return '';
         const div = divisions.find((d) => d.divisionId === effId);
         const name = div?.name ?? profile?.divisionName ?? effId;
-        return `${name}（部門）`;
+        return `${name} ${t('(division)')}`;
       }
       case CaseTargetScope.DEPARTMENT: {
         if (!effId) return '';
         const dept = departments.find((d) => d.departmentId === effId);
         const name = dept?.name ?? profile?.departmentName ?? effId;
-        return `${name}（部署）`;
+        return `${name} ${t('(department)')}`;
       }
       case CaseTargetScope.TEAM: {
         if (!effId) return '';
-        const team = teams.find((t) => t.teamId === effId);
+        const team = teams.find((tm) => tm.teamId === effId);
         const name = team?.name ?? profile?.teamName ?? effId;
-        return `${name}（チーム）`;
+        return `${name} ${t('(team)')}`;
       }
       case CaseTargetScope.USER: {
         const id = computedTargetScopeId;
         if (!id) return '';
-        if (isOrgUser) return `${profile?.name ?? '自分'}（自分）`;
+        if (isOrgUser) return `${profile?.name ?? t('self')} ${t('(self only)')}`;
         const u = companyUsers.find((u) => u.userId === id);
-        return u ? `${u.name}（ユーザー）` : id;
+        return u ? `${u.name} ${t('(user)')}` : id;
       }
       default:
         return '';
     }
-  }, [effectiveSubmitScope, targetScope, deliveryType, computedTargetScopeId, profile, divisions, departments, teams, companyUsers, isOrgUser]);
+  }, [effectiveSubmitScope, targetScope, deliveryType, computedTargetScopeId, profile, divisions, departments, teams, companyUsers, isOrgUser, t]);
 
   // ── Selector visibility flags ─────────────────────────────────────────────
 
@@ -389,17 +364,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     targetScope === CaseTargetScope.TEAM ||
     targetScope === CaseTargetScope.USER;
 
-  // Division selector: only COMPANY_ADMIN needs to pick (others have fixed division)
   const showDivisionSelector = needsOrgData && userRole === UserRole.COMPANY_ADMIN;
 
-  // Show own-division info label for DIVISION_ADMIN targeting DIVISION
   const showDivisionAutoLabel =
     userRole === UserRole.DIVISION_ADMIN &&
     targetScope === CaseTargetScope.DIVISION &&
     !!profile?.divisionId &&
     profile.divisionId !== 'NONE';
 
-  // Department selector/filter: shown unless role is scoped to own dept or below
   const showDeptSelector =
     (targetScope === CaseTargetScope.DEPARTMENT ||
       targetScope === CaseTargetScope.TEAM ||
@@ -407,26 +379,22 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     userRole !== UserRole.DEPT_ADMIN &&
     userRole !== UserRole.TEAM_ADMIN;
 
-  // Show own-dept info label for DEPT_ADMIN targeting DEPARTMENT
   const showDeptAutoLabel =
     userRole === UserRole.DEPT_ADMIN &&
     targetScope === CaseTargetScope.DEPARTMENT &&
     !!profile?.departmentId &&
     profile.departmentId !== 'NONE';
 
-  // Team selector/filter: shown unless role is scoped to own team
   const showTeamSelector =
     (targetScope === CaseTargetScope.TEAM || targetScope === CaseTargetScope.USER) &&
     userRole !== UserRole.TEAM_ADMIN;
 
-  // Show own-team info label for TEAM_ADMIN targeting TEAM
   const showTeamAutoLabel =
     userRole === UserRole.TEAM_ADMIN &&
     targetScope === CaseTargetScope.TEAM &&
     !!profile?.teamId &&
     profile.teamId !== 'NONE';
 
-  // User selector: shown for admins targeting USER
   const showUserSelector = targetScope === CaseTargetScope.USER && !isOrgUser;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -472,7 +440,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
       onSuccess();
     } catch (error) {
       console.error('Failed to create case', error);
-      setSubmitError('案件の作成に失敗しました。再度お試しください。');
+      setSubmitError('Failed to create case. Please try again.');
     }
   };
 
@@ -496,17 +464,17 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               <div>
                 <h2 className="text-sm font-bold text-slate-900">
                   {selectedCaseType === CaseType.PROJECT
-                    ? `${CASE_TYPE_LABELS[CaseType.PROJECT]}作成`
+                    ? t('Create Project')
                     : selectedCaseType === CaseType.STANDARD
-                      ? `${CASE_TYPE_LABELS[CaseType.STANDARD]}作成`
-                      : `${CASE_TYPE_LABELS[CaseType.REQUEST]}作成`}
+                      ? t('Create Standard Case')
+                      : t('Create Request')}
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {selectedCaseType === CaseType.PROJECT
-                    ? `複数の${CASE_TYPE_LABELS[CaseType.STANDARD]}に分解できる大型案件`
+                    ? t('case type desc PROJECT')
                     : selectedCaseType === CaseType.STANDARD
-                      ? `複数の${CASE_TYPE_LABELS[CaseType.REQUEST]}に分解できる社内案件`
-                      : '特定の組織・ユーザーへの依頼'}
+                      ? t('case type desc STANDARD')
+                      : t('case type desc REQUEST')}
                 </p>
               </div>
               <button
@@ -528,14 +496,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                   <CheckCircle size={28} className="text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-base font-bold text-slate-900">案件を作成しました</p>
-                  <p className="text-xs text-slate-500 mt-1">ダッシュボードの一覧に追加されました。</p>
+                  <p className="text-base font-bold text-slate-900">{t('Case created successfully')}</p>
+                  <p className="text-xs text-slate-500 mt-1">{t('Added to the dashboard list.')}</p>
                 </div>
                 <button
                   onClick={handleClose}
                   className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
                 >
-                  閉じる
+                  {t('Close')}
                 </button>
               </motion.div>
             ) : (
@@ -546,13 +514,13 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 {submitError && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs text-red-700 font-medium flex items-center gap-2">
                     <AlertCircle size={13} className="shrink-0" />
-                    {submitError}
+                    {t(submitError)}
                   </div>
                 )}
 
                 {/* ── Case type ── */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">案件タイプ</label>
+                  <label className="text-xs font-semibold text-slate-700">{t('Case Type')}</label>
                   <div className="bg-slate-100 p-1 rounded-md flex gap-1 border border-slate-200">
                     {([CaseType.REQUEST, CaseType.STANDARD, CaseType.PROJECT] as CaseType[]).map((ct) => (
                       <label
@@ -573,7 +541,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           value={ct}
                           className="sr-only"
                         />
-                        {CASE_TYPE_LABELS[ct]}
+                        {t(CASE_TYPE_LABELS[ct])}
                       </label>
                     ))}
                   </div>
@@ -581,13 +549,13 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
                 {/* ── Title ── */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">タイトル</label>
+                  <label className="text-xs font-semibold text-slate-700">{t('Title')}</label>
                   <input
                     {...register('title', {
-                      required: 'タイトルを入力してください。',
-                      validate: (v) => v.trim().length > 0 || 'タイトルを入力してください。',
+                      required: t('Please enter a title.'),
+                      validate: (v) => v.trim().length > 0 || t('Please enter a title.'),
                     })}
-                    placeholder="案件のタイトルを入力"
+                    placeholder={t('Enter case title')}
                     className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors bg-white placeholder:text-slate-400"
                   />
                   {errors.title && (
@@ -597,13 +565,13 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
                 {/* ── Description ── */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">内容</label>
+                  <label className="text-xs font-semibold text-slate-700">{t('Content')}</label>
                   <textarea
                     {...register('description', {
-                      required: '内容を入力してください。',
-                      validate: (v) => v.trim().length > 0 || '内容を入力してください。',
+                      required: t('Please enter a description.'),
+                      validate: (v) => v.trim().length > 0 || t('Please enter a description.'),
                     })}
-                    placeholder="案件の詳細を入力..."
+                    placeholder={t('Enter case details...')}
                     className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors h-24 resize-none bg-white placeholder:text-slate-400"
                   />
                   {errors.description && (
@@ -613,7 +581,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
                 {/* ── Delivery type ── */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">配信方式</label>
+                  <label className="text-xs font-semibold text-slate-700">{t('Delivery Type')}</label>
                   <div className="grid grid-cols-2 gap-2">
                     {([CaseDeliveryType.DIRECT, CaseDeliveryType.OPEN] as CaseDeliveryType[]).map((dt) => {
                       const isSelected = deliveryType === dt;
@@ -639,9 +607,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                             onChange={() => { if (!isDisabled) setDeliveryType(dt); }}
                             disabled={isDisabled}
                           />
-                          <span className="text-sm font-semibold">{CASE_DELIVERY_TYPE_LABELS[dt]}</span>
+                          <span className="text-sm font-semibold">{t(CASE_DELIVERY_TYPE_LABELS[dt])}</span>
                           <span className={`text-xs mt-0.5 ${isSelected ? 'text-white/70' : 'text-slate-500'}`}>
-                            {isDirect ? '特定の相手へ直接' : '権限範囲内に公開'}
+                            {isDirect ? t('Directly to a specific target') : t('Open within permission scope')}
                           </span>
                         </label>
                       );
@@ -649,14 +617,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                   </div>
                   {targetScope === CaseTargetScope.USER && (
                     <p className="text-xs text-amber-700">
-                      ユーザー宛ての案件は 지명 に固定されます。
+                      {t('Cases targeting a user are fixed to Direct.')}
                     </p>
                   )}
                 </div>
 
                 {/* ── Target scope buttons ── */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">送信先スコープ</label>
+                  <label className="text-xs font-semibold text-slate-700">{t('Target Scope')}</label>
                   {allowedScopes.length > 1 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {allowedScopes.map((scope) => (
@@ -670,13 +638,13 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                               : 'bg-white text-slate-600 border-slate-300 hover:border-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          {SCOPE_LABELS[scope]}
+                          {t(SCOPE_LABELS[scope])}
                         </button>
                       ))}
                     </div>
                   ) : (
                     <p className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
-                      {SCOPE_LABELS[allowedScopes[0] ?? CaseTargetScope.USER]}（固定）
+                      {t(SCOPE_LABELS[allowedScopes[0] ?? CaseTargetScope.USER])} {t('(fixed)')}
                     </p>
                   )}
                 </div>
@@ -687,14 +655,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {orgLoading && (
                       <div className="flex items-center gap-2 text-xs text-slate-400 py-2 px-1">
                         <Loader2 size={14} className="animate-spin" />
-                        組織情報を読み込み中...
+                        {t('Loading org info...')}
                       </div>
                     )}
                     {orgError && (
                       <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-start justify-between gap-3">
                         <div className="flex items-start gap-2">
                           <AlertCircle size={13} className="shrink-0 mt-0.5" />
-                          <span>{orgError}</span>
+                          <span>{t(orgError)}</span>
                         </div>
                         <button
                           type="button"
@@ -702,7 +670,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           className="flex items-center gap-1 text-xs font-bold text-red-700 hover:text-red-900 underline shrink-0 whitespace-nowrap"
                         >
                           <RefreshCw size={11} />
-                          再試行
+                          {t('Retry')}
                         </button>
                       </div>
                     )}
@@ -716,14 +684,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {/* COMPANY: auto label */}
                     {targetScope === CaseTargetScope.COMPANY && (
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
-                        送信先（自動）: <span className="font-bold">{profile?.companyName ?? '自社全体'}</span>
+                        {t('Target (auto): ')} <span className="font-bold">{profile?.companyName ?? t('own company')}</span>
                       </div>
                     )}
 
                     {/* DIVISION auto label (DIVISION_ADMIN own scope) */}
                     {showDivisionAutoLabel && (
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
-                        送信先（自動）: <span className="font-bold">{profile?.divisionName ?? profile?.divisionId}</span>（部門）
+                        {t('Target (auto): ')} <span className="font-bold">{profile?.divisionName ?? profile?.divisionId}</span> {t('(division)')}
                       </div>
                     )}
 
@@ -732,10 +700,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-slate-700">
                           {targetScope === CaseTargetScope.DIVISION && deliveryType === CaseDeliveryType.DIRECT
-                            ? '送信先の部門 *'
+                            ? t('Target division *')
                             : targetScope === CaseTargetScope.DIVISION
-                            ? '公開範囲の部門（任意・未選択で全社公開）'
-                            : '部門（絞り込み・任意）'}
+                            ? t('Division scope (optional)')
+                            : t('Division (filter, optional)')}
                         </label>
                         <select
                           value={filterDivisionId}
@@ -744,10 +712,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                         >
                           <option value="">
                             {targetScope === CaseTargetScope.DIVISION && deliveryType === CaseDeliveryType.DIRECT
-                              ? '-- 部門を選択してください --'
+                              ? t('-- Select division --')
                               : targetScope === CaseTargetScope.DIVISION
-                              ? '-- 全社公開（絞り込みなし）--'
-                              : '-- すべての部門 --'}
+                              ? t('-- Company-wide (no filter) --')
+                              : t('-- All divisions --')}
                           </option>
                           {filteredDivisions.map((d) => (
                             <option key={d.divisionId} value={d.divisionId}>
@@ -756,7 +724,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                           ))}
                         </select>
                         {filteredDivisions.length === 0 && !orgLoading && (
-                          <p className="text-[10px] text-slate-500">部門データがありません。</p>
+                          <p className="text-[10px] text-slate-500">{t('No division data.')}</p>
                         )}
                       </div>
                     )}
@@ -764,7 +732,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {/* DEPARTMENT auto label (DEPT_ADMIN own scope) */}
                     {showDeptAutoLabel && (
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
-                        送信先（自動）: <span className="font-bold">{profile?.departmentName ?? profile?.departmentId}</span>（部署）
+                        {t('Target (auto): ')} <span className="font-bold">{profile?.departmentName ?? profile?.departmentId}</span> {t('(department)')}
                       </div>
                     )}
 
@@ -773,10 +741,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-slate-700">
                           {targetScope === CaseTargetScope.DEPARTMENT && deliveryType === CaseDeliveryType.DIRECT
-                            ? '送信先の部署 *'
+                            ? t('Target department *')
                             : targetScope === CaseTargetScope.DEPARTMENT
-                            ? '公開範囲の部署（任意・未選択で全社公開）'
-                            : '部署（絞り込み・任意）'}
+                            ? t('Department scope (optional)')
+                            : t('Department (filter, optional)')}
                         </label>
                         <select
                           value={filterDepartmentId}
@@ -785,10 +753,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                         >
                           <option value="">
                             {targetScope === CaseTargetScope.DEPARTMENT && deliveryType === CaseDeliveryType.DIRECT
-                              ? '-- 部署を選択してください --'
+                              ? t('-- Select department --')
                               : targetScope === CaseTargetScope.DEPARTMENT
-                              ? '-- 全社公開（絞り込みなし）--'
-                              : '-- すべての部署 --'}
+                              ? t('-- Company-wide (no filter) --')
+                              : t('-- All departments --')}
                           </option>
                           {filteredDepartments.map((d) => (
                             <option key={d.departmentId} value={d.departmentId}>
@@ -798,7 +766,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                         </select>
                         {filteredDepartments.length === 0 && !orgLoading && (
                           <p className="text-[10px] text-slate-500">
-                            {filterDivisionId ? '選択した部門に部署データがありません。' : '部署データがありません。'}
+                            {filterDivisionId ? t('No dept data for selected division.') : t('No department data.')}
                           </p>
                         )}
                       </div>
@@ -807,7 +775,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {/* TEAM auto label (TEAM_ADMIN own scope) */}
                     {showTeamAutoLabel && (
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
-                        送信先（自動）: <span className="font-bold">{profile?.teamName ?? profile?.teamId}</span>（チーム）
+                        {t('Target (auto): ')} <span className="font-bold">{profile?.teamName ?? profile?.teamId}</span> {t('(team)')}
                       </div>
                     )}
 
@@ -816,10 +784,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-slate-700">
                           {targetScope === CaseTargetScope.TEAM && deliveryType === CaseDeliveryType.DIRECT
-                            ? '送信先のチーム *'
+                            ? t('Target team *')
                             : targetScope === CaseTargetScope.TEAM
-                            ? '公開範囲のチーム（任意・未選択で全社公開）'
-                            : 'チーム（絞り込み・任意）'}
+                            ? t('Team scope (optional)')
+                            : t('Team (filter, optional)')}
                         </label>
                         <select
                           value={filterTeamId}
@@ -828,20 +796,20 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                         >
                           <option value="">
                             {targetScope === CaseTargetScope.TEAM && deliveryType === CaseDeliveryType.DIRECT
-                              ? '-- チームを選択してください --'
+                              ? t('-- Select team --')
                               : targetScope === CaseTargetScope.TEAM
-                              ? '-- 全社公開（絞り込みなし）--'
-                              : '-- すべてのチーム --'}
+                              ? t('-- Company-wide (no filter) --')
+                              : t('-- All teams --')}
                           </option>
-                          {filteredTeams.map((t) => (
-                            <option key={t.teamId} value={t.teamId}>
-                              {t.name}
+                          {filteredTeams.map((tm) => (
+                            <option key={tm.teamId} value={tm.teamId}>
+                              {tm.name}
                             </option>
                           ))}
                         </select>
                         {filteredTeams.length === 0 && !orgLoading && (
                           <p className="text-[10px] text-slate-500">
-                            {filterDepartmentId ? '選択した部署にチームデータがありません。' : 'チームデータがありません。'}
+                            {filterDepartmentId ? t('No team data for selected department.') : t('No team data.')}
                           </p>
                         )}
                       </div>
@@ -850,7 +818,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {/* USER auto label (USER/GUEST) */}
                     {targetScope === CaseTargetScope.USER && isOrgUser && (
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700">
-                        送信先（自動）: <span className="font-bold">{profile?.name ?? '自分'}（自分のみ）</span>
+                        {t('Target (auto): ')} <span className="font-bold">{profile?.name ?? t('self')} {t('(self only)')}</span>
                       </div>
                     )}
 
@@ -858,14 +826,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     {showUserSelector && (
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-slate-700">
-                          送信先のユーザー *
+                          {t('Target user *')}
                         </label>
                         <select
                           value={selectedUserId}
                           onChange={(e) => setSelectedUserId(e.target.value)}
                           className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
                         >
-                          <option value="">-- ユーザーを選択してください --</option>
+                          <option value="">{t('-- Select user --')}</option>
                           {filteredUsers.map((u) => (
                             <option key={u.userId} value={u.userId}>
                               {u.name}（{u.email}）
@@ -875,10 +843,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                         {filteredUsers.length === 0 && !orgLoading && (
                           <p className="text-[10px] text-slate-500">
                             {filterTeamId
-                              ? '選択したチームにユーザーがいません。'
+                              ? t('No users in selected team.')
                               : filterDepartmentId
-                                ? '選択した部署にユーザーがいません。'
-                                : 'ユーザーデータがありません。'}
+                                ? t('No users in selected department.')
+                                : t('No user data.')}
                           </p>
                         )}
                       </div>
@@ -890,9 +858,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 {targetScope !== CaseTargetScope.USER && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-700">
-                      閲覧に必要な権限
+                      {t('Required permission')}
                       {deliveryType === CaseDeliveryType.OPEN && (
-                        <span className="ml-1 text-amber-500 font-normal normal-case">（公募案件では重要）</span>
+                        <span className="ml-1 text-amber-500 font-normal normal-case">{t('(important for open cases)')}</span>
                       )}
                     </label>
                     <select
@@ -902,12 +870,12 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     >
                       {allowedRequiredRoles.map((r) => (
                         <option key={r} value={r}>
-                          {USER_ROLE_LABELS[r]}
+                          {t(USER_ROLE_LABELS[r])}
                         </option>
                       ))}
                     </select>
                     <p className="text-[10px] text-slate-500">
-                      選択した送信先内でこの権限以上のユーザーが閲覧できます。
+                      {t('Users with this role or higher can view.')}
                     </p>
                   </div>
                 )}
@@ -915,7 +883,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 {/* ── Due date ── */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                    <Calendar size={12} className="text-slate-400" /> 期限（任意）
+                    <Calendar size={12} className="text-slate-400" /> {t('Due Date (optional)')}
                   </label>
                   <input
                     type="date"
@@ -927,15 +895,15 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 {/* ── Send summary confirmation ── */}
                 {targetSummaryText && (
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-md space-y-1">
-                    <span className="text-xs font-semibold text-slate-600 block">送信先確認</span>
+                    <span className="text-xs font-semibold text-slate-600 block">{t('Target confirmation')}</span>
                     <div className="text-sm font-semibold text-slate-900">{targetSummaryText}</div>
                     <div className="text-xs text-slate-500 space-x-3">
                       <span>
-                        配信: <span className="font-medium text-slate-700">{deliveryType}</span>
+                        {t('Delivery: ')} <span className="font-medium text-slate-700">{t(CASE_DELIVERY_TYPE_LABELS[deliveryType])}</span>
                       </span>
                       {targetScope !== CaseTargetScope.USER && (
                         <span>
-                          閲覧権限: <span className="font-medium text-slate-700">{effectiveRequiredRole}以上</span>
+                          {t('Required role: ')} <span className="font-medium text-slate-700">{t(USER_ROLE_LABELS[effectiveRequiredRole])} {t('or higher')}</span>
                         </span>
                       )}
                     </div>
@@ -949,14 +917,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                     onClick={handleClose}
                     className="flex-1 px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                   >
-                    キャンセル
+                    {t('Cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
                     className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                   >
-                    {isSubmitting ? '送信中...' : '案件を作成する'}
+                    {isSubmitting ? t('Sending...') : t('Create Case')}
                   </button>
                 </div>
               </form>

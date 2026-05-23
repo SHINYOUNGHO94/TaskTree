@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { CaseDetail, CaseStatus, CaseType } from '@task/core';
 import { Calendar, ArrowRight } from 'lucide-react';
 import { CASE_STATUS_LABELS, CASE_TYPE_LABELS } from './caseLabels';
@@ -33,7 +34,8 @@ const statusStyles: Record<CaseStatus, string> = {
 };
 
 export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick }) => {
-  const createdDate = new Date(caseDetail.createdAt).toLocaleDateString('ja-JP');
+  const { t } = useTranslation('ui');
+  const createdDate = new Date(caseDetail.createdAt).toLocaleDateString();
   const { badge, accent } = caseTypeStyles[caseDetail.caseType];
 
   return (
@@ -49,10 +51,10 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick }) => {
         <div>
           <div className="flex justify-between items-center mb-3">
             <span className={`text-[10px] font-bold tracking-wide px-2.5 py-0.5 rounded-full ${badge}`}>
-              {CASE_TYPE_LABELS[caseDetail.caseType]}
+              {t(CASE_TYPE_LABELS[caseDetail.caseType])}
             </span>
             <span className={`text-[10px] font-bold tracking-wide px-2.5 py-0.5 rounded-full ${statusStyles[caseDetail.status]}`}>
-              {CASE_STATUS_LABELS[caseDetail.status]}
+              {t(CASE_STATUS_LABELS[caseDetail.status])}
             </span>
           </div>
 
@@ -68,7 +70,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick }) => {
         <div className="flex items-center justify-between text-[11px] text-slate-400 pt-3 border-t border-slate-100 w-full mt-auto">
           <div className="flex items-center gap-1.5 font-medium text-slate-500">
             <Calendar size={11} className="text-slate-400" />
-            <span>{caseDetail.dueDate ?? '期限なし'}</span>
+            <span>{caseDetail.dueDate ?? t('No due date')}</span>
           </div>
           <div className="flex items-center gap-1 group-hover:text-indigo-500 transition-colors duration-200">
             <span>{createdDate}</span>
