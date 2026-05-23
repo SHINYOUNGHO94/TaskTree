@@ -1,4 +1,4 @@
-import { QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { BaseRepository } from "./baseRepository";
 import { UserRecord, UserRecordType, UserEntity } from "@/aws/entities/items/userRecord";
 import { UserRole } from "@task/core";
@@ -74,6 +74,27 @@ export class UserRepository extends BaseRepository<UserRecordType> {
   async hasUsersByDepartmentId(companyId: string, departmentId: string): Promise<boolean> {
     const users = await this.findByCompanyId(companyId);
     return users.some((u) => u.departmentId === departmentId);
+  }
+
+  async updateName(userId: string, name: string): Promise<void> {
+    const entity = await this.findByUserId(userId);
+    if (!entity) throw new Error("User not found");
+    await this.docClient.send(
+      new UpdateCommand({
+        TableName: this.tableName,
+        Key: {
+          pk: UserRecord.makePk(),
+          sk: UserRecord.makeSk(entity.teamId, userId),
+        },
+        UpdateExpression: "SET #name = :name, update_at = :update_at",
+        ExpressionAttributeNames: { "#name": "name" },
+        ExpressionAttributeValues: {
+          ":name": name,
+          ":update_at": new Date().toISOString(),
+        },
+        ConditionExpression: "attribute_exists(pk)",
+      })
+    );
   }
 
   async deleteByUserId(userId: string): Promise<void> {

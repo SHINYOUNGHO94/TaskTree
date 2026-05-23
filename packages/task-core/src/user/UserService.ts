@@ -1,4 +1,4 @@
-import { get, post, del } from 'aws-amplify/api';
+import { get, post, put, del } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { UserProfile } from '../types/user';
 import { UserRole } from '../types/role';
@@ -107,6 +107,44 @@ export const UserService = {
     if (response.statusCode !== 200) {
       const json = await response.body.json() as { error?: string };
       throw new Error(json?.error || `Failed to delete user (Status: ${response.statusCode})`);
+    }
+  },
+
+  updateProfile: async (params: { name: string }): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: "user/profile",
+      options: {
+        body: params,
+        headers: { Authorization: idToken || '' },
+      }
+    });
+
+    const response = await restOperation.response;
+    if (response.statusCode !== 200) {
+      throw new Error(`Failed to update profile (Status: ${response.statusCode})`);
+    }
+  },
+
+  updateCompanyName: async (params: { name: string }): Promise<void> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+
+    const restOperation = put({
+      apiName: "TaskApi",
+      path: "company",
+      options: {
+        body: params,
+        headers: { Authorization: idToken || '' },
+      }
+    });
+
+    const response = await restOperation.response;
+    if (response.statusCode !== 200) {
+      throw new Error(`Failed to update company name (Status: ${response.statusCode})`);
     }
   },
 

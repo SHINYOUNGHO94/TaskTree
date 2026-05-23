@@ -251,6 +251,12 @@ export default function TeamPage() {
             </div>
             組織管理
           </h2>
+          {profile.companyName && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <Building size={12} className="text-slate-400" />
+              <span className="text-sm font-semibold text-slate-700">{profile.companyName}</span>
+            </div>
+          )}
           <p className="text-slate-600 text-sm mt-1">会社のメンバーと組織構造（部署・チーム）を管理します。</p>
           {!isLoading && (
             <div className="flex items-center gap-2 mt-3 flex-wrap">

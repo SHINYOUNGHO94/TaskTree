@@ -943,6 +943,135 @@ ChildCase UX 整備と同ブランチで、アプリ全体の UI をポートフ
 
 ---
 
+### Task 26: 取引先フロー実装（会社検索・パートナー招待・メール招待）
+
+**目的:**
+
+OPEN 案件への外部会社参加フローを完成させる。既存の `inviteParticipantCompany`（companyId 直接入力）だけでは実用上使えないため、会社検索 UI・取引先タブ・メール招待の 3 つを一括実装した。
+
+**実装内容:**
+
+**① 会社検索 API と UI**
+
+- `GET /company/search?name=xxx` — 自社除外・名前フィルターで会社一覧返却
+- `CompanyRepository.findAll()` 追加（pk="Company" QueryCommand。Scan 不使用）
+- `CaseParticipantCompanySection` の招待フォームを検索 as-you-type UI に刷新
+  - 300ms debounce で検索 → 候補リスト表示 → クリック選択 → 招待
+
+**② 取引先タブ（新規ページ）**
+
+- サイドバーに「取引先」タブ追加（`Handshake` アイコン）
+- `packages/task-app/src/app/dashboard/partners/page.tsx` 新規作成
+  - 未対応招待（承認待ち）セクション：受領した案件招待を一覧表示、参加・拒否ボタン
+  - 協業履歴テーブル：過去の参加会社ステータスを表形式で表示
+
+**③ メール招待フロー（未登録会社向け）**
+
+問題: 検索ベースの招待は相手がすでに登録済みの場合のみ機能する。未登録会社を招待できなかった。
+
+解決: 既存の `inviteUser`（`AdminCreateUserCommand`）と同じ仕組みを会社間招待に適用。SES 不要。Cognito が招待メールを自動送信。
+
+フロー:
+1. A社が OPEN 案件から相手のメールアドレスを入力 → `POST /company/invite-by-email`
+2. `CompanyEmailInvitation` record を DynamoDB に保存（email + caseId + status=PENDING）
+3. Cognito `AdminCreateUserCommand` → 招待メール自動送信（相手が既登録の場合は invitation record のみ保存）
+4. B社代表がメールからログイン → `postConfirmation` 発火 → 新会社自動生成
+5. B社代表が取引先タブ「メール招待」セクションで確認 → 「参加する」
+6. `POST /company/email-invitations/{id}/accept` → `participantCompany` record 生成（ACTIVE） + invitation ACCEPTED
+
+**新規 Lambda・API route:**
+
+| Lambda | route | 権限 |
+|---|---|---|
+| `SearchCompaniesFunction` | `GET /company/search` | DynamoDB read |
+| `InviteCompanyByEmailFunction` | `POST /company/invite-by-email` | DynamoDB read+write、`cognito-idp:AdminCreateUser` |
+| `GetMyEmailInvitationsFunction` | `GET /company/email-invitations` | DynamoDB read |
+| `AcceptEmailInvitationFunction` | `POST /company/email-invitations/{id}/accept` | DynamoDB read+write |
+
+**新規 DynamoDB record:**
+
+- `CompanyEmailInvitation`: pk=`"CompanyEmailInvitation"`, sk=`Email#{email}#Case#{caseId}`
+- GSI 変更なし。既存 primary key で email prefix query 対応
+
+**変更ファイル:**
+
+- `packages/task-api/src/repositories/companyRepository.ts` — `findAll()` 追加
+- `packages/task-api/src/repositories/companyEmailInvitationRepository.ts` — 新規
+- `packages/task-api/src/aws/entities/items/companyEmailInvitationRecord.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/searchCompanies.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/inviteCompanyByEmail.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/getMyEmailInvitations.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/acceptEmailInvitation.ts` — 新規
+- `packages/task-infra/lib/task-infra-stack.ts` — Lambda 4 本・route 5 本追加
+- `packages/task-core/src/types/case.ts` — `CompanySearchResult`・`InviteCompanyByEmailInput`・`EmailInvitation` 追加
+- `packages/task-core/src/case/CaseService.ts` — `searchCompanies`・`inviteCompanyByEmail`・`getMyEmailInvitations`・`acceptEmailInvitation` 追加
+- `packages/task-app/src/components/case-detail/CaseParticipantCompanySection.tsx` — 検索 UI・メール招待タブ刷新
+- `packages/task-app/src/components/dashboard/Sidebar.tsx` — 取引先タブ追加
+- `packages/task-app/src/app/dashboard/partners/page.tsx` — 新規
+
+**検証:**
+
+- `yarn lint` — クリーン
+- `yarn type-check:api` — クリーン
+- `yarn type-check:core` — クリーン
+- `yarn workspace @task/infra cdk synth` — 全 Lambda バンドル成功・エラーなし
+
+**④ プロフィール設定・会社名編集**
+
+- `UserRepository.updateName()` / `CompanyRepository.updateName()` — DynamoDB `UpdateExpression` で更新
+- `PUT /user/profile` Lambda — 認証済みユーザー自身の名前を更新
+- `PUT /company` Lambda — COMPANY_ADMIN のみ自社名を更新
+- `UserService.updateProfile()` / `UserService.updateCompanyName()` を task-core に追加
+- `/dashboard/profile` ページ新規作成（名前編集 全ロール・会社名編集 COMPANY_ADMIN のみ）
+- Sidebar プロフィールフッタ → `/dashboard/profile` リンク
+- 組織管理ページタイトル直下に会社名表示
+
+**⑤ CI/CD・デプロイ自動化**
+
+- `lint-test-build.yml` — `cache: "yarn"` 追加でインストール高速化
+- `deploy.yml` — OIDC (`role-to-assume`) による CD ワークフロー・`environment: production` 承認ゲート
+- `release.yml` — main push 時に GitHub Release 自動生成（日付 + commit hash タグ）
+- `packages/task-infra/scripts/seed-test-user.mjs` — deploy 後に Cognito + DynamoDB へテスト用アカウントを自動投入（冪等）
+- `packages/task-infra/package.json` deploy スクリプトに seed 自動実行を追加
+
+**変更ファイル:**
+
+- `packages/task-api/src/repositories/userRepository.ts` — `updateName()` 追加
+- `packages/task-api/src/repositories/companyRepository.ts` — `updateName()` 追加、`findAll()` 追加
+- `packages/task-api/src/repositories/companyEmailInvitationRepository.ts` — 新規
+- `packages/task-api/src/aws/entities/items/companyEmailInvitationRecord.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/searchCompanies.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/inviteCompanyByEmail.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/getMyEmailInvitations.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/acceptEmailInvitation.ts` — 新規
+- `packages/task-api/src/aws/handlers/company/updateCompany.ts` — 新規
+- `packages/task-api/src/aws/handlers/user/updateUserProfile.ts` — 新規
+- `packages/task-infra/lib/task-infra-stack.ts` — Lambda 6 本・route 7 本追加
+- `packages/task-infra/scripts/seed-test-user.mjs` — 新規
+- `packages/task-infra/package.json` — deploy スクリプト更新
+- `packages/task-core/src/types/case.ts` — `CompanySearchResult`・`InviteCompanyByEmailInput`・`EmailInvitation` 追加
+- `packages/task-core/src/case/CaseService.ts` — `searchCompanies`・`inviteCompanyByEmail`・`getMyEmailInvitations`・`acceptEmailInvitation` 追加
+- `packages/task-core/src/user/UserService.ts` — `updateProfile`・`updateCompanyName` 追加
+- `packages/task-app/src/components/case-detail/CaseParticipantCompanySection.tsx` — 検索 UI・メール招待タブ刷新
+- `packages/task-app/src/components/dashboard/Sidebar.tsx` — 取引先タブ追加・フッタリンク追加
+- `packages/task-app/src/app/dashboard/partners/page.tsx` — 新規
+- `packages/task-app/src/app/dashboard/profile/page.tsx` — 新規
+- `packages/task-app/src/app/dashboard/team/page.tsx` — 会社名表示追加
+- `.github/workflows/lint-test-build.yml` — yarn キャッシュ追加
+- `.github/workflows/deploy.yml` — 新規（OIDC CD）
+- `.github/workflows/release.yml` — 新規（自動リリース）
+- `.gitignore` — `repomix-output.xml`・`diff.xml` 追加
+
+**検証:**
+
+- `yarn lint` — クリーン
+- `npx tsc --noEmit` (task-api / task-core) — クリーン
+- `yarn workspace @task/infra cdk synth` — 全 Lambda バンドル成功・エラーなし
+
+**API / デプロイ影響:** CDK deploy 必須。新規 Lambda 6 本・API route 7 本・IAM 変更あり。
+
+---
+
 ## 開発メモ
 
 実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。

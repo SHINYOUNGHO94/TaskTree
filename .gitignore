@@ -30,9 +30,10 @@ Thumbs.db
 .claude/
 
 # AI analysis artifacts
-repomix-output.xml
 cdk-outputs.json
 *_kr.md
 !docs/workflow/*_kr.md
+repomix-output.xml
+diff.xml
 # Lock file (Yarn v4 standard)
 # yarn.lock should NOT be ignored.

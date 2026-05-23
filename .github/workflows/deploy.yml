@@ -1,20 +1,20 @@
-name: Lint, Test and Build
+name: Deploy
 
 on:
   push:
     branches:
       - main
-      - develop
-  pull_request:
-    types:
-      - opened
-      - synchronize
   workflow_dispatch:
 
 jobs:
-  lint-test-build:
-    name: Lint, Test and Build
+  deploy:
+    name: Deploy to AWS
     runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - uses: actions/checkout@v4
 
@@ -30,19 +30,18 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Lint
-        run: yarn lint --max-warnings 0
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-northeast-1
 
-      - name: Type check
-        run: yarn type-check
-
-      - name: API test
-        run: yarn test:api
-
-      - name: Build Applications
-        run: yarn workspace @task/app build
-
-      - name: AWS CDK Validation (Synth)
+      - name: CDK Synth (validation)
         run: yarn workspace @task/infra cdk synth
+        env:
+          AWS_DEFAULT_REGION: ap-northeast-1
+
+      - name: Deploy
+        run: yarn workspace @task/infra deploy
         env:
           AWS_DEFAULT_REGION: ap-northeast-1
