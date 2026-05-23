@@ -6,7 +6,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "cdk deploy --outputs-file cdk-outputs.json && node scripts/write-app-env.mjs cdk-outputs.json"
+    "deploy": "cdk deploy --outputs-file cdk-outputs.json && node scripts/write-app-env.mjs cdk-outputs.json && node scripts/seed-test-user.mjs cdk-outputs.json"
   },
   "devDependencies": {
     "@types/jest": "^30",

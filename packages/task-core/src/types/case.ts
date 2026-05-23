@@ -199,6 +199,28 @@ export interface UpdateParticipantCompanyStatusInput {
   status: CaseParticipantCompanyStatus.ACTIVE | CaseParticipantCompanyStatus.REJECTED;
 }
 
+export interface CompanySearchResult {
+  companyId: string;
+  name: string;
+}
+
+export interface InviteCompanyByEmailInput {
+  email: string;
+  caseId: string;
+}
+
+export interface EmailInvitation {
+  invitationId: string;
+  email: string;
+  caseId: string;
+  caseTitle: string | null;
+  caseType: CaseType | null;
+  caseStatus: CaseStatus | null;
+  ownerCompanyId: string;
+  status: "PENDING" | "ACCEPTED" | "EXPIRED";
+  createdAt: string;
+}
+
 export enum CaseClaimRequestStatus {
   PENDING = "PENDING",
   APPROVED = "APPROVED",

@@ -7,7 +7,8 @@ import {
   TreeDeciduous,
   Building2,
   Layers,
-  Users
+  Users,
+  Handshake,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useUser } from '../providers/UserProvider';
@@ -16,6 +17,7 @@ import { UserRole } from '@task/core';
 
 const getMenuItems = (role?: string) => [
   { id: 'dashboard', label: 'ダッシュボード', icon: LayoutDashboard, href: '/dashboard' },
+  { id: 'partners', label: '取引先', icon: Handshake, href: '/dashboard/partners' },
   ...(role === 'COMPANY_ADMIN' || role === 'DIVISION_ADMIN' || role === 'DEPT_ADMIN' || role === 'TEAM_ADMIN'
     ? [{ id: 'team', label: '組織管理', icon: Users, href: '/dashboard/team' }]
     : []),
@@ -150,16 +152,18 @@ export const Sidebar: React.FC = () => {
 
       {/* User footer */}
       <div className="p-4 border-t border-slate-800/60">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 border border-slate-700/50">
-          <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarGradient(profile?.name || 'G')} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-            {(profile?.name || "G").charAt(0).toUpperCase()}
+        <Link href="/dashboard/profile" className="block">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 border border-slate-700/50 hover:bg-slate-700/80 transition-colors cursor-pointer">
+            <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarGradient(profile?.name || 'G')} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+              {(profile?.name || "G").charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-white truncate">{profile?.name || "Guest User"}</p>
+              <p className="text-[10px] text-slate-400 truncate mt-0.5">{profile?.role ? (USER_ROLE_LABELS[profile.role as UserRole] ?? profile.role) : "—"}</p>
+            </div>
+            <ChevronRight size={12} className="text-slate-500 flex-shrink-0" />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-white truncate">{profile?.name || "Guest User"}</p>
-            <p className="text-[10px] text-slate-400 truncate mt-0.5">{profile?.role ? (USER_ROLE_LABELS[profile.role as UserRole] ?? profile.role) : "—"}</p>
-          </div>
-          <ChevronRight size={12} className="text-slate-500 flex-shrink-0" />
-        </div>
+        </Link>
       </div>
     </aside>
   );

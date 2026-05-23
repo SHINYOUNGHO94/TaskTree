@@ -67,6 +67,16 @@ export class TaskInfraStack extends cdk.Stack {
     });
     grantTableCreate(postConfirmationFn);
 
+    const postAuthenticationFn = new NodejsFunction(this, 'PostAuthenticationFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/auth/postAuthentication.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(postAuthenticationFn, ['dynamodb:PutItem', 'dynamodb:Query']);
+
     const userPool = new cognito.UserPool(this, 'TaskUserPool', {
       userPoolName: 'task-tree-user-pool',
       selfSignUpEnabled: true,
@@ -104,6 +114,7 @@ export class TaskInfraStack extends cdk.Stack {
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       lambdaTriggers: {
         postConfirmation: postConfirmationFn,
+        postAuthentication: postAuthenticationFn,
       },
     });
 
@@ -131,6 +142,51 @@ export class TaskInfraStack extends cdk.Stack {
       },
     });
     grantTableCreate(createCompanyFn);
+
+    const searchCompaniesFn = new NodejsFunction(this, 'SearchCompaniesFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/company/searchCompanies.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(searchCompaniesFn);
+
+    const inviteCompanyByEmailFn = new NodejsFunction(this, 'InviteCompanyByEmailFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/company/inviteCompanyByEmail.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        USER_POOL_ID: userPool.userPoolId,
+      },
+    });
+    grantCaseMutation(inviteCompanyByEmailFn, ['dynamodb:PutItem']);
+    inviteCompanyByEmailFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['cognito-idp:AdminCreateUser'],
+      resources: [userPool.userPoolArn],
+    }));
+
+    const getMyEmailInvitationsFn = new NodejsFunction(this, 'GetMyEmailInvitationsFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/company/getMyEmailInvitations.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getMyEmailInvitationsFn);
+
+    const acceptEmailInvitationFn = new NodejsFunction(this, 'AcceptEmailInvitationFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/company/acceptEmailInvitation.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(acceptEmailInvitationFn, ['dynamodb:PutItem', 'dynamodb:UpdateItem']);
 
     const createDivisionFn = new NodejsFunction(this, 'CreateDivisionFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -303,6 +359,26 @@ export class TaskInfraStack extends cdk.Stack {
     });
     grantTableRead(getUserProfileFn);
 
+    const updateUserProfileFn = new NodejsFunction(this, 'UpdateUserProfileFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/user/updateUserProfile.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(updateUserProfileFn, ['dynamodb:UpdateItem', 'dynamodb:Query']);
+
+    const updateCompanyFn = new NodejsFunction(this, 'UpdateCompanyFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/company/updateCompany.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(updateCompanyFn, ['dynamodb:UpdateItem', 'dynamodb:Query']);
+
     const createCaseFn = new NodejsFunction(this, 'CreateCaseFunction', {
       runtime: Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/createCase.ts'),
@@ -431,6 +507,20 @@ export class TaskInfraStack extends cdk.Stack {
 
     const companyResource = api.root.addResource('company');
     companyResource.addMethod('POST', new apigateway.LambdaIntegration(createCompanyFn));
+    companyResource.addMethod('PUT', new apigateway.LambdaIntegration(updateCompanyFn), { authorizer });
+
+    const companySearchResource = companyResource.addResource('search');
+    companySearchResource.addMethod('GET', new apigateway.LambdaIntegration(searchCompaniesFn), { authorizer });
+
+    const companyInviteByEmailResource = companyResource.addResource('invite-by-email');
+    companyInviteByEmailResource.addMethod('POST', new apigateway.LambdaIntegration(inviteCompanyByEmailFn), { authorizer });
+
+    const companyEmailInvitationsResource = companyResource.addResource('email-invitations');
+    companyEmailInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getMyEmailInvitationsFn), { authorizer });
+
+    const emailInvitationIdResource = companyEmailInvitationsResource.addResource('{invitationId}');
+    const emailInvitationAcceptResource = emailInvitationIdResource.addResource('accept');
+    emailInvitationAcceptResource.addMethod('POST', new apigateway.LambdaIntegration(acceptEmailInvitationFn), { authorizer });
 
     const divisionResource = api.root.addResource('division');
     divisionResource.addMethod('POST', new apigateway.LambdaIntegration(createDivisionFn), { authorizer });
@@ -459,6 +549,9 @@ export class TaskInfraStack extends cdk.Stack {
     const userResource = api.root.addResource('user');
     userResource.addMethod('POST', new apigateway.LambdaIntegration(createUserFn));
     userResource.addMethod('GET', new apigateway.LambdaIntegration(getUserProfileFn), { authorizer });
+
+    const userProfileResource = userResource.addResource('profile');
+    userProfileResource.addMethod('PUT', new apigateway.LambdaIntegration(updateUserProfileFn), { authorizer });
 
     const userInviteResource = userResource.addResource('invite');
     userInviteResource.addMethod('POST', new apigateway.LambdaIntegration(inviteUserFn), { authorizer });

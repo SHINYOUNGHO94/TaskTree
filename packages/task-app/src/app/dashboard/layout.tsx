@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AuthService } from "@task/core";
 import { useUser } from "../../components/providers/UserProvider";
 import { Sidebar } from "../../components/dashboard/Sidebar";
@@ -13,7 +14,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, isLoading } = useUser();
+  const { user, profile, isLoading } = useUser();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -42,11 +43,22 @@ export default function DashboardLayout({
     return null;
   }
 
+  const displayName = profile?.name || user.name || user.email;
+  const isProfileIncomplete = !!profile && profile.name === profile.email;
+
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <DashboardHeader userName={user.name} onSignOut={handleSignOut} />
+        <DashboardHeader userName={displayName} onSignOut={handleSignOut} />
+        {isProfileIncomplete && (
+          <div className="bg-amber-50 border-b border-amber-200 px-8 py-2.5 flex items-center gap-2 text-sm">
+            <span className="text-amber-700">プロフィールが未設定です。</span>
+            <Link href="/dashboard/profile" className="text-amber-800 font-semibold underline">
+              今すぐ設定する →
+            </Link>
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto p-8">
             {children}

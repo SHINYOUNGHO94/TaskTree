@@ -3,6 +3,9 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import {
   CaseClaimRequest,
   CaseComment,
+  CompanySearchResult,
+  EmailInvitation,
+  InviteCompanyByEmailInput,
   CaseDetail,
   CaseHistoryEntry,
   CaseParticipantCompany,
@@ -499,6 +502,89 @@ export const CaseService = {
       await restOperation.response;
     } catch (error) {
       console.error('Error deleting case task:', error);
+      throw error;
+    }
+  },
+
+  inviteCompanyByEmail: async (input: InviteCompanyByEmailInput): Promise<{ invitationId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: 'company/invite-by-email',
+        options: {
+          headers: { Authorization: idToken || '' },
+          body: { email: input.email, caseId: input.caseId },
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { invitationId: string };
+    } catch (error) {
+      console.error('Error inviting company by email:', error);
+      throw error;
+    }
+  },
+
+  getMyEmailInvitations: async (): Promise<EmailInvitation[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: 'company/email-invitations',
+        options: {
+          headers: { Authorization: idToken || '' },
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as EmailInvitation[];
+    } catch (error) {
+      console.error('Error fetching email invitations:', error);
+      throw error;
+    }
+  },
+
+  acceptEmailInvitation: async (invitationId: string): Promise<{ caseId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: `company/email-invitations/${invitationId}/accept`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body: {},
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { caseId: string };
+    } catch (error) {
+      console.error('Error accepting email invitation:', error);
+      throw error;
+    }
+  },
+
+  searchCompanies: async (name: string): Promise<CompanySearchResult[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `company/search`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          queryParams: name ? { name } : {},
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as CompanySearchResult[];
+    } catch (error) {
+      console.error('Error searching companies:', error);
       throw error;
     }
   },
