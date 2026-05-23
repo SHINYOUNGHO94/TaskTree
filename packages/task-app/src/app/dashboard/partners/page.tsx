@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   CaseParticipantCompanyStatus,
   CaseService,
@@ -20,11 +21,11 @@ const STATUS_BADGE: Record<CaseParticipantCompanyStatus, string> = {
   [CaseParticipantCompanyStatus.REMOVED]: "bg-slate-100 text-slate-500 border border-slate-200",
 };
 
-const STATUS_LABEL: Record<CaseParticipantCompanyStatus, string> = {
-  [CaseParticipantCompanyStatus.INVITED]: "招待中",
-  [CaseParticipantCompanyStatus.ACTIVE]: "参加中",
-  [CaseParticipantCompanyStatus.REJECTED]: "拒否",
-  [CaseParticipantCompanyStatus.REMOVED]: "削除",
+const STATUS_LABEL_KEY: Record<CaseParticipantCompanyStatus, string> = {
+  [CaseParticipantCompanyStatus.INVITED]: "Invited (status)",
+  [CaseParticipantCompanyStatus.ACTIVE]: "Active (status)",
+  [CaseParticipantCompanyStatus.REJECTED]: "Rejected (status)",
+  [CaseParticipantCompanyStatus.REMOVED]: "Removed (status)",
 };
 
 const CASE_TYPE_BADGE: Record<CaseType, string> = {
@@ -35,6 +36,7 @@ const CASE_TYPE_BADGE: Record<CaseType, string> = {
 
 export default function PartnersPage() {
   const router = useRouter();
+  const { t } = useTranslation("ui");
   const [invitations, setInvitations] = useState<ParticipantCompanyInvitation[]>([]);
   const [emailInvitations, setEmailInvitations] = useState<EmailInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,9 +107,9 @@ export default function PartnersPage() {
           <div className="w-8 h-8 rounded-md bg-indigo-600 flex items-center justify-center">
             <Handshake size={15} className="text-white" />
           </div>
-          取引先
+          {t("Partners page title")}
         </h2>
-        <p className="text-slate-600 text-sm mt-1">他社からの案件招待の確認と、協業履歴を管理します。</p>
+        <p className="text-slate-600 text-sm mt-1">{t("Partners description")}</p>
       </div>
 
       {/* Email invitations */}
@@ -115,7 +117,7 @@ export default function PartnersPage() {
         <section className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Mail size={14} className="text-indigo-600" />
-            <h3 className="text-sm font-bold text-slate-700">メール招待（新規参加）</h3>
+            <h3 className="text-sm font-bold text-slate-700">{t("Email Invitations (New)")}</h3>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
               {emailInvitations.length}
             </span>
@@ -130,11 +132,11 @@ export default function PartnersPage() {
                   <Mail size={16} className="text-indigo-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{inv.caseTitle ?? "案件"}</p>
+                  <p className="text-sm font-semibold text-slate-900 truncate">{inv.caseTitle ?? t("Cases")}</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    招待元: <span className="font-medium text-slate-700">{inv.ownerCompanyId}</span>
+                    {t("Invited by")}: <span className="font-medium text-slate-700">{inv.ownerCompanyId}</span>
                     <span className="mx-1.5 text-slate-300">·</span>
-                    {new Date(inv.createdAt).toLocaleDateString("ja-JP")}
+                    {new Date(inv.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <button
@@ -143,7 +145,7 @@ export default function PartnersPage() {
                   className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   <CheckCircle size={13} />
-                  参加する
+                  {t("Join")}
                 </button>
               </div>
             ))}
@@ -155,7 +157,7 @@ export default function PartnersPage() {
       <section className="mb-8">
         <div className="flex items-center gap-2 mb-4">
           <Clock size={14} className="text-amber-600" />
-          <h3 className="text-sm font-bold text-slate-700">未対応の招待</h3>
+          <h3 className="text-sm font-bold text-slate-700">{t("Pending Invitations")}</h3>
           {pending.length > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
               {pending.length}
@@ -169,7 +171,7 @@ export default function PartnersPage() {
           </div>
         ) : pending.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-lg p-8 text-center">
-            <p className="text-sm text-slate-400">未対応の招待はありません。</p>
+            <p className="text-sm text-slate-400">{t("No pending invitations.")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -184,15 +186,15 @@ export default function PartnersPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${CASE_TYPE_BADGE[inv.caseSummary.caseType]}`}>
-                      {CASE_TYPE_LABELS[inv.caseSummary.caseType]}
+                      {t(CASE_TYPE_LABELS[inv.caseSummary.caseType])}
                     </span>
-                    <span className="text-xs text-slate-400">{CASE_STATUS_LABELS[inv.caseSummary.status as CaseStatus]}</span>
+                    <span className="text-xs text-slate-400">{t(CASE_STATUS_LABELS[inv.caseSummary.status as CaseStatus])}</span>
                   </div>
                   <p className="text-sm font-semibold text-slate-900 truncate">{inv.caseSummary.title}</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    招待元: <span className="font-medium text-slate-700">{inv.participantCompany.ownerCompanyId}</span>
+                    {t("Invited by")}: <span className="font-medium text-slate-700">{inv.participantCompany.ownerCompanyId}</span>
                     <span className="mx-1.5 text-slate-300">·</span>
-                    {new Date(inv.participantCompany.createdAt).toLocaleDateString("ja-JP")}
+                    {new Date(inv.participantCompany.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -202,7 +204,7 @@ export default function PartnersPage() {
                     className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
                   >
                     <XCircle size={13} />
-                    拒否
+                    {t("Reject")}
                   </button>
                   <button
                     onClick={() => handleAction(inv, CaseParticipantCompanyStatus.ACTIVE)}
@@ -210,7 +212,7 @@ export default function PartnersPage() {
                     className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
                   >
                     <CheckCircle size={13} />
-                    参加する
+                    {t("Join")}
                   </button>
                 </div>
               </div>
@@ -223,16 +225,16 @@ export default function PartnersPage() {
       {!isLoading && history.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-sm font-bold text-slate-700">協業履歴</h3>
+            <h3 className="text-sm font-bold text-slate-700">{t("Collaboration History")}</h3>
           </div>
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-left">
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide">案件</th>
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">種別</th>
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-24">ステータス</th>
-                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">参加状況</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide">{t("Case (header)")}</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">{t("Type")}</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-24">{t("Status")}</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">{t("Participation (header)")}</th>
                   <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-8"></th>
                 </tr>
               </thead>
@@ -248,15 +250,15 @@ export default function PartnersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${CASE_TYPE_BADGE[inv.caseSummary.caseType]}`}>
-                        {CASE_TYPE_LABELS[inv.caseSummary.caseType]}
+                        {t(CASE_TYPE_LABELS[inv.caseSummary.caseType])}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600">
-                      {CASE_STATUS_LABELS[inv.caseSummary.status as CaseStatus]}
+                      {t(CASE_STATUS_LABELS[inv.caseSummary.status as CaseStatus])}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${STATUS_BADGE[inv.participantCompany.status]}`}>
-                        {STATUS_LABEL[inv.participantCompany.status]}
+                        {t(STATUS_LABEL_KEY[inv.participantCompany.status])}
                       </span>
                     </td>
                     <td className="px-4 py-3">

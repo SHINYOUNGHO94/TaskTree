@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -80,11 +81,11 @@ const CASE_TYPE_GRADIENT: Record<CaseType, string> = {
 };
 
 const OWNER_TYPE_LABELS: Record<CaseOwnerType, string> = {
-  [CaseOwnerType.USER]:       "個人",
-  [CaseOwnerType.TEAM]:       "チーム",
-  [CaseOwnerType.DEPARTMENT]: "部署",
-  [CaseOwnerType.DIVISION]:   "事業部",
-  [CaseOwnerType.COMPANY]:    "会社",
+  [CaseOwnerType.USER]:       "User",
+  [CaseOwnerType.TEAM]:       "Team",
+  [CaseOwnerType.DEPARTMENT]: "Department",
+  [CaseOwnerType.DIVISION]:   "Division",
+  [CaseOwnerType.COMPANY]:    "Company",
 };
 
 
@@ -112,6 +113,7 @@ const ErrorAlert = ({ message }: { message: string }) => (
 );
 
 const CaseDetailPage = () => {
+  const { t } = useTranslation("ui");
   const { id } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -207,7 +209,7 @@ const CaseDetailPage = () => {
       await Promise.all([fetchCase(), fetchCaseHistory()]);
     } catch (error) {
       console.error("Failed to update case status", error);
-      setUpdateError("ステータスの更新に失敗しました。再度お試しください。");
+      setUpdateError("Failed to update status. Please try again.");
       setSelectedStatus(caseDetail.status);
     } finally {
       setIsUpdating(false);
@@ -222,7 +224,7 @@ const CaseDetailPage = () => {
       setCaseTasks(data);
     } catch (error) {
       console.error("Failed to fetch case tasks", error);
-      setTasksError("作業の取得に失敗しました。");
+      setTasksError("Failed to load tasks.");
     } finally {
       setIsTasksLoading(false);
     }
@@ -244,7 +246,7 @@ const CaseDetailPage = () => {
       if (statusCode === 403) {
         setClaimsAccessDenied(true);
       } else {
-        setClaimsError("担当希望の取得に失敗しました。");
+        setClaimsError("Failed to load claim requests.");
       }
     } finally {
       setIsClaimsLoading(false);
@@ -262,7 +264,7 @@ const CaseDetailPage = () => {
       await Promise.all([fetchCase(), fetchCaseClaimRequests(), fetchCaseHistory()]);
     } catch (error) {
       console.error("Failed to submit claim request", error);
-      setClaimSubmitError("担当希望の送信に失敗しました。再度お試しください。");
+      setClaimSubmitError("Failed to submit claim request. Please try again.");
     } finally {
       setIsSubmittingClaim(false);
     }
@@ -283,7 +285,7 @@ const CaseDetailPage = () => {
       await Promise.all([fetchCase(), fetchCaseClaimRequests(), fetchCaseHistory()]);
     } catch (error) {
       console.error("Failed to process claim action", error);
-      setClaimActionError("処理に失敗しました。再度お試しください。");
+      setClaimActionError("Failed to process.");
     } finally {
       setIsProcessingClaimAction(false);
     }
@@ -298,7 +300,7 @@ const CaseDetailPage = () => {
       setChildCases(data);
     } catch (error) {
       console.error("Failed to fetch child cases", error);
-      setChildCasesError("子案件の取得に失敗しました。");
+      setChildCasesError("Failed to load sub-cases.");
     } finally {
       setIsChildCasesLoading(false);
     }
@@ -324,7 +326,7 @@ const CaseDetailPage = () => {
         .map((result) => result.value);
       setRequestChildrenByStandard(Object.fromEntries(entries));
       if (results.some((result) => result.status === "rejected")) {
-        setNestedChildCasesError("一部の依頼子案件をロードできませんでした。");
+        setNestedChildCasesError("Some sub-cases could not be loaded.");
       }
     } finally {
       setIsNestedLoading(false);
@@ -339,7 +341,7 @@ const CaseDetailPage = () => {
       setCaseHistory(data);
     } catch (error) {
       console.error("Failed to fetch case history", error);
-      setHistoryError("履歴の取得に失敗しました。");
+      setHistoryError("Failed to load history.");
     } finally {
       setIsHistoryLoading(false);
     }
@@ -353,7 +355,7 @@ const CaseDetailPage = () => {
       setCaseComments(data);
     } catch (error) {
       console.error("Failed to fetch case comments", error);
-      setCommentsError("コメントの取得に失敗しました。");
+      setCommentsError("Failed to load comments.");
     } finally {
       setIsCommentsLoading(false);
     }
@@ -367,7 +369,7 @@ const CaseDetailPage = () => {
       setParticipantCompanies(data);
     } catch (error) {
       console.error("Failed to fetch participant companies", error);
-      setParticipantsError("参加会社の取得に失敗しました。");
+      setParticipantsError("Failed to load participant companies.");
     } finally {
       setIsParticipantsLoading(false);
     }
@@ -456,9 +458,9 @@ const CaseDetailPage = () => {
 
   if (errorType) {
     const errorConfig = {
-      notFound: { title: "案件が見つかりません", message: "この案件は存在しないか、すでに削除されています。" },
-      forbidden: { title: "アクセス権限がありません", message: "この案件を閲覧する権限がありません。" },
-      error: { title: "エラーが発生しました", message: "案件の取得に失敗しました。再度お試しください。" },
+      notFound: { title: t("Case not found"), message: t("This case does not exist or has been deleted.") },
+      forbidden: { title: t("Access denied"), message: t("You don't have permission to view this case.") },
+      error: { title: t("An error occurred"), message: t("Failed to load case. Please try again.") },
     }[errorType];
 
     return (
@@ -468,7 +470,7 @@ const CaseDetailPage = () => {
           className="group flex items-center gap-2 text-slate-400 hover:text-slate-700 transition-all text-sm font-medium mb-8"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
-          戻る
+          {t("Back")}
         </button>
         <div className="text-center py-24 bg-white border border-slate-100 rounded-2xl shadow-lg shadow-slate-200/50">
           <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
@@ -492,7 +494,7 @@ const CaseDetailPage = () => {
           className="group flex items-center gap-2 text-slate-400 hover:text-slate-700 transition-all duration-200 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-slate-100"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
-          戻る
+          {t("Back")}
         </button>
       </div>
 
@@ -508,13 +510,13 @@ const CaseDetailPage = () => {
             <div className="p-8">
               <div className="flex flex-wrap items-center gap-2.5 mb-5">
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[caseDetail.status]}`}>
-                  {CASE_STATUS_LABELS[caseDetail.status]}
+                  {t(CASE_STATUS_LABELS[caseDetail.status])}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${CASE_TYPE_STYLES[caseDetail.caseType]}`}>
-                  {CASE_TYPE_LABELS[caseDetail.caseType]}
+                  {t(CASE_TYPE_LABELS[caseDetail.caseType])}
                 </span>
                 <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-600 ring-1 ring-slate-200/80">
-                  {CASE_DELIVERY_TYPE_LABELS[caseDetail.deliveryType]}
+                  {t(CASE_DELIVERY_TYPE_LABELS[caseDetail.deliveryType])}
                 </span>
               </div>
 
@@ -523,10 +525,10 @@ const CaseDetailPage = () => {
               </h1>
 
               <div className="border-t border-slate-100 pt-6">
-                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">詳細内容</h3>
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">{t("Description")}</h3>
                 <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap min-h-[100px] bg-slate-50/60 rounded-xl p-4 border border-slate-100">
                   {caseDetail.description || (
-                    <span className="text-slate-300 italic">内容なし</span>
+                    <span className="text-slate-300 italic">{t("No description")}</span>
                   )}
                 </div>
               </div>
@@ -578,7 +580,7 @@ const CaseDetailPage = () => {
               <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
                 <Clock size={12} className="text-indigo-500" />
               </div>
-              ステータス更新
+              {t("Update Status")}
             </h3>
             <div className="space-y-3">
               <select
@@ -588,7 +590,7 @@ const CaseDetailPage = () => {
                 className="w-full text-sm font-medium border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 disabled:opacity-50 transition-all cursor-pointer hover:border-slate-300"
               >
                 {UPDATABLE_STATUSES.map((s) => (
-                  <option key={s} value={s}>{CASE_STATUS_LABELS[s]}</option>
+                  <option key={s} value={s}>{t(CASE_STATUS_LABELS[s])}</option>
                 ))}
               </select>
               <button
@@ -596,15 +598,15 @@ const CaseDetailPage = () => {
                 disabled={isUpdating || selectedStatus === caseDetail.status}
                 className="w-full text-sm font-bold px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 transition-all duration-200 shadow-md shadow-indigo-300/20"
               >
-                {isUpdating ? "更新中..." : "ステータス更新"}
+                {isUpdating ? t("Updating...") : t("Update Status")}
               </button>
-              {updateError && <ErrorAlert message={updateError} />}
+              {updateError && <ErrorAlert message={t(updateError)} />}
             </div>
           </div>
 
           {/* Details & specs */}
           <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
-            <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5">案件仕様</h3>
+            <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5">{t("Case Specs")}</h3>
             <div className="space-y-4">
 
               <div className="flex items-start gap-3">
@@ -612,8 +614,8 @@ const CaseDetailPage = () => {
                   <Calendar size={13} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">期限</span>
-                  <span className="text-sm font-semibold text-slate-700">{caseDetail.dueDate ?? "期限なし"}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Due Date")}</span>
+                  <span className="text-sm font-semibold text-slate-700">{caseDetail.dueDate ?? t("No due date")}</span>
                 </div>
               </div>
 
@@ -622,8 +624,8 @@ const CaseDetailPage = () => {
                   <Clock size={13} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">作成日時</span>
-                  <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.createdAt).toLocaleDateString("ja-JP")}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Created At")}</span>
+                  <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
 
@@ -632,8 +634,8 @@ const CaseDetailPage = () => {
                   <Clock size={13} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">最終更新</span>
-                  <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.updatedAt).toLocaleDateString("ja-JP")}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Last Updated")}</span>
+                  <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.updatedAt).toLocaleDateString()}</span>
                 </div>
               </div>
 
@@ -642,8 +644,8 @@ const CaseDetailPage = () => {
                   <Tag size={13} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">公開範囲</span>
-                  <span className="text-sm font-semibold text-slate-700">{CASE_TARGET_SCOPE_LABELS[caseDetail.targetScope]}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Scope")}</span>
+                  <span className="text-sm font-semibold text-slate-700">{t(CASE_TARGET_SCOPE_LABELS[caseDetail.targetScope])}</span>
                   <span className="text-xs text-slate-500 block mt-0.5 max-w-[180px] truncate" title={caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}>
                     {caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}
                   </span>
@@ -655,8 +657,8 @@ const CaseDetailPage = () => {
                   <Shield size={13} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">最低権限</span>
-                  <span className="text-sm font-semibold text-slate-700">{USER_ROLE_LABELS[caseDetail.requiredRole]}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Required Role")}</span>
+                  <span className="text-sm font-semibold text-slate-700">{t(USER_ROLE_LABELS[caseDetail.requiredRole])}</span>
                 </div>
               </div>
 
@@ -665,8 +667,8 @@ const CaseDetailPage = () => {
                   <User size={13} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">担当</span>
-                  <span className="text-sm font-semibold text-slate-700">{OWNER_TYPE_LABELS[caseDetail.ownerType]}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Owner")}</span>
+                  <span className="text-sm font-semibold text-slate-700">{t(OWNER_TYPE_LABELS[caseDetail.ownerType])}</span>
                   <span className="text-xs text-slate-500 block mt-0.5 max-w-[180px] truncate" title={caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}>
                     {caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}
                   </span>
@@ -678,7 +680,7 @@ const CaseDetailPage = () => {
                   <User size={13} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">作成者</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Creator")}</span>
                   <span className="text-xs text-slate-500 block max-w-[180px] truncate mt-0.5" title={resolveDisplayName(caseDetail.creatorId, userMap)}>
                     {resolveDisplayName(caseDetail.creatorId, userMap)}
                   </span>
@@ -691,7 +693,7 @@ const CaseDetailPage = () => {
                     <FileText size={13} className="text-slate-400" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">プロジェクト</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Project")}</span>
                     <span className="text-xs text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.projectId}>
                       {caseDetail.projectId}
                     </span>
@@ -705,7 +707,7 @@ const CaseDetailPage = () => {
                     <FileText size={13} className="text-slate-400" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">親案件</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Parent Case")}</span>
                     <span className="text-xs text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.parentCaseId}>
                       {caseDetail.parentCaseId}
                     </span>
@@ -731,17 +733,17 @@ const CaseDetailPage = () => {
           {/* Claims */}
           {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
             <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
-              <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-4">担当希望</h3>
+              <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-4">{t("Claim Requests")}</h3>
 
               {isClaimsLoading ? (
                 <div className="flex items-center justify-center py-4">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500" />
                 </div>
               ) : claimsError ? (
-                <ErrorAlert message={claimsError} />
+                <ErrorAlert message={t(claimsError)} />
               ) : (
                 <div className="space-y-4">
-                  {claimActionError && <ErrorAlert message={claimActionError} />}
+                  {claimActionError && <ErrorAlert message={t(claimActionError)} />}
 
                   {claimRequests.length > 0 && (
                     <ul className="space-y-3">
@@ -758,14 +760,14 @@ const CaseDetailPage = () => {
                                   ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80"
                                   : "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80"
                             }`}>
-                              {req.status === CaseClaimRequestStatus.PENDING ? "申請中" : req.status === CaseClaimRequestStatus.APPROVED ? "承認済" : "却下"}
+                              {req.status === CaseClaimRequestStatus.PENDING ? t("Pending") : req.status === CaseClaimRequestStatus.APPROVED ? t("Approved") : t("Rejected")}
                             </span>
                           </div>
                           {req.message && (
                             <p className="text-xs text-slate-700 bg-white p-2 rounded-lg border border-slate-100 mb-2 leading-relaxed">{req.message}</p>
                           )}
                           {req.rejectReason && (
-                            <p className="text-[10px] text-rose-500 bg-rose-50 p-2 rounded-lg border border-rose-100 mb-2">却下理由: {req.rejectReason}</p>
+                            <p className="text-[10px] text-rose-500 bg-rose-50 p-2 rounded-lg border border-rose-100 mb-2">{t("Reject reason: ")}{req.rejectReason}</p>
                           )}
                           {req.status === CaseClaimRequestStatus.PENDING &&
                             currentUserId &&
@@ -777,11 +779,11 @@ const CaseDetailPage = () => {
                                   disabled={isProcessingClaimAction}
                                   className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
-                                  承認
+                                  {t("Approve")}
                                 </button>
                                 <button
                                   onClick={() => {
-                                    const reason = window.prompt("却下理由を入力してください");
+                                    const reason = window.prompt(t("Enter rejection reason"));
                                     if (reason && reason.trim()) {
                                       void handleClaimAction(req.claimRequestId, "REJECTED", reason.trim());
                                     }
@@ -789,7 +791,7 @@ const CaseDetailPage = () => {
                                   disabled={isProcessingClaimAction}
                                   className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
-                                  却下
+                                  {t("Reject")}
                                 </button>
                               </div>
                             )}
@@ -803,11 +805,11 @@ const CaseDetailPage = () => {
                     !(caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId) &&
                     (claimsAccessDenied || !claimRequests.some((r) => r.requesterId === currentUserId && r.status === CaseClaimRequestStatus.PENDING)) && (
                       <div className="space-y-2 border-t border-slate-100 pt-4">
-                        {claimSubmitError && <ErrorAlert message={claimSubmitError} />}
+                        {claimSubmitError && <ErrorAlert message={t(claimSubmitError)} />}
                         <textarea
                           value={claimMessage}
                           onChange={(e) => setClaimMessage(e.target.value)}
-                          placeholder="担当したい理由（任意）..."
+                          placeholder={t("Claim reason (optional)...")}
                           rows={2}
                           className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 resize-none transition-all"
                         />
@@ -816,13 +818,13 @@ const CaseDetailPage = () => {
                           disabled={isSubmittingClaim}
                           className="w-full text-xs font-bold py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 transition-all duration-200 shadow-md shadow-indigo-300/20"
                         >
-                          {isSubmittingClaim ? "送信中..." : "担当を希望する"}
+                          {isSubmittingClaim ? t("Sending...") : t("Submit Claim")}
                         </button>
                       </div>
                     )}
 
                   {claimRequests.length === 0 && !claimsAccessDenied && (
-                    <p className="text-xs text-slate-400 text-center py-4">担当希望はまだありません。</p>
+                    <p className="text-xs text-slate-400 text-center py-4">{t("No claim requests yet.")}</p>
                   )}
                 </div>
               )}

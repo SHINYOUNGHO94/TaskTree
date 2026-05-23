@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertCircle, Calendar, CheckSquare, Square, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   CaseDetail,
   CaseService,
@@ -52,6 +53,7 @@ export const CaseTasksSection = ({
   userMap,
   onTaskChange,
 }: CaseTasksSectionProps) => {
+  const { t } = useTranslation("ui");
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
@@ -74,7 +76,7 @@ export const CaseTasksSection = ({
 
   const handleCreateTask = async () => {
     if (!newTaskTitle.trim()) {
-      setTaskCreateError("タイトルを入力してください。");
+      setTaskCreateError(t("Please enter a title."));
       return;
     }
     setIsCreatingTask(true);
@@ -91,7 +93,7 @@ export const CaseTasksSection = ({
       setShowTaskForm(false);
       await onTaskChange();
     } catch {
-      setTaskCreateError("作業の作成に失敗しました。再度お試しください。");
+      setTaskCreateError(t("Failed to create task. Please try again."));
     } finally {
       setIsCreatingTask(false);
     }
@@ -110,7 +112,7 @@ export const CaseTasksSection = ({
   const handleUpdateTask = async () => {
     if (!editingTask) return;
     if (!editTaskTitle.trim()) {
-      setEditTaskError("タイトルを入力してください。");
+      setEditTaskError(t("Please enter a title."));
       return;
     }
     setIsEditingTask(true);
@@ -127,7 +129,7 @@ export const CaseTasksSection = ({
       setEditingTask(null);
       await onTaskChange();
     } catch {
-      setEditTaskError("作業の更新に失敗しました。再度お試しください。");
+      setEditTaskError(t("Failed to update task. Please try again."));
     } finally {
       setIsEditingTask(false);
     }
@@ -142,7 +144,7 @@ export const CaseTasksSection = ({
       setDeletingTaskId(null);
       await onTaskChange();
     } catch {
-      setDeleteTaskError("作業の削除に失敗しました。再度お試しください。");
+      setDeleteTaskError(t("Failed to delete task. Please try again."));
     } finally {
       setIsDeletingTask(false);
     }
@@ -153,8 +155,8 @@ export const CaseTasksSection = ({
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-gray-800">作業一覧</h3>
-            <p className="text-xs text-gray-400 mt-0.5">完了すべきタスクのチェックリスト</p>
+            <h3 className="text-sm font-bold text-gray-800">{t("Tasks")}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{t("Checklist of tasks to complete")}</p>
           </div>
           <button
             onClick={() => {
@@ -163,7 +165,7 @@ export const CaseTasksSection = ({
             }}
             className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
           >
-            {showTaskForm ? "キャンセル" : "+ 作業を追加"}
+            {showTaskForm ? t("Cancel") : t("+ Add Task")}
           </button>
         </div>
 
@@ -172,26 +174,26 @@ export const CaseTasksSection = ({
             <div className="space-y-4">
               {taskCreateError && <ErrorAlert message={taskCreateError} />}
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">タイトル</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Title")}</label>
                 <input
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="作業のタイトルを入力"
+                  placeholder={t("Enter task title")}
                   className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">内容（任意）</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Content (optional)")}</label>
                 <textarea
                   value={newTaskDescription}
                   onChange={(e) => setNewTaskDescription(e.target.value)}
-                  placeholder="作業の詳細を入力..."
+                  placeholder={t("Enter task details...")}
                   rows={3}
                   className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none"
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">期限（任意）</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Due Date (optional)")}</label>
                 <input
                   type="date"
                   value={newTaskDueDate}
@@ -204,7 +206,7 @@ export const CaseTasksSection = ({
                 disabled={isCreatingTask}
                 className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {isCreatingTask ? "作成中..." : "作業を作成"}
+                {isCreatingTask ? t("Creating...") : t("Create Task")}
               </button>
             </div>
           </div>
@@ -219,7 +221,7 @@ export const CaseTasksSection = ({
             <ErrorAlert message={tasksError} />
           ) : caseTasks.length === 0 ? (
             <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
-              <p className="text-sm text-gray-400">作業はまだありません。</p>
+              <p className="text-sm text-gray-400">{t("No tasks yet.")}</p>
             </div>
           ) : (
             <ul className="space-y-2.5">
@@ -256,7 +258,7 @@ export const CaseTasksSection = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${TASK_STATUS_STYLES[task.status]}`}>
-                        {CASE_TASK_STATUS_LABELS[task.status]}
+                        {t(CASE_TASK_STATUS_LABELS[task.status])}
                       </span>
                       {task.dueDate && (
                         <span className="text-xs text-gray-400 flex items-center gap-1 whitespace-nowrap">
@@ -270,7 +272,7 @@ export const CaseTasksSection = ({
                             onClick={() => openEditTask(task)}
                             className="text-xs text-gray-400 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors font-medium whitespace-nowrap"
                           >
-                            編集
+                            {t("Edit")}
                           </button>
                           <button
                             onClick={() => {
@@ -279,7 +281,7 @@ export const CaseTasksSection = ({
                             }}
                             className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors font-medium whitespace-nowrap"
                           >
-                            削除
+                            {t("Delete")}
                           </button>
                         </>
                       )}
@@ -297,12 +299,12 @@ export const CaseTasksSection = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="p-6 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-800">作業を編集</h3>
+              <h3 className="text-sm font-bold text-gray-800">{t("Edit Task")}</h3>
             </div>
             <div className="p-6 space-y-4">
               {editTaskError && <ErrorAlert message={editTaskError} />}
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">タイトル</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Title")}</label>
                 <input
                   value={editTaskTitle}
                   onChange={(e) => setEditTaskTitle(e.target.value)}
@@ -310,7 +312,7 @@ export const CaseTasksSection = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">内容</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Content")}</label>
                 <textarea
                   value={editTaskDescription}
                   onChange={(e) => setEditTaskDescription(e.target.value)}
@@ -319,32 +321,32 @@ export const CaseTasksSection = ({
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">ステータス</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Status")}</label>
                 <select
                   value={editTaskStatus}
                   onChange={(e) => setEditTaskStatus(e.target.value as CaseTaskStatus)}
                   className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
                 >
                   {Object.values(CaseTaskStatus).map((s) => (
-                    <option key={s} value={s}>{CASE_TASK_STATUS_LABELS[s]}</option>
+                    <option key={s} value={s}>{t(CASE_TASK_STATUS_LABELS[s])}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">担当者</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Assignee")}</label>
                 <select
                   value={editTaskAssigneeId}
                   onChange={(e) => setEditTaskAssigneeId(e.target.value)}
                   className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
                 >
-                  <option value="">担当者なし</option>
+                  <option value="">{t("No assignee")}</option>
                   {Array.from(userMap.entries()).map(([uid, u]) => (
                     <option key={uid} value={uid}>{u.name || u.email || shortId(uid)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">期限（任意）</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Due Date (optional)")}</label>
                 <input
                   type="date"
                   value={editTaskDueDate}
@@ -359,14 +361,14 @@ export const CaseTasksSection = ({
                 disabled={isEditingTask}
                 className="text-sm font-bold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
               >
-                キャンセル
+                {t("Cancel")}
               </button>
               <button
                 onClick={handleUpdateTask}
                 disabled={isEditingTask}
                 className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {isEditingTask ? "更新中..." : "更新"}
+                {isEditingTask ? t("Updating...") : t("Update")}
               </button>
             </div>
           </div>
@@ -378,8 +380,8 @@ export const CaseTasksSection = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
             <div className="p-6">
-              <h3 className="text-sm font-bold text-gray-800 mb-2">作業を削除</h3>
-              <p className="text-sm text-gray-500">この作業を削除してもよいですか？この操作は元に戻せません。</p>
+              <h3 className="text-sm font-bold text-gray-800 mb-2">{t("Delete Task")}</h3>
+              <p className="text-sm text-gray-500">{t("Are you sure you want to delete this task? This action cannot be undone.")}</p>
               {deleteTaskError && <div className="mt-3"><ErrorAlert message={deleteTaskError} /></div>}
             </div>
             <div className="p-6 pt-0 flex justify-end gap-3">
@@ -388,14 +390,14 @@ export const CaseTasksSection = ({
                 disabled={isDeletingTask}
                 className="text-sm font-bold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
               >
-                キャンセル
+                {t("Cancel")}
               </button>
               <button
                 onClick={handleDeleteTask}
                 disabled={isDeletingTask}
                 className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {isDeletingTask ? "削除中..." : "削除する"}
+                {isDeletingTask ? t("Deleting...") : t("Delete (confirm)")}
               </button>
             </div>
           </div>

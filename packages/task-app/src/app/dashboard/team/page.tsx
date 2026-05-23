@@ -37,7 +37,7 @@ const ROLE_LEVEL: Record<UserRole, number> = {
 
 export default function TeamPage() {
   const { profile } = useUser();
-  const { t } = useTranslation();
+  const { t } = useTranslation("ui");
 
   const [members, setMembers] = useState<UserProfile[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
@@ -227,7 +227,7 @@ export default function TeamPage() {
   if (!profile || !ORG_ALLOWED_ROLES.includes(profile.role as UserRole)) {
     return (
       <div className="p-8">
-        <p className="text-slate-400">このページにアクセスする権限がありません。</p>
+        <p className="text-slate-400">{t("No permission to access this page.")}</p>
       </div>
     );
   }
@@ -249,7 +249,7 @@ export default function TeamPage() {
             <div className="w-8 h-8 rounded-md bg-indigo-600 flex items-center justify-center">
               <Users size={15} className="text-white" />
             </div>
-            組織管理
+            {t("Org Management")}
           </h2>
           {profile.companyName && (
             <div className="flex items-center gap-1.5 mt-1.5">
@@ -257,20 +257,20 @@ export default function TeamPage() {
               <span className="text-sm font-semibold text-slate-700">{profile.companyName}</span>
             </div>
           )}
-          <p className="text-slate-600 text-sm mt-1">会社のメンバーと組織構造（部署・チーム）を管理します。</p>
+          <p className="text-slate-600 text-sm mt-1">{t("Team page description")}</p>
           {!isLoading && (
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-700 border border-slate-300">
-                <Users size={11} /> {members.length} 名
+                <Users size={11} /> {members.length} {t("members")}
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-700 border border-slate-300">
-                <Shield size={11} /> {divisions.length} 本部
+                <Shield size={11} /> {divisions.length} {t("Division")}
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-700 border border-slate-300">
-                <Building size={11} /> {departments.length} 部署
+                <Building size={11} /> {departments.length} {t("Department")}
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-700 border border-slate-300">
-                <Layers size={11} /> {teams.length} チーム
+                <Layers size={11} /> {teams.length} {t("Team")}
               </span>
             </div>
           )}
@@ -281,25 +281,25 @@ export default function TeamPage() {
             onClick={() => setIsDivModalOpen(true)}
             className="bg-white text-slate-700 px-3.5 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5"
           >
-            <Shield size={14} /> 本部追加
+            <Shield size={14} /> {t("Add Division")}
           </button>
           <button
             onClick={() => setIsDeptModalOpen(true)}
             className="bg-white text-slate-700 px-3.5 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5"
           >
-            <Building size={14} /> 部署追加
+            <Building size={14} /> {t("Add Department")}
           </button>
           <button
             onClick={() => setIsTeamModalOpen(true)}
             className="bg-white text-slate-700 px-3.5 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5"
           >
-            <Layers size={14} /> チーム追加
+            <Layers size={14} /> {t("Add Team")}
           </button>
           <button
             onClick={() => setIsInviteModalOpen(true)}
             className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
           >
-            <Plus size={14} /> メンバー招待
+            <Plus size={14} /> {t("Invite Member")}
           </button>
         </div>
       </div>
@@ -318,7 +318,7 @@ export default function TeamPage() {
                 <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
                   <Building size={13} className="text-indigo-500" />
                 </div>
-                組織ツリー
+                {t("Org Tree")}
               </h3>
             </div>
             <OrgTree

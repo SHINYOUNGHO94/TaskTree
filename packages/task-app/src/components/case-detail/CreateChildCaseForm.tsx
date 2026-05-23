@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   CaseDeliveryType,
   CaseService,
@@ -43,6 +44,7 @@ export const CreateChildCaseForm = ({
   currentProfile,
   onCreated,
 }: CreateChildCaseFormProps) => {
+  const { t } = useTranslation("ui");
   const role = currentProfile.role;
   const isOrgUser = role === UserRole.USER || role === UserRole.GUEST;
 
@@ -84,11 +86,11 @@ export const CreateChildCaseForm = ({
       setOrgTeams(teams);
       setOrgUsers(users);
     } catch {
-      setOrgDataError("組織データの取得に失敗しました。");
+      setOrgDataError(t("Failed to load org data."));
     } finally {
       setIsOrgDataLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchOrgData();
@@ -106,16 +108,16 @@ export const CreateChildCaseForm = ({
     return true;
   });
 
-  const filteredTeams = orgTeams.filter((t) => {
-    if (role === UserRole.TEAM_ADMIN) return t.teamId === currentProfile.teamId;
-    if (role === UserRole.DEPT_ADMIN) return t.departmentId === currentProfile.departmentId;
+  const filteredTeams = orgTeams.filter((tm) => {
+    if (role === UserRole.TEAM_ADMIN) return tm.teamId === currentProfile.teamId;
+    if (role === UserRole.DEPT_ADMIN) return tm.departmentId === currentProfile.departmentId;
     if (role === UserRole.DIVISION_ADMIN) {
-      if (t.divisionId !== currentProfile.divisionId) return false;
-      if (filterDepartmentId) return t.departmentId === filterDepartmentId;
+      if (tm.divisionId !== currentProfile.divisionId) return false;
+      if (filterDepartmentId) return tm.departmentId === filterDepartmentId;
       return true;
     }
-    if (filterDepartmentId) return t.departmentId === filterDepartmentId;
-    if (filterDivisionId) return t.divisionId === filterDivisionId;
+    if (filterDepartmentId) return tm.departmentId === filterDepartmentId;
+    if (filterDivisionId) return tm.divisionId === filterDivisionId;
     return true;
   });
 
@@ -152,15 +154,15 @@ export const CreateChildCaseForm = ({
 
   const handleSubmit = async () => {
     if (isOrgDataLoading) {
-      setError("組織データを読み込み中です。しばらくお待ちください。");
+      setError(t("Loading org data..."));
       return;
     }
     if (!title.trim()) {
-      setError("タイトルを入力してください。");
+      setError(t("Please enter a title."));
       return;
     }
     if (!description.trim()) {
-      setError("内容を入力してください。");
+      setError(t("Please enter a description."));
       return;
     }
 
@@ -187,7 +189,7 @@ export const CreateChildCaseForm = ({
     }
 
     if (!computedScopeId.trim()) {
-      setError("送信先を選択してください。");
+      setError(t("Please select a target."));
       return;
     }
 
@@ -205,7 +207,7 @@ export const CreateChildCaseForm = ({
       });
       await onCreated();
     } catch {
-      setError("子案件の作成に失敗しました。再度お試しください。");
+      setError(t("Failed to create sub-case. Please try again."));
     } finally {
       setIsCreating(false);
     }
@@ -218,44 +220,44 @@ export const CreateChildCaseForm = ({
       <div className="space-y-4">
         {error && <ErrorAlert message={error} />}
         <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700 font-medium">
-          作成される案件種別: {CASE_TYPE_LABELS[childCaseType]}
+          {t("Creating case type")}: {t(CASE_TYPE_LABELS[childCaseType])}
         </div>
         <div>
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">タイトル</label>
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Title")}</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="子案件のタイトルを入力"
+            placeholder={t("Enter case title")}
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
           />
         </div>
         <div>
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">内容</label>
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Content")}</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="子案件の詳細を入力..."
+            placeholder={t("Enter case details...")}
             rows={3}
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none"
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">配信タイプ</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Delivery Type")}</label>
             <select
               value={deliveryType}
               onChange={(e) => setDeliveryType(e.target.value as CaseDeliveryType)}
               disabled={targetScope === CaseTargetScope.USER}
               className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white disabled:bg-gray-50 disabled:text-gray-400"
             >
-              <option value={CaseDeliveryType.DIRECT}>直接依頼</option>
+              <option value={CaseDeliveryType.DIRECT}>{t("Direct")}</option>
               {targetScope !== CaseTargetScope.USER && (
-                <option value={CaseDeliveryType.OPEN}>公開</option>
+                <option value={CaseDeliveryType.OPEN}>{t("Open Recruitment")}</option>
               )}
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">送信先</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Target")}</label>
             <select
               value={targetScope}
               onChange={(e) => handleScopeChange(e.target.value as CaseTargetScope)}
@@ -263,7 +265,7 @@ export const CreateChildCaseForm = ({
             >
               {allowedScopes.map((scope) => (
                 <option key={scope} value={scope}>
-                  {CASE_TARGET_SCOPE_LABELS[scope]}
+                  {t(CASE_TARGET_SCOPE_LABELS[scope])}
                 </option>
               ))}
             </select>
@@ -272,7 +274,7 @@ export const CreateChildCaseForm = ({
         {orgDataError && <ErrorAlert message={orgDataError} />}
         {targetScope === CaseTargetScope.COMPANY && (
           <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">会社</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Company")}</label>
             <div className="mt-1 px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600">
               {currentProfile.companyName ?? currentProfile.companyId}
             </div>
@@ -280,20 +282,20 @@ export const CreateChildCaseForm = ({
         )}
         {targetScope === CaseTargetScope.DIVISION && (
           <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">事業部</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Division")}</label>
             {role === UserRole.DIVISION_ADMIN ? (
               <div className="mt-1 px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600">
                 {currentProfile.divisionName ?? currentProfile.divisionId}
               </div>
             ) : isOrgDataLoading ? (
-              <div className="mt-1 px-3 py-2 text-sm text-gray-400">ロード中...</div>
+              <div className="mt-1 px-3 py-2 text-sm text-gray-400">{t("Loading...")}</div>
             ) : (
               <select
                 value={filterDivisionId}
                 onChange={(e) => setFilterDivisionId(e.target.value)}
                 className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
               >
-                <option value="">事業部を選択...</option>
+                <option value="">{t("Select division...")}</option>
                 {filteredDivisions.map((d) => (
                   <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
                 ))}
@@ -303,13 +305,13 @@ export const CreateChildCaseForm = ({
         )}
         {targetScope === CaseTargetScope.DEPARTMENT && (
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">部署</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Department")}</label>
             {role === UserRole.DEPT_ADMIN ? (
               <div className="px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600">
                 {currentProfile.departmentName ?? currentProfile.departmentId}
               </div>
             ) : isOrgDataLoading ? (
-              <div className="px-3 py-2 text-sm text-gray-400">ロード中...</div>
+              <div className="px-3 py-2 text-sm text-gray-400">{t("Loading...")}</div>
             ) : (
               <>
                 {role === UserRole.COMPANY_ADMIN && (
@@ -318,7 +320,7 @@ export const CreateChildCaseForm = ({
                     onChange={(e) => { setFilterDivisionId(e.target.value); setFilterDepartmentId(""); }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                   >
-                    <option value="">全事業部</option>
+                    <option value="">{t("All Divisions")}</option>
                     {filteredDivisions.map((d) => (
                       <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
                     ))}
@@ -329,7 +331,7 @@ export const CreateChildCaseForm = ({
                   onChange={(e) => setFilterDepartmentId(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                 >
-                  <option value="">部署を選択...</option>
+                  <option value="">{t("Select department...")}</option>
                   {filteredDepartments.map((d) => (
                     <option key={d.departmentId} value={d.departmentId}>{d.name}</option>
                   ))}
@@ -340,13 +342,13 @@ export const CreateChildCaseForm = ({
         )}
         {targetScope === CaseTargetScope.TEAM && (
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">チーム</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Team")}</label>
             {role === UserRole.TEAM_ADMIN ? (
               <div className="px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600">
                 {currentProfile.teamName ?? currentProfile.teamId}
               </div>
             ) : isOrgDataLoading ? (
-              <div className="px-3 py-2 text-sm text-gray-400">ロード中...</div>
+              <div className="px-3 py-2 text-sm text-gray-400">{t("Loading...")}</div>
             ) : (
               <>
                 {role === UserRole.COMPANY_ADMIN && (
@@ -355,7 +357,7 @@ export const CreateChildCaseForm = ({
                     onChange={(e) => { setFilterDivisionId(e.target.value); setFilterDepartmentId(""); setFilterTeamId(""); }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                   >
-                    <option value="">全事業部</option>
+                    <option value="">{t("All Divisions")}</option>
                     {filteredDivisions.map((d) => (
                       <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
                     ))}
@@ -367,7 +369,7 @@ export const CreateChildCaseForm = ({
                     onChange={(e) => { setFilterDepartmentId(e.target.value); setFilterTeamId(""); }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                   >
-                    <option value="">全部署</option>
+                    <option value="">{t("All Departments")}</option>
                     {filteredDepartments.map((d) => (
                       <option key={d.departmentId} value={d.departmentId}>{d.name}</option>
                     ))}
@@ -378,9 +380,9 @@ export const CreateChildCaseForm = ({
                   onChange={(e) => setFilterTeamId(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                 >
-                  <option value="">チームを選択...</option>
-                  {filteredTeams.map((t) => (
-                    <option key={t.teamId} value={t.teamId}>{t.name}</option>
+                  <option value="">{t("Select team...")}</option>
+                  {filteredTeams.map((tm) => (
+                    <option key={tm.teamId} value={tm.teamId}>{tm.name}</option>
                   ))}
                 </select>
               </>
@@ -389,13 +391,13 @@ export const CreateChildCaseForm = ({
         )}
         {targetScope === CaseTargetScope.USER && (
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">ユーザー</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("User")}</label>
             {isOrgUser ? (
               <div className="px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600">
                 {currentProfile.name}
               </div>
             ) : isOrgDataLoading ? (
-              <div className="px-3 py-2 text-sm text-gray-400">ロード中...</div>
+              <div className="px-3 py-2 text-sm text-gray-400">{t("Loading...")}</div>
             ) : (
               <>
                 {role === UserRole.COMPANY_ADMIN && (
@@ -404,7 +406,7 @@ export const CreateChildCaseForm = ({
                     onChange={(e) => { setFilterDivisionId(e.target.value); setFilterDepartmentId(""); setFilterTeamId(""); setSelectedUserId(""); }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                   >
-                    <option value="">全事業部</option>
+                    <option value="">{t("All Divisions")}</option>
                     {filteredDivisions.map((d) => (
                       <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
                     ))}
@@ -416,7 +418,7 @@ export const CreateChildCaseForm = ({
                     onChange={(e) => { setFilterDepartmentId(e.target.value); setFilterTeamId(""); setSelectedUserId(""); }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                   >
-                    <option value="">全部署</option>
+                    <option value="">{t("All Departments")}</option>
                     {filteredDepartments.map((d) => (
                       <option key={d.departmentId} value={d.departmentId}>{d.name}</option>
                     ))}
@@ -428,9 +430,9 @@ export const CreateChildCaseForm = ({
                     onChange={(e) => { setFilterTeamId(e.target.value); setSelectedUserId(""); }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                   >
-                    <option value="">全チーム</option>
-                    {filteredTeams.map((t) => (
-                      <option key={t.teamId} value={t.teamId}>{t.name}</option>
+                    <option value="">{t("All Teams")}</option>
+                    {filteredTeams.map((tm) => (
+                      <option key={tm.teamId} value={tm.teamId}>{tm.name}</option>
                     ))}
                   </select>
                 )}
@@ -439,7 +441,7 @@ export const CreateChildCaseForm = ({
                   onChange={(e) => setSelectedUserId(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
                 >
-                  <option value="">ユーザーを選択...</option>
+                  <option value="">{t("Select user...")}</option>
                   {filteredUsers.map((u) => (
                     <option key={u.userId} value={u.userId}>{u.name || u.email || shortId(u.userId)}</option>
                   ))}
@@ -450,7 +452,7 @@ export const CreateChildCaseForm = ({
         )}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">最低権限</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Required Role")}</label>
             <select
               value={requiredRole}
               onChange={(e) => setRequiredRole(e.target.value as UserRole)}
@@ -461,13 +463,13 @@ export const CreateChildCaseForm = ({
                 .sort(([, a], [, b]) => a - b)
                 .map(([r]) => (
                   <option key={r} value={r}>
-                    {USER_ROLE_LABELS[r] ?? r}
+                    {t(USER_ROLE_LABELS[r] ?? r)}
                   </option>
                 ))}
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">期限（任意）</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("Due Date (optional)")}</label>
             <input
               type="date"
               value={dueDate}
@@ -482,12 +484,12 @@ export const CreateChildCaseForm = ({
           className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {isCreating
-            ? "作成中..."
+            ? t("Creating...")
             : isOrgDataLoading
-              ? "ロード中..."
+              ? t("Loading...")
               : parentCaseType === CaseType.PROJECT
-                ? "標準案件を作成"
-                : "依頼案件を作成"}
+                ? t("Create Standard Case (action)")
+                : t("Create Request Case (action)")}
         </button>
       </div>
     </div>

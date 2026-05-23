@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertCircle, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { CaseComment, CaseService } from "@task/core";
 import { resolveDisplayName } from "../dashboard/caseLabels";
 
@@ -29,13 +30,14 @@ export const CaseCommentsSection = ({
   userMap,
   onRefresh,
 }: CaseCommentsSectionProps) => {
+  const { t } = useTranslation("ui");
   const [newCommentContent, setNewCommentContent] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentSubmitError, setCommentSubmitError] = useState<string | null>(null);
 
   const handleSubmitComment = async () => {
     if (!newCommentContent.trim()) {
-      setCommentSubmitError("コメント内容を入力してください。");
+      setCommentSubmitError(t("Please enter a comment."));
       return;
     }
     setIsSubmittingComment(true);
@@ -45,7 +47,7 @@ export const CaseCommentsSection = ({
       setNewCommentContent("");
       await onRefresh();
     } catch {
-      setCommentSubmitError("コメントの送信に失敗しました。再度お試しください。");
+      setCommentSubmitError(t("Failed to send comment. Please try again."));
     } finally {
       setIsSubmittingComment(false);
     }
@@ -54,8 +56,8 @@ export const CaseCommentsSection = ({
   return (
     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
       <div className="p-6 border-b border-gray-100">
-        <h3 className="text-sm font-bold text-gray-800">コメント</h3>
-        <p className="text-xs text-gray-400 mt-0.5">案件に関するディスカッション</p>
+        <h3 className="text-sm font-bold text-gray-800">{t("Comments")}</h3>
+        <p className="text-xs text-gray-400 mt-0.5">{t("Discussion about this case")}</p>
       </div>
 
       <div className="p-6 border-b border-gray-100 bg-gray-50/30">
@@ -64,7 +66,7 @@ export const CaseCommentsSection = ({
           <textarea
             value={newCommentContent}
             onChange={(e) => setNewCommentContent(e.target.value)}
-            placeholder="コメントを入力..."
+            placeholder={t("Enter comment...")}
             rows={3}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none bg-white"
           />
@@ -74,7 +76,7 @@ export const CaseCommentsSection = ({
               disabled={isSubmittingComment || !newCommentContent.trim()}
               className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {isSubmittingComment ? "送信中..." : "コメントを送信"}
+              {isSubmittingComment ? t("Sending...") : t("Send Comment")}
             </button>
           </div>
         </div>
@@ -89,7 +91,7 @@ export const CaseCommentsSection = ({
           <ErrorAlert message={error} />
         ) : comments.length === 0 ? (
           <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
-            <p className="text-sm text-gray-400">コメントはまだありません。</p>
+            <p className="text-sm text-gray-400">{t("No comments yet.")}</p>
           </div>
         ) : (
           <ul className="space-y-5">
@@ -102,7 +104,7 @@ export const CaseCommentsSection = ({
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold text-gray-700">{resolveDisplayName(comment.authorId, userMap)}</span>
                     <span className="text-[10px] text-gray-400">
-                      {new Date(comment.createdAt).toLocaleString("ja-JP")}
+                      {new Date(comment.createdAt).toLocaleString()}
                     </span>
                   </div>
                   <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{comment.content}</p>

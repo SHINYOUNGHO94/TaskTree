@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Mail, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Division, Department, Team, UserProfile, UserRole } from "@task/core";
 
 type InviteData = {
@@ -34,6 +35,7 @@ export function InviteMemberModal({
   onSubmit,
   onClose,
 }: InviteMemberModalProps) {
+  const { t } = useTranslation("ui");
   const [email, setEmail] = useState("");
   const [familyName, setFamilyName] = useState("");
   const [givenName, setGivenName] = useState("");
@@ -93,10 +95,10 @@ export function InviteMemberModal({
       );
 
   const visibleTeams = isTeamLockedByCaller
-    ? teams.filter((t) => t.teamId === profile.teamId)
+    ? teams.filter((tm) => tm.teamId === profile.teamId)
     : isTeamDisabledByRole
     ? []
-    : teams.filter((t) => t.departmentId === effectiveDeptId);
+    : teams.filter((tm) => tm.departmentId === effectiveDeptId);
 
   const handleRoleChange = (newRole: UserRole) => {
     setRole(newRole);
@@ -146,8 +148,8 @@ export function InviteMemberModal({
               <Mail size={14} className="text-indigo-500" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">メンバーを招待</h3>
-              <p className="text-xs text-slate-500 mt-0.5">招待メールが送信され、自動的に組織に登録されます</p>
+              <h3 className="text-base font-bold text-slate-900">{t("Invite Member")}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{t("Invite member desc")}</p>
             </div>
           </div>
           <button
@@ -165,31 +167,29 @@ export function InviteMemberModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>姓</label>
+              <label className={labelClass}>{t("Last Name")}</label>
               <input
                 type="text"
                 required
                 value={familyName}
                 onChange={(e) => setFamilyName(e.target.value)}
                 className={inputClass}
-                placeholder="辛"
               />
             </div>
             <div>
-              <label className={labelClass}>名</label>
+              <label className={labelClass}>{t("First Name")}</label>
               <input
                 type="text"
                 required
                 value={givenName}
                 onChange={(e) => setGivenName(e.target.value)}
                 className={inputClass}
-                placeholder="永呼"
               />
             </div>
           </div>
 
           <div>
-            <label className={labelClass}>メールアドレス</label>
+            <label className={labelClass}>{t("Email Address")}</label>
             <input
               type="email"
               required
@@ -201,36 +201,36 @@ export function InviteMemberModal({
           </div>
 
           <div>
-            <label className={labelClass}>権限</label>
+            <label className={labelClass}>{t("Permission (header)")}</label>
             <select
               value={role}
               onChange={(e) => handleRoleChange(e.target.value as UserRole)}
               className={selectClass}
             >
-              <option value={UserRole.USER}>一般メンバー</option>
+              <option value={UserRole.USER}>{t("Member")}</option>
               {(profile.role === UserRole.TEAM_ADMIN ||
                 profile.role === UserRole.DEPT_ADMIN ||
                 profile.role === UserRole.DIVISION_ADMIN ||
                 profile.role === UserRole.COMPANY_ADMIN) && (
-                <option value={UserRole.TEAM_ADMIN}>チームリーダー</option>
+                <option value={UserRole.TEAM_ADMIN}>{t("Team Leader")}</option>
               )}
               {(profile.role === UserRole.DEPT_ADMIN ||
                 profile.role === UserRole.DIVISION_ADMIN ||
                 profile.role === UserRole.COMPANY_ADMIN) && (
-                <option value={UserRole.DEPT_ADMIN}>部門管理者（部長）</option>
+                <option value={UserRole.DEPT_ADMIN}>{t("Dept Head")}</option>
               )}
               {(profile.role === UserRole.DIVISION_ADMIN || profile.role === UserRole.COMPANY_ADMIN) && (
-                <option value={UserRole.DIVISION_ADMIN}>統括管理者（本部長）</option>
+                <option value={UserRole.DIVISION_ADMIN}>{t("Division Head")}</option>
               )}
               {profile.role === UserRole.COMPANY_ADMIN && (
-                <option value={UserRole.COMPANY_ADMIN}>全体管理者（社長）</option>
+                <option value={UserRole.COMPANY_ADMIN}>{t("Company Admin")}</option>
               )}
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>所属本部</label>
+              <label className={labelClass}>{t("Division (membership)")}</label>
               <select
                 value={effectiveDivId}
                 onChange={(e) => {
@@ -241,14 +241,14 @@ export function InviteMemberModal({
                 disabled={isDivisionDisabled}
                 className={selectClass}
               >
-                <option value="">未配属</option>
+                <option value="">{t("Unassigned (membership)")}</option>
                 {visibleDivisions.map((d) => (
                   <option key={d.divisionId} value={d.divisionId}>{d.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelClass}>所属部署</label>
+              <label className={labelClass}>{t("Department (membership)")}</label>
               <select
                 value={effectiveDeptId}
                 onChange={(e) => {
@@ -258,7 +258,7 @@ export function InviteMemberModal({
                 disabled={isDeptDisabled || (!effectiveDivId && !isDeptLockedByCaller && divisions.length > 0)}
                 className={selectClass}
               >
-                <option value="">未配属</option>
+                <option value="">{t("Unassigned (membership)")}</option>
                 {visibleDepartments.map((d) => (
                   <option key={d.departmentId} value={d.departmentId}>{d.name}</option>
                 ))}
@@ -268,7 +268,7 @@ export function InviteMemberModal({
 
           <div>
             <label className={labelClass}>
-              所属チーム
+              {t("Team (membership)")}
               {role === UserRole.TEAM_ADMIN && !isTeamDisabled && (
                 <span className="text-red-500 ml-1">*</span>
               )}
@@ -280,9 +280,9 @@ export function InviteMemberModal({
               required={role === UserRole.TEAM_ADMIN && !isTeamDisabled}
               className={selectClass}
             >
-              <option value="">未配属</option>
-              {visibleTeams.map((t) => (
-                <option key={t.teamId} value={t.teamId}>{t.name}</option>
+              <option value="">{t("Unassigned (membership)")}</option>
+              {visibleTeams.map((tm) => (
+                <option key={tm.teamId} value={tm.teamId}>{tm.name}</option>
               ))}
             </select>
           </div>
@@ -293,7 +293,7 @@ export function InviteMemberModal({
               onClick={onClose}
               className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
             >
-              キャンセル
+              {t("Cancel")}
             </button>
             <button
               type="submit"
@@ -303,7 +303,7 @@ export function InviteMemberModal({
               {isInviting ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               ) : (
-                "招待を送信"
+                t("Send Invitation")
               )}
             </button>
           </div>

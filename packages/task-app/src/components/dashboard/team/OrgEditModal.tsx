@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Pencil, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { OrgTarget, orgTypeLabel } from "./orgPermissions";
 
 type OrgEditModalProps = {
@@ -13,6 +14,7 @@ type OrgEditModalProps = {
 };
 
 export function OrgEditModal({ editTarget, isOrgMutating, error, onSubmit, onClose }: OrgEditModalProps) {
+  const { t } = useTranslation("ui");
   const [editName, setEditName] = useState(editTarget.name);
 
   const handleSubmit = (e: React.SyntheticEvent) => {
@@ -31,7 +33,7 @@ export function OrgEditModal({ editTarget, isOrgMutating, error, onSubmit, onClo
               <Pencil size={14} className="text-indigo-500" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">{orgTypeLabel(editTarget.type)}名を変更</h3>
+              <h3 className="text-base font-bold text-slate-900">{t("Rename X", { x: t(orgTypeLabel(editTarget.type)) })}</h3>
               <p className="text-xs text-slate-500 mt-0.5">{editTarget.name}</p>
             </div>
           </div>
@@ -48,7 +50,7 @@ export function OrgEditModal({ editTarget, isOrgMutating, error, onSubmit, onClo
             <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{error}</div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">新しい名前</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t("New Name")}</label>
             <input
               type="text"
               required
@@ -64,7 +66,7 @@ export function OrgEditModal({ editTarget, isOrgMutating, error, onSubmit, onClo
               onClick={onClose}
               className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
             >
-              キャンセル
+              {t("Cancel")}
             </button>
             <button
               type="submit"
@@ -74,7 +76,7 @@ export function OrgEditModal({ editTarget, isOrgMutating, error, onSubmit, onClo
               {isOrgMutating ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               ) : (
-                "変更する"
+                t("Rename (action)")
               )}
             </button>
           </div>

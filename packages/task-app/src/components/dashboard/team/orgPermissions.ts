@@ -6,7 +6,7 @@ export type OrgTarget =
   | { type: "team"; id: string; name: string };
 
 export const orgTypeLabel = (type: OrgTarget["type"]): string =>
-  type === "division" ? "本部" : type === "department" ? "部署" : "チーム";
+  type === "division" ? "Division" : type === "department" ? "Department" : "Team";
 
 export const ORG_ALLOWED_ROLES: UserRole[] = [
   UserRole.COMPANY_ADMIN,
