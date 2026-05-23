@@ -28,7 +28,6 @@ import {
   CaseTaskDetail,
   CaseType,
   UserProfile,
-  UserRole,
   UserService,
 } from "@task/core";
 import {

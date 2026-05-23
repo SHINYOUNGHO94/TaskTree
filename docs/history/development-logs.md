@@ -907,6 +907,20 @@ ChildCase UX 整備と同ブランチで、アプリ全体の UI をポートフ
 
 **API / デプロイ影響:** なし。フロントエンドのみ修正。CDK deploy 不要。
 
+### Task 25 追記: 軽微改善（lint・デフォルトビュー）
+
+**lint 警告修正:**
+
+- `packages/task-app/src/app/dashboard/cases/[id]/page.tsx` — 未使用 import `UserRole` 削除
+- `packages/task-app/src/app/dashboard/page.tsx` — 未使用 import `CaseCard` 削除
+- `packages/task-app/src/components/dashboard/team/OrgTree.tsx` — 未使用 import `Building` 削除
+
+**バードビューのデフォルト化:**
+
+- 案件リスト画面のデフォルト表示を `"list"` → `"board"` に変更
+- ビュー切り替えトグルのボタン順序をバード（左）・リスト（右）に入れ替え（デフォルトが左側になるよう統一）
+- URL パラメータ `?caseView=list` による手動上書きは引き続き有効
+
 ---
 
 ## 開発メモ
@@ -923,8 +937,6 @@ ChildCase UX 整備と同ブランチで、アプリ全体の UI をポートフ
 
 ### 新規登録
 ![新規登録画面](docs/images/signup.png)
-
-![認証コード入力画面](docs/images/auth_signup_code.png)
 
 ### ダッシュボード
 ![ダッシュボード画面](docs/images/task_dashboard.png)

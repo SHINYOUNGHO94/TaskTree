@@ -15,7 +15,6 @@ import {
 } from "@task/core";
 import { useUser } from "../../components/providers/UserProvider";
 import { CaseBoardView } from "../../components/dashboard/CaseBoardView";
-import { CaseCard } from "../../components/dashboard/CaseCard";
 import { CreateCaseModal } from "../../components/dashboard/CreateCaseModal";
 import { CASE_DELIVERY_TYPE_LABELS, CASE_STATUS_LABELS, CASE_TYPE_LABELS } from "../../components/dashboard/caseLabels";
 
@@ -169,7 +168,7 @@ const DashboardPage = () => {
   const [deliveryTypeFilter, setDeliveryTypeFilter] = useState<DeliveryTypeFilter>((searchParams.get("deliveryType") as DeliveryTypeFilter) ?? "ALL");
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>((searchParams.get("ownership") as OwnershipFilter) ?? "ALL");
   const [sortKey, setSortKey] = useState<SortKey>((searchParams.get("sort") as SortKey) ?? "updatedAt_desc");
-  const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("caseView") as ViewMode) ?? "list");
+  const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("caseView") as ViewMode) ?? "board");
 
   useEffect(() => {
     if (user) {
@@ -390,18 +389,18 @@ const DashboardPage = () => {
 
           <div className="flex flex-shrink-0 border border-slate-200 rounded-md overflow-hidden">
             <button
-              onClick={() => setViewMode("list")}
-              className={`p-1.5 transition-colors ${viewMode === "list" ? "bg-indigo-600 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}
-              title="リスト表示"
-            >
-              <List size={14} />
-            </button>
-            <button
               onClick={() => setViewMode("board")}
-              className={`p-1.5 border-l border-slate-200 transition-colors ${viewMode === "board" ? "bg-indigo-600 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}
+              className={`p-1.5 transition-colors ${viewMode === "board" ? "bg-indigo-600 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}
               title="ボード表示"
             >
               <LayoutGrid size={14} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 border-l border-slate-200 transition-colors ${viewMode === "list" ? "bg-indigo-600 text-white" : "bg-white text-slate-400 hover:bg-slate-50"}`}
+              title="リスト表示"
+            >
+              <List size={14} />
             </button>
           </div>
         </div>

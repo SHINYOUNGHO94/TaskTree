@@ -1,7 +1,7 @@
 "use client";
 
 import { Division, Department, Team } from "@task/core";
-import { Shield, Layers, Pencil, Trash2, Building } from "lucide-react";
+import { Shield, Layers, Pencil, Trash2 } from "lucide-react";
 import { OrgTarget } from "./orgPermissions";
 
 type OrgTreeProps = {
