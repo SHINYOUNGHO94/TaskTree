@@ -33,9 +33,9 @@ export default function DashboardLayout({
   if (!user) {
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-white gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          <p className="text-xs font-bold text-gray-400 animate-pulse tracking-widest">読み込み中...</p>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 gap-3">
+          <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center animate-pulse" />
+          <p className="text-xs text-slate-500 animate-pulse tracking-widest uppercase">読み込み中...</p>
         </div>
       );
     }
@@ -43,12 +43,12 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-gray-900 font-sans">
+    <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <DashboardHeader userName={user.name} onSignOut={handleSignOut} />
-        <main className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto p-8">
             {children}
           </div>
         </main>

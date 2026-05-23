@@ -11,9 +11,6 @@ import {
   Tag,
   User,
   AlertCircle,
-  CheckSquare,
-  Square,
-  CornerDownRight,
 } from "lucide-react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import {
@@ -22,118 +19,33 @@ import {
   CaseComment,
   CaseDeliveryType,
   CaseDetail,
-  CaseHistoryAction,
   CaseHistoryEntry,
   CaseOwnerType,
   CaseParticipantCompany,
-  CaseParticipantCompanyStatus,
   CaseService,
   CaseStatus,
   CaseTargetScope,
   CaseTaskDetail,
-  CaseTaskStatus,
   CaseType,
-  UpdateCaseTaskInput,
   UserProfile,
-  UserRole,
   UserService,
 } from "@task/core";
 import {
   CASE_DELIVERY_TYPE_LABELS,
   CASE_STATUS_LABELS,
   CASE_TARGET_SCOPE_LABELS,
-  CASE_TASK_STATUS_LABELS,
   CASE_TYPE_LABELS,
+  USER_ROLE_LABELS,
   resolveDisplayName,
   shortId,
 } from "../../../../components/dashboard/caseLabels";
-
-const HISTORY_ACTION_LABELS: Record<CaseHistoryAction, string> = {
-  [CaseHistoryAction.CASE_CREATED]: "案件作成",
-  [CaseHistoryAction.STATUS_CHANGED]: "ステータス変更",
-  [CaseHistoryAction.TASK_CREATED]: "作業追加",
-  [CaseHistoryAction.TASK_UPDATED]: "作業更新",
-  [CaseHistoryAction.TASK_STATUS_CHANGED]: "作業ステータス変更",
-  [CaseHistoryAction.TASK_ASSIGNEE_CHANGED]: "作業担当者変更",
-  [CaseHistoryAction.TASK_DELETED]: "作業削除",
-  [CaseHistoryAction.CLAIM_REQUESTED]: "担当希望",
-  [CaseHistoryAction.CLAIM_APPROVED]: "担当承認",
-  [CaseHistoryAction.CLAIM_REJECTED]: "担当却下",
-  [CaseHistoryAction.CHILD_CASE_CREATED]: "子案件追加",
-  [CaseHistoryAction.PARTICIPANT_COMPANY_INVITED]: "外部会社招待",
-  [CaseHistoryAction.PARTICIPANT_COMPANY_ACCEPTED]: "外部会社参加承認",
-  [CaseHistoryAction.PARTICIPANT_COMPANY_REJECTED]: "外部会社参加拒否",
-};
-
-const PARTICIPANT_STATUS_STYLES: Record<CaseParticipantCompanyStatus, string> = {
-  [CaseParticipantCompanyStatus.INVITED]: "bg-yellow-50 text-yellow-700 border border-yellow-200",
-  [CaseParticipantCompanyStatus.ACTIVE]: "bg-green-50 text-green-700 border border-green-200",
-  [CaseParticipantCompanyStatus.REJECTED]: "bg-red-50 text-red-700 border border-red-200",
-  [CaseParticipantCompanyStatus.REMOVED]: "bg-gray-50 text-gray-500 border border-gray-200",
-};
-
-const PARTICIPANT_STATUS_LABELS: Record<CaseParticipantCompanyStatus, string> = {
-  [CaseParticipantCompanyStatus.INVITED]: "招待中",
-  [CaseParticipantCompanyStatus.ACTIVE]: "参加中",
-  [CaseParticipantCompanyStatus.REJECTED]: "拒否",
-  [CaseParticipantCompanyStatus.REMOVED]: "削除",
-};
-
-const TASK_STATUS_STYLES: Record<CaseTaskStatus, string> = {
-  [CaseTaskStatus.TODO]: "bg-gray-100 text-gray-600 border border-gray-200",
-  [CaseTaskStatus.IN_PROGRESS]: "bg-blue-50 text-blue-600 border border-blue-100",
-  [CaseTaskStatus.REVIEW_REQUESTED]: "bg-purple-50 text-purple-600 border border-purple-100",
-  [CaseTaskStatus.DONE]: "bg-green-50 text-green-600 border border-green-100",
-  [CaseTaskStatus.ON_HOLD]: "bg-yellow-50 text-yellow-600 border border-yellow-100",
-  [CaseTaskStatus.CANCELED]: "bg-red-50 text-red-600 border border-red-100",
-};
+import { CaseChildCasesSection } from "../../../../components/case-detail/CaseChildCasesSection";
+import { CaseTasksSection } from "../../../../components/case-detail/CaseTasksSection";
+import { CaseHistorySection } from "../../../../components/case-detail/CaseHistorySection";
+import { CaseCommentsSection } from "../../../../components/case-detail/CaseCommentsSection";
+import { CaseParticipantCompanySection } from "../../../../components/case-detail/CaseParticipantCompanySection";
 
 type ErrorType = "notFound" | "forbidden" | "error";
-
-const canManageCaseOwner = (profile: UserProfile | null, caseDetail: CaseDetail): boolean => {
-  if (!profile) return false;
-  if (profile.role === UserRole.COMPANY_ADMIN && caseDetail.ownerType === CaseOwnerType.COMPANY) {
-    return true;
-  }
-  if (caseDetail.ownerType === CaseOwnerType.DIVISION) {
-    return (
-      profile.role === UserRole.COMPANY_ADMIN ||
-      (profile.role === UserRole.DIVISION_ADMIN && caseDetail.divisionId === profile.divisionId)
-    );
-  }
-  if (caseDetail.ownerType === CaseOwnerType.DEPARTMENT) {
-    return (
-      profile.role === UserRole.COMPANY_ADMIN ||
-      (profile.role === UserRole.DIVISION_ADMIN && caseDetail.divisionId === profile.divisionId) ||
-      (profile.role === UserRole.DEPT_ADMIN && caseDetail.departmentId === profile.departmentId)
-    );
-  }
-  if (caseDetail.ownerType === CaseOwnerType.TEAM) {
-    return (
-      profile.role === UserRole.COMPANY_ADMIN ||
-      (profile.role === UserRole.DIVISION_ADMIN && caseDetail.divisionId === profile.divisionId) ||
-      (profile.role === UserRole.DEPT_ADMIN && caseDetail.departmentId === profile.departmentId) ||
-      (profile.role === UserRole.TEAM_ADMIN && caseDetail.teamId === profile.teamId)
-    );
-  }
-  return false;
-};
-
-const canManageCaseTask = (
-  task: CaseTaskDetail,
-  caseDetail: CaseDetail,
-  currentUserId: string | null,
-  profile: UserProfile | null,
-): boolean => {
-  if (!currentUserId) return false;
-  return (
-    caseDetail.creatorId === currentUserId ||
-    (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId) ||
-    canManageCaseOwner(profile, caseDetail) ||
-    task.creatorId === currentUserId ||
-    task.assigneeId === currentUserId
-  );
-};
 
 const UPDATABLE_STATUSES: CaseStatus[] = [
   CaseStatus.WAITING,
@@ -146,37 +58,35 @@ const UPDATABLE_STATUSES: CaseStatus[] = [
 ];
 
 const STATUS_STYLES: Record<CaseStatus, string> = {
-  [CaseStatus.WAITING]: "bg-gray-100 text-gray-700 border border-gray-200",
-  [CaseStatus.IN_PROGRESS]: "bg-blue-50 text-blue-700 border border-blue-100",
-  [CaseStatus.REVIEW_REQUESTED]: "bg-purple-50 text-purple-700 border border-purple-100",
-  [CaseStatus.COMPLETED]: "bg-green-50 text-green-700 border border-green-100",
-  [CaseStatus.ON_HOLD]: "bg-yellow-50 text-yellow-700 border border-yellow-100",
-  [CaseStatus.CANCELED]: "bg-red-50 text-red-700 border border-red-100",
-  [CaseStatus.REOPENED]: "bg-orange-50 text-orange-700 border border-orange-100",
+  [CaseStatus.WAITING]:           "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80",
+  [CaseStatus.IN_PROGRESS]:       "bg-sky-50 text-sky-700 ring-1 ring-sky-200/80",
+  [CaseStatus.REVIEW_REQUESTED]:  "bg-violet-50 text-violet-700 ring-1 ring-violet-200/80",
+  [CaseStatus.COMPLETED]:         "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80",
+  [CaseStatus.ON_HOLD]:           "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80",
+  [CaseStatus.CANCELED]:          "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80",
+  [CaseStatus.REOPENED]:          "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80",
 };
 
 const CASE_TYPE_STYLES: Record<CaseType, string> = {
-  [CaseType.REQUEST]: "bg-orange-50 text-orange-700 border border-orange-100",
-  [CaseType.STANDARD]: "bg-blue-50 text-blue-700 border border-blue-100",
-  [CaseType.PROJECT]: "bg-purple-50 text-purple-700 border border-purple-100",
+  [CaseType.REQUEST]:  "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80",
+  [CaseType.STANDARD]: "bg-blue-50 text-blue-700 ring-1 ring-blue-200/80",
+  [CaseType.PROJECT]:  "bg-violet-50 text-violet-700 ring-1 ring-violet-200/80",
+};
+
+const CASE_TYPE_GRADIENT: Record<CaseType, string> = {
+  [CaseType.REQUEST]:  "from-amber-400 to-orange-500",
+  [CaseType.STANDARD]: "from-blue-400 to-sky-500",
+  [CaseType.PROJECT]:  "from-violet-500 to-purple-600",
 };
 
 const OWNER_TYPE_LABELS: Record<CaseOwnerType, string> = {
-  [CaseOwnerType.USER]: "個人",
-  [CaseOwnerType.TEAM]: "チーム",
+  [CaseOwnerType.USER]:       "個人",
+  [CaseOwnerType.TEAM]:       "チーム",
   [CaseOwnerType.DEPARTMENT]: "部署",
-  [CaseOwnerType.DIVISION]: "事業部",
-  [CaseOwnerType.COMPANY]: "会社",
+  [CaseOwnerType.DIVISION]:   "事業部",
+  [CaseOwnerType.COMPANY]:    "会社",
 };
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  [UserRole.GUEST]: "ゲスト",
-  [UserRole.USER]: "ユーザー",
-  [UserRole.TEAM_ADMIN]: "チームリーダー",
-  [UserRole.DEPT_ADMIN]: "部長",
-  [UserRole.DIVISION_ADMIN]: "事業部長",
-  [UserRole.COMPANY_ADMIN]: "社長",
-};
 
 const resolveErrorType = (error: unknown): ErrorType => {
   if (typeof error === "object" && error !== null) {
@@ -208,23 +118,24 @@ const CaseDetailPage = () => {
 
   const buildBackUrl = () => {
     const params = new URLSearchParams();
-    const caseView = searchParams.get("caseView");
-    const caseType = searchParams.get("caseType");
-    const status = searchParams.get("status");
+    const caseView    = searchParams.get("caseView");
+    const caseType    = searchParams.get("caseType");
+    const status      = searchParams.get("status");
     const deliveryType = searchParams.get("deliveryType");
-    const ownership = searchParams.get("ownership");
-    const sort = searchParams.get("sort");
-    const q = searchParams.get("q");
-    if (caseView) params.set("caseView", caseView);
-    if (caseType) params.set("caseType", caseType);
-    if (status) params.set("status", status);
+    const ownership   = searchParams.get("ownership");
+    const sort        = searchParams.get("sort");
+    const q           = searchParams.get("q");
+    if (caseView)     params.set("caseView", caseView);
+    if (caseType)     params.set("caseType", caseType);
+    if (status)       params.set("status", status);
     if (deliveryType) params.set("deliveryType", deliveryType);
-    if (ownership) params.set("ownership", ownership);
-    if (sort) params.set("sort", sort);
-    if (q) params.set("q", q);
+    if (ownership)    params.set("ownership", ownership);
+    if (sort)         params.set("sort", sort);
+    if (q)            params.set("q", q);
     const qs = params.toString();
     return qs ? `/dashboard?${qs}` : "/dashboard";
   };
+
   const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorType, setErrorType] = useState<ErrorType | null>(null);
@@ -234,32 +145,12 @@ const CaseDetailPage = () => {
   const [caseTasks, setCaseTasks] = useState<CaseTaskDetail[]>([]);
   const [isTasksLoading, setIsTasksLoading] = useState(false);
   const [tasksError, setTasksError] = useState<string | null>(null);
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskDescription, setNewTaskDescription] = useState("");
-  const [newTaskDueDate, setNewTaskDueDate] = useState("");
-  const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [taskCreateError, setTaskCreateError] = useState<string | null>(null);
-  const [editingTask, setEditingTask] = useState<CaseTaskDetail | null>(null);
-  const [editTaskTitle, setEditTaskTitle] = useState("");
-  const [editTaskDescription, setEditTaskDescription] = useState("");
-  const [editTaskStatus, setEditTaskStatus] = useState<CaseTaskStatus>(CaseTaskStatus.TODO);
-  const [editTaskAssigneeId, setEditTaskAssigneeId] = useState<string>("");
-  const [editTaskDueDate, setEditTaskDueDate] = useState("");
-  const [isEditingTask, setIsEditingTask] = useState(false);
-  const [editTaskError, setEditTaskError] = useState<string | null>(null);
-  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
-  const [isDeletingTask, setIsDeletingTask] = useState(false);
-  const [deleteTaskError, setDeleteTaskError] = useState<string | null>(null);
   const [caseHistory, setCaseHistory] = useState<CaseHistoryEntry[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [caseComments, setCaseComments] = useState<CaseComment[]>([]);
   const [isCommentsLoading, setIsCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
-  const [newCommentContent, setNewCommentContent] = useState("");
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [commentSubmitError, setCommentSubmitError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
   const [claimRequests, setClaimRequests] = useState<CaseClaimRequest[]>([]);
@@ -274,27 +165,12 @@ const CaseDetailPage = () => {
   const [childCases, setChildCases] = useState<CaseDetail[]>([]);
   const [isChildCasesLoading, setIsChildCasesLoading] = useState(false);
   const [childCasesError, setChildCasesError] = useState<string | null>(null);
-  const [showChildCaseForm, setShowChildCaseForm] = useState(false);
-  const [childCaseTitle, setChildCaseTitle] = useState("");
-  const [childCaseDescription, setChildCaseDescription] = useState("");
-  const [childCaseDeliveryType, setChildCaseDeliveryType] = useState<CaseDeliveryType>(CaseDeliveryType.DIRECT);
-  const [childCaseTargetScope, setChildCaseTargetScope] = useState<CaseTargetScope>(CaseTargetScope.TEAM);
-  const [childCaseTargetScopeId, setChildCaseTargetScopeId] = useState("");
-  const [childCaseRequiredRole, setChildCaseRequiredRole] = useState<UserRole>(UserRole.USER);
-  const [childCaseDueDate, setChildCaseDueDate] = useState("");
-  const [isCreatingChildCase, setIsCreatingChildCase] = useState(false);
-  const [childCaseCreateError, setChildCaseCreateError] = useState<string | null>(null);
   const [requestChildrenByStandard, setRequestChildrenByStandard] = useState<Record<string, CaseDetail[]>>({});
   const [isNestedLoading, setIsNestedLoading] = useState(false);
   const [nestedChildCasesError, setNestedChildCasesError] = useState<string | null>(null);
   const [participantCompanies, setParticipantCompanies] = useState<CaseParticipantCompany[]>([]);
   const [isParticipantsLoading, setIsParticipantsLoading] = useState(false);
   const [participantsError, setParticipantsError] = useState<string | null>(null);
-  const [showInviteForm, setShowInviteForm] = useState(false);
-  const [inviteCompanyId, setInviteCompanyId] = useState("");
-  const [isInviting, setIsInviting] = useState(false);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-
   const [userMap, setUserMap] = useState<Map<string, { name: string; email: string }>>(new Map());
 
   const fetchCase = useCallback(async () => {
@@ -318,7 +194,7 @@ const CaseDetailPage = () => {
       const map = new Map(users.map((u) => [u.userId, { name: u.name, email: u.email }]));
       setUserMap(map);
     } catch {
-      // display name resolution is best-effort; silent failure is acceptable
+      // display name resolution is best-effort
     }
   }, []);
 
@@ -434,7 +310,6 @@ const CaseDetailPage = () => {
       setNestedChildCasesError(null);
       return;
     }
-
     setIsNestedLoading(true);
     setNestedChildCasesError(null);
     try {
@@ -455,45 +330,6 @@ const CaseDetailPage = () => {
       setIsNestedLoading(false);
     }
   }, []);
-
-  const handleCreateChildCase = async () => {
-    if (!childCaseTitle.trim()) {
-      setChildCaseCreateError("タイトルを入力してください。");
-      return;
-    }
-    if (!childCaseDescription.trim()) {
-      setChildCaseCreateError("内容を入力してください。");
-      return;
-    }
-    if (!childCaseTargetScopeId.trim()) {
-      setChildCaseCreateError("送信先IDを入力してください。");
-      return;
-    }
-    setIsCreatingChildCase(true);
-    setChildCaseCreateError(null);
-    try {
-      await CaseService.createChildCase(id as string, {
-        title: childCaseTitle.trim(),
-        description: childCaseDescription.trim(),
-        deliveryType: childCaseDeliveryType,
-        targetScope: childCaseTargetScope,
-        targetScopeId: childCaseTargetScopeId.trim(),
-        requiredRole: childCaseRequiredRole,
-        dueDate: childCaseDueDate || null,
-      });
-      setChildCaseTitle("");
-      setChildCaseDescription("");
-      setChildCaseTargetScopeId("");
-      setChildCaseDueDate("");
-      setShowChildCaseForm(false);
-      await Promise.all([fetchChildCases(), fetchCaseHistory()]);
-    } catch (error) {
-      console.error("Failed to create child case", error);
-      setChildCaseCreateError("子案件の作成に失敗しました。再度お試しください。");
-    } finally {
-      setIsCreatingChildCase(false);
-    }
-  };
 
   const fetchCaseHistory = useCallback(async () => {
     setIsHistoryLoading(true);
@@ -537,124 +373,6 @@ const CaseDetailPage = () => {
     }
   }, [id]);
 
-  const handleInviteCompany = async () => {
-    if (!inviteCompanyId.trim()) {
-      setInviteError("会社IDを入力してください。");
-      return;
-    }
-    setIsInviting(true);
-    setInviteError(null);
-    try {
-      await CaseService.inviteParticipantCompany(id as string, { companyId: inviteCompanyId.trim() });
-      setInviteCompanyId("");
-      setShowInviteForm(false);
-      await Promise.all([fetchParticipantCompanies(), fetchCaseHistory()]);
-    } catch (error) {
-      console.error("Failed to invite company", error);
-      setInviteError("招待に失敗しました。会社IDを確認してください。");
-    } finally {
-      setIsInviting(false);
-    }
-  };
-
-  const handleSubmitComment = async () => {
-    if (!newCommentContent.trim()) {
-      setCommentSubmitError("コメント内容を入力してください。");
-      return;
-    }
-    setIsSubmittingComment(true);
-    setCommentSubmitError(null);
-    try {
-      await CaseService.createCaseComment(id as string, { content: newCommentContent.trim() });
-      setNewCommentContent("");
-      await fetchCaseComments();
-    } catch (error) {
-      console.error("Failed to submit comment", error);
-      setCommentSubmitError("コメントの送信に失敗しました。再度お試しください。");
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
-
-  const handleCreateTask = async () => {
-    if (!newTaskTitle.trim()) {
-      setTaskCreateError("タイトルを入力してください。");
-      return;
-    }
-    setIsCreatingTask(true);
-    setTaskCreateError(null);
-    try {
-      await CaseService.createCaseTask(id as string, {
-        title: newTaskTitle.trim(),
-        description: newTaskDescription,
-        dueDate: newTaskDueDate || null,
-      });
-      setNewTaskTitle("");
-      setNewTaskDescription("");
-      setNewTaskDueDate("");
-      setShowTaskForm(false);
-      await Promise.all([fetchCaseTasks(), fetchCaseHistory()]);
-    } catch (error) {
-      console.error("Failed to create case task", error);
-      setTaskCreateError("作業の作成に失敗しました。再度お試しください。");
-    } finally {
-      setIsCreatingTask(false);
-    }
-  };
-
-  const openEditTask = (task: CaseTaskDetail) => {
-    setEditingTask(task);
-    setEditTaskTitle(task.title);
-    setEditTaskDescription(task.description);
-    setEditTaskStatus(task.status);
-    setEditTaskAssigneeId(task.assigneeId ?? "");
-    setEditTaskDueDate(task.dueDate ?? "");
-    setEditTaskError(null);
-  };
-
-  const handleUpdateTask = async () => {
-    if (!editingTask) return;
-    if (!editTaskTitle.trim()) {
-      setEditTaskError("タイトルを入力してください。");
-      return;
-    }
-    setIsEditingTask(true);
-    setEditTaskError(null);
-    try {
-      const input: UpdateCaseTaskInput = {
-        title: editTaskTitle.trim(),
-        description: editTaskDescription,
-        status: editTaskStatus,
-        assigneeId: editTaskAssigneeId || null,
-        dueDate: editTaskDueDate || null,
-      };
-      await CaseService.updateCaseTask(id as string, editingTask.taskId, input);
-      setEditingTask(null);
-      await Promise.all([fetchCaseTasks(), fetchCaseHistory()]);
-    } catch (error) {
-      console.error("Failed to update case task", error);
-      setEditTaskError("作業の更新に失敗しました。再度お試しください。");
-    } finally {
-      setIsEditingTask(false);
-    }
-  };
-
-  const handleDeleteTask = async () => {
-    if (!deletingTaskId) return;
-    setIsDeletingTask(true);
-    setDeleteTaskError(null);
-    try {
-      await CaseService.deleteCaseTask(id as string, deletingTaskId);
-      setDeletingTaskId(null);
-      await Promise.all([fetchCaseTasks(), fetchCaseHistory()]);
-    } catch (error) {
-      console.error("Failed to delete case task", error);
-      setDeleteTaskError("作業の削除に失敗しました。再度お試しください。");
-    } finally {
-      setIsDeletingTask(false);
-    }
-  };
-
   useEffect(() => {
     fetchAuthSession()
       .then(({ tokens }) => {
@@ -662,9 +380,7 @@ const CaseDetailPage = () => {
         if (typeof sub === "string") setCurrentUserId(sub);
       })
       .catch(() => undefined);
-    UserService.getUserProfile()
-      .then(setCurrentProfile)
-      .catch(() => undefined);
+    UserService.getUserProfile().then(setCurrentProfile).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -688,47 +404,78 @@ const CaseDetailPage = () => {
       setIsNestedLoading(false);
       return;
     }
-
     void fetchNestedRequestChildren(childCases);
   }, [id, caseDetail, childCases, fetchNestedRequestChildren]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      <div className="animate-pulse">
+        <div className="h-6 w-16 bg-slate-200 rounded-lg mb-8" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-md shadow-slate-100/60">
+              <div className="h-1.5 bg-slate-200" />
+              <div className="p-8 space-y-5">
+                <div className="flex gap-2">
+                  <div className="h-6 w-20 bg-slate-100 rounded-full" />
+                  <div className="h-6 w-20 bg-slate-100 rounded-full" />
+                </div>
+                <div className="h-8 bg-slate-200 rounded-xl w-3/4" />
+                <div className="space-y-2 pt-4 border-t border-slate-100">
+                  <div className="h-3 bg-slate-100 rounded w-full" />
+                  <div className="h-3 bg-slate-100 rounded w-5/6" />
+                  <div className="h-3 bg-slate-100 rounded w-4/6" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-100 h-40 shadow-sm" />
+          </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
+              <div className="h-4 bg-slate-200 rounded-lg w-24" />
+              <div className="h-10 bg-slate-100 rounded-xl" />
+              <div className="h-10 bg-slate-200 rounded-xl" />
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
+              <div className="h-4 bg-slate-200 rounded-lg w-16 mb-2" />
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="w-7 h-7 bg-slate-100 rounded-lg flex-shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-2.5 bg-slate-100 rounded w-12" />
+                    <div className="h-3.5 bg-slate-200 rounded w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (errorType) {
     const errorConfig = {
-      notFound: {
-        title: "案件が見つかりません",
-        message: "この案件は存在しないか、すでに削除されています。",
-      },
-      forbidden: {
-        title: "アクセス権限がありません",
-        message: "この案件を閲覧する権限がありません。",
-      },
-      error: {
-        title: "エラーが発生しました",
-        message: "案件の取得に失敗しました。再度お試しください。",
-      },
+      notFound: { title: "案件が見つかりません", message: "この案件は存在しないか、すでに削除されています。" },
+      forbidden: { title: "アクセス権限がありません", message: "この案件を閲覧する権限がありません。" },
+      error: { title: "エラーが発生しました", message: "案件の取得に失敗しました。再度お試しください。" },
     }[errorType];
 
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
         <button
           onClick={() => router.push(buildBackUrl())}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium mb-8"
+          className="group flex items-center gap-2 text-slate-400 hover:text-slate-700 transition-all text-sm font-medium mb-8"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
           戻る
         </button>
-        <div className="text-center py-20 bg-white border border-gray-200 rounded-2xl shadow-sm">
-          <FileText size={48} className="mx-auto mb-4 text-gray-300 animate-pulse" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">{errorConfig.title}</h2>
-          <p className="text-gray-500 text-sm">{errorConfig.message}</p>
+        <div className="text-center py-24 bg-white border border-slate-100 rounded-2xl shadow-lg shadow-slate-200/50">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <FileText size={28} className="text-slate-300" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">{errorConfig.title}</h2>
+          <p className="text-slate-400 text-sm">{errorConfig.message}</p>
         </div>
       </div>
     );
@@ -737,506 +484,117 @@ const CaseDetailPage = () => {
   if (!caseDetail) return null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Back Button */}
+    <div>
+      {/* Back button */}
       <div className="flex items-center mb-8">
         <button
           onClick={() => router.push(buildBackUrl())}
-          className="group flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
+          className="group flex items-center gap-2 text-slate-400 hover:text-slate-700 transition-all duration-200 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-slate-100"
         >
-          <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+          <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
           戻る
         </button>
       </div>
 
-      {/* Main Grid: 2 Columns */}
+      {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Side: Main Contents (2/3 width) */}
+
+        {/* Left: main content */}
         <div className="lg:col-span-2 space-y-6">
-          
-          {/* Main Case Info Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+
+          {/* Main case info card */}
+          <div className="bg-white border border-slate-100 rounded-2xl shadow-lg shadow-slate-200/50 overflow-hidden">
+            <div className={`h-1.5 w-full bg-gradient-to-r ${CASE_TYPE_GRADIENT[caseDetail.caseType]}`} />
             <div className="p-8">
-              {/* Badges */}
               <div className="flex flex-wrap items-center gap-2.5 mb-5">
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_STYLES[caseDetail.status]}`}>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[caseDetail.status]}`}>
                   {CASE_STATUS_LABELS[caseDetail.status]}
                 </span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${CASE_TYPE_STYLES[caseDetail.caseType]}`}>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${CASE_TYPE_STYLES[caseDetail.caseType]}`}>
                   {CASE_TYPE_LABELS[caseDetail.caseType]}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200">
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-600 ring-1 ring-slate-200/80">
                   {CASE_DELIVERY_TYPE_LABELS[caseDetail.deliveryType]}
                 </span>
               </div>
 
-              {/* Title */}
-              <h1 className="text-2xl lg:text-3xl font-extrabold text-gray-950 mb-6 leading-tight">
+              <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 mb-6 leading-tight">
                 {caseDetail.title}
               </h1>
 
-              {/* Description Section */}
-              <div className="border-t border-gray-100 pt-6">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">詳細内容</h3>
-                <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap min-h-[100px] bg-gray-50/50 rounded-xl p-4 border border-gray-100">
+              <div className="border-t border-slate-100 pt-6">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">詳細内容</h3>
+                <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap min-h-[100px] bg-slate-50/60 rounded-xl p-4 border border-slate-100">
                   {caseDetail.description || (
-                    <span className="text-gray-400 italic">内容なし</span>
+                    <span className="text-slate-300 italic">内容なし</span>
                   )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Child Cases (STANDARD / REQUEST hierarchy) */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-gray-800">子案件</h3>
-                <p className="text-xs text-gray-400 mt-0.5">関連するサブ案件の階層構造</p>
-              </div>
-              {(caseDetail.caseType === CaseType.STANDARD ||
-                caseDetail.caseType === CaseType.PROJECT) &&
-                currentUserId &&
-                (caseDetail.creatorId === currentUserId ||
-                  (caseDetail.ownerType === CaseOwnerType.USER &&
-                    caseDetail.ownerId === currentUserId)) && (
-                  <button
-                    onClick={() => {
-                      setShowChildCaseForm(!showChildCaseForm);
-                      setChildCaseCreateError(null);
-                    }}
-                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                  >
-                    {showChildCaseForm
-                      ? "キャンセル"
-                      : caseDetail.caseType === CaseType.PROJECT
-                        ? "+ 通常案件を追加"
-                        : "+ 子案件を追加"}
-                  </button>
-                )}
-            </div>
+          <CaseChildCasesSection
+            caseDetail={caseDetail}
+            currentUserId={currentUserId}
+            currentProfile={currentProfile}
+            childCases={childCases}
+            isChildCasesLoading={isChildCasesLoading}
+            childCasesError={childCasesError}
+            requestChildrenByStandard={requestChildrenByStandard}
+            nestedChildCasesError={nestedChildCasesError}
+            isNestedLoading={isNestedLoading}
+            onCreated={async () => { await Promise.all([fetchChildCases(), fetchCaseHistory()]); }}
+            onNavigate={(caseId) => router.push(`/dashboard/cases/${caseId}`)}
+          />
 
-            {showChildCaseForm && (
-              <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-                <div className="space-y-4">
-                  {childCaseCreateError && <ErrorAlert message={childCaseCreateError} />}
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">タイトル</label>
-                    <input
-                      value={childCaseTitle}
-                      onChange={(e) => setChildCaseTitle(e.target.value)}
-                      placeholder="子案件のタイトルを入力"
-                      className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">内容</label>
-                    <textarea
-                      value={childCaseDescription}
-                      onChange={(e) => setChildCaseDescription(e.target.value)}
-                      placeholder="子案件の詳細を入力..."
-                      rows={3}
-                      className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">配信タイプ</label>
-                      <select
-                        value={childCaseDeliveryType}
-                        onChange={(e) => setChildCaseDeliveryType(e.target.value as CaseDeliveryType)}
-                        className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
-                      >
-                        <option value={CaseDeliveryType.DIRECT}>直接依頼</option>
-                        <option value={CaseDeliveryType.OPEN}>公開</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">送信先</label>
-                      <select
-                        value={childCaseTargetScope}
-                        onChange={(e) => setChildCaseTargetScope(e.target.value as CaseTargetScope)}
-                        className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
-                      >
-                        <option value={CaseTargetScope.TEAM}>チーム</option>
-                        <option value={CaseTargetScope.USER}>個人</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                      {childCaseTargetScope === CaseTargetScope.TEAM ? "チームID" : "ユーザーID"}
-                    </label>
-                    <input
-                      value={childCaseTargetScopeId}
-                      onChange={(e) => setChildCaseTargetScopeId(e.target.value)}
-                      placeholder={childCaseTargetScope === CaseTargetScope.TEAM ? "チームIDを入力" : "ユーザーIDを入力"}
-                      className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">最低権限</label>
-                      <select
-                        value={childCaseRequiredRole}
-                        onChange={(e) => setChildCaseRequiredRole(e.target.value as UserRole)}
-                        className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-white"
-                      >
-                        <option value={UserRole.USER}>ユーザー</option>
-                        <option value={UserRole.TEAM_ADMIN}>チームリーダー</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">期限（任意）</label>
-                      <input
-                        type="date"
-                        value={childCaseDueDate}
-                        onChange={(e) => setChildCaseDueDate(e.target.value)}
-                        className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleCreateChildCase}
-                    disabled={isCreatingChildCase}
-                    className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isCreatingChildCase ? "作成中..." : "子案件を作成"}
-                  </button>
-                </div>
-              </div>
-            )}
+          <CaseTasksSection
+            caseId={id as string}
+            caseDetail={caseDetail}
+            caseTasks={caseTasks}
+            isTasksLoading={isTasksLoading}
+            tasksError={tasksError}
+            currentUserId={currentUserId}
+            currentProfile={currentProfile}
+            userMap={userMap}
+            onTaskChange={async () => { await Promise.all([fetchCaseTasks(), fetchCaseHistory()]); }}
+          />
 
-            <div className="p-6">
-              {isChildCasesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
-                </div>
-              ) : childCasesError ? (
-                <ErrorAlert message={childCasesError} />
-              ) : childCases.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
-                  <p className="text-sm text-gray-400">子案件はまだありません。</p>
-                </div>
-              ) : caseDetail.caseType === CaseType.PROJECT ? (
-                <>
-                  {nestedChildCasesError && <ErrorAlert message={nestedChildCasesError} />}
-                  <ul className="space-y-4">
-                    {childCases.map((standardChild) => (
-                      <li key={standardChild.caseId} className="border border-blue-100 rounded-xl overflow-hidden shadow-sm">
-                        <div
-                          onClick={() => router.push(`/dashboard/cases/${standardChild.caseId}`)}
-                          className="flex items-center gap-3 p-4 bg-blue-50/20 hover:bg-blue-50/50 transition-colors cursor-pointer"
-                        >
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_STYLES[standardChild.status]}`}>
-                            {CASE_STATUS_LABELS[standardChild.status]}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap bg-blue-100 text-blue-700 border border-blue-200">
-                            {CASE_TYPE_LABELS[CaseType.STANDARD]}
-                          </span>
-                          <span className="text-sm font-bold text-gray-800 flex-1 truncate">{standardChild.title}</span>
-                          {standardChild.dueDate && (
-                            <span className="text-xs text-gray-400 flex items-center gap-1 whitespace-nowrap">
-                              <Calendar size={12} />
-                              {standardChild.dueDate}
-                            </span>
-                          )}
-                        </div>
-                        {isNestedLoading ? (
-                          <div className="px-6 py-4 flex items-center gap-2 border-t border-gray-50">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
-                            <span className="text-xs text-gray-400">ロード中...</span>
-                          </div>
-                        ) : (requestChildrenByStandard[standardChild.caseId] ?? []).length > 0 ? (
-                          <ul className="divide-y divide-gray-50 border-t border-gray-50 bg-gray-50/30">
-                            {(requestChildrenByStandard[standardChild.caseId] ?? []).map((requestChild) => (
-                              <li
-                                key={requestChild.caseId}
-                                onClick={() => router.push(`/dashboard/cases/${requestChild.caseId}`)}
-                                className="flex items-center gap-3 p-3 pl-8 hover:bg-gray-50 transition-colors cursor-pointer group"
-                              >
-                                <CornerDownRight size={14} className="text-gray-300 group-hover:text-gray-400 transition-colors" />
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_STYLES[requestChild.status]}`}>
-                                  {CASE_STATUS_LABELS[requestChild.status]}
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap bg-orange-100 text-orange-700 border border-orange-200">
-                                  {CASE_TYPE_LABELS[CaseType.REQUEST]}
-                                </span>
-                                <span className="text-sm text-gray-700 flex-1 truncate">{requestChild.title}</span>
-                                {requestChild.dueDate && (
-                                  <span className="text-xs text-gray-400 flex items-center gap-1 whitespace-nowrap">
-                                    <Calendar size={12} />
-                                    {requestChild.dueDate}
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <ul className="space-y-2.5">
-                  {childCases.map((child) => (
-                    <li
-                      key={child.caseId}
-                      onClick={() => router.push(`/dashboard/cases/${child.caseId}`)}
-                      className="flex items-center gap-3 p-3.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 transition-all cursor-pointer shadow-sm"
-                    >
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_STYLES[child.status]}`}>
-                        {CASE_STATUS_LABELS[child.status]}
-                      </span>
-                      <span className="text-sm font-bold text-gray-800 flex-1 truncate">{child.title}</span>
-                      {child.dueDate && (
-                        <span className="text-xs text-gray-400 flex items-center gap-1 whitespace-nowrap">
-                          <Calendar size={12} />
-                          {child.dueDate}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          {/* Work / Tasks Checklist */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-gray-800">作業一覧</h3>
-                <p className="text-xs text-gray-400 mt-0.5">完了すべきタスクのチェックリスト</p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowTaskForm(!showTaskForm);
-                  setTaskCreateError(null);
-                }}
-                className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-              >
-                {showTaskForm ? "キャンセル" : "+ 作業を追加"}
-              </button>
-            </div>
-
-            {showTaskForm && (
-              <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-                <div className="space-y-4">
-                  {taskCreateError && <ErrorAlert message={taskCreateError} />}
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">タイトル</label>
-                    <input
-                      value={newTaskTitle}
-                      onChange={(e) => setNewTaskTitle(e.target.value)}
-                      placeholder="作業のタイトルを入力"
-                      className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">内容（任意）</label>
-                    <textarea
-                      value={newTaskDescription}
-                      onChange={(e) => setNewTaskDescription(e.target.value)}
-                      placeholder="作業の詳細を入力..."
-                      rows={3}
-                      className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">期限（任意）</label>
-                    <input
-                      type="date"
-                      value={newTaskDueDate}
-                      onChange={(e) => setNewTaskDueDate(e.target.value)}
-                      className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                    />
-                  </div>
-                  <button
-                    onClick={handleCreateTask}
-                    disabled={isCreatingTask}
-                    className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isCreatingTask ? "作成中..." : "作業を作成"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="p-6">
-              {isTasksLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
-                </div>
-              ) : tasksError ? (
-                <ErrorAlert message={tasksError} />
-              ) : caseTasks.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
-                  <p className="text-sm text-gray-400">作業はまだありません。</p>
-                </div>
-              ) : (
-                <ul className="space-y-2.5">
-                  {caseTasks.map((task) => {
-                    const isCompleted = task.status === CaseTaskStatus.DONE;
-                    const canManageTask = caseDetail
-                      ? canManageCaseTask(task, caseDetail, currentUserId, currentProfile)
-                      : false;
-                    return (
-                      <li
-                        key={task.taskId}
-                        className="flex items-center gap-3.5 p-3.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 transition-all shadow-sm"
-                      >
-                        <div className="flex-shrink-0">
-                          {isCompleted ? (
-                            <CheckSquare className="w-5 h-5 text-green-500" />
-                          ) : (
-                            <Square className="w-5 h-5 text-gray-300" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-bold text-gray-800 truncate ${isCompleted ? "line-through text-gray-400 font-normal" : ""}`}>
-                            {task.title}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {task.description && (
-                              <p className="text-xs text-gray-400 truncate">{task.description}</p>
-                            )}
-                            {task.assigneeId && (
-                              <span className="text-xs text-gray-400 whitespace-nowrap flex items-center gap-1">
-                                <User size={10} />
-                                {resolveDisplayName(task.assigneeId, userMap)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${TASK_STATUS_STYLES[task.status]}`}>
-                            {CASE_TASK_STATUS_LABELS[task.status]}
-                          </span>
-                          {task.dueDate && (
-                            <span className="text-xs text-gray-400 flex items-center gap-1 whitespace-nowrap">
-                              <Calendar size={12} />
-                              {task.dueDate}
-                            </span>
-                          )}
-                          {canManageTask && (
-                            <>
-                              <button
-                                onClick={() => openEditTask(task)}
-                                className="text-xs text-gray-400 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors font-medium whitespace-nowrap"
-                              >
-                                編集
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setDeletingTaskId(task.taskId);
-                                  setDeleteTaskError(null);
-                                }}
-                                className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors font-medium whitespace-nowrap"
-                              >
-                                削除
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          {/* Comments Section */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-800">コメント</h3>
-              <p className="text-xs text-gray-400 mt-0.5">案件に関するディスカッション</p>
-            </div>
-
-            {/* Comment Input Card */}
-            <div className="p-6 border-b border-gray-100 bg-gray-50/30">
-              <div className="space-y-3">
-                {commentSubmitError && <ErrorAlert message={commentSubmitError} />}
-                <textarea
-                  value={newCommentContent}
-                  onChange={(e) => setNewCommentContent(e.target.value)}
-                  placeholder="コメントを入力..."
-                  rows={3}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none bg-white"
-                />
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleSubmitComment}
-                    disabled={isSubmittingComment || !newCommentContent.trim()}
-                    className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isSubmittingComment ? "送信中..." : "コメントを送信"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Comments List */}
-            <div className="p-6">
-              {isCommentsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
-                </div>
-              ) : commentsError ? (
-                <ErrorAlert message={commentsError} />
-              ) : caseComments.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
-                  <p className="text-sm text-gray-400">コメントはまだありません。</p>
-                </div>
-              ) : (
-                <ul className="space-y-5">
-                  {caseComments.map((comment) => (
-                    <li key={comment.commentId} className="flex items-start gap-3.5">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-500 shadow-sm">
-                        <User size={16} />
-                      </div>
-                      <div className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl rounded-tl-none p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-gray-700">{resolveDisplayName(comment.authorId, userMap)}</span>
-                          <span className="text-[10px] text-gray-400">
-                            {new Date(comment.createdAt).toLocaleString("ja-JP")}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{comment.content}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
+          <CaseCommentsSection
+            caseId={id as string}
+            comments={caseComments}
+            isLoading={isCommentsLoading}
+            error={commentsError}
+            userMap={userMap}
+            onRefresh={fetchCaseComments}
+          />
         </div>
 
-        {/* Right Side: Sidebar (1/3 width) */}
+        {/* Right: sidebar panels */}
         <div className="space-y-6">
-          
-          {/* Status Update Panel */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-800 mb-4">ステータス更新</h3>
+
+          {/* Status update */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
+            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <Clock size={12} className="text-indigo-500" />
+              </div>
+              ステータス更新
+            </h3>
             <div className="space-y-3">
               <select
                 value={selectedStatus ?? caseDetail.status}
                 onChange={(e) => setSelectedStatus(e.target.value as CaseStatus)}
                 disabled={isUpdating}
-                className="w-full text-sm font-medium border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-50 transition-all"
+                className="w-full text-sm font-medium border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 disabled:opacity-50 transition-all cursor-pointer hover:border-slate-300"
               >
                 {UPDATABLE_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                          {CASE_STATUS_LABELS[s]}
-                  </option>
+                  <option key={s} value={s}>{CASE_STATUS_LABELS[s]}</option>
                 ))}
               </select>
               <button
                 onClick={handleStatusUpdate}
                 disabled={isUpdating || selectedStatus === caseDetail.status}
-                className="w-full text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="w-full text-sm font-bold px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 transition-all duration-200 shadow-md shadow-indigo-300/20"
               >
                 {isUpdating ? "更新中..." : "ステータス更新"}
               </button>
@@ -1244,84 +602,84 @@ const CaseDetailPage = () => {
             </div>
           </div>
 
-          {/* Details & Specs Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4.5">
-            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-3">案件仕様</h3>
-            
+          {/* Details & specs */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
+            <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5">案件仕様</h3>
             <div className="space-y-4">
+
               <div className="flex items-start gap-3">
-                <Calendar size={16} className="text-gray-400 mt-0.5" />
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Calendar size={13} className="text-slate-400" />
+                </div>
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">期限</span>
-                  <span className="text-sm font-semibold text-gray-700">{caseDetail.dueDate ?? "期限なし"}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">期限</span>
+                  <span className="text-sm font-semibold text-slate-700">{caseDetail.dueDate ?? "期限なし"}</span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Clock size={16} className="text-gray-400 mt-0.5" />
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock size={13} className="text-slate-400" />
+                </div>
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">作成日時</span>
-                  <span className="text-sm font-semibold text-gray-700">
-                    {new Date(caseDetail.createdAt).toLocaleDateString("ja-JP")}
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">作成日時</span>
+                  <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.createdAt).toLocaleDateString("ja-JP")}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock size={13} className="text-slate-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">最終更新</span>
+                  <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.updatedAt).toLocaleDateString("ja-JP")}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Tag size={13} className="text-slate-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">公開範囲</span>
+                  <span className="text-sm font-semibold text-slate-700">{CASE_TARGET_SCOPE_LABELS[caseDetail.targetScope]}</span>
+                  <span className="text-xs text-slate-500 block mt-0.5 max-w-[180px] truncate" title={caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}>
+                    {caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Clock size={16} className="text-gray-400 mt-0.5" />
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Shield size={13} className="text-slate-400" />
+                </div>
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">最終更新</span>
-                  <span className="text-sm font-semibold text-gray-700">
-                    {new Date(caseDetail.updatedAt).toLocaleDateString("ja-JP")}
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">最低権限</span>
+                  <span className="text-sm font-semibold text-slate-700">{USER_ROLE_LABELS[caseDetail.requiredRole]}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <User size={13} className="text-slate-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">担当</span>
+                  <span className="text-sm font-semibold text-slate-700">{OWNER_TYPE_LABELS[caseDetail.ownerType]}</span>
+                  <span className="text-xs text-slate-500 block mt-0.5 max-w-[180px] truncate" title={caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}>
+                    {caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Tag size={16} className="text-gray-400 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">公開範囲</span>
-                  <span className="text-sm font-semibold text-gray-700">{CASE_TARGET_SCOPE_LABELS[caseDetail.targetScope]}</span>
-                  <span
-                    className="text-xs text-gray-600 block mt-0.5 max-w-[180px] truncate"
-                    title={caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}
-                  >
-                    {caseDetail.targetScope === CaseTargetScope.USER
-                      ? resolveDisplayName(caseDetail.targetScopeId, userMap)
-                      : shortId(caseDetail.targetScopeId)}
-                  </span>
+                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <User size={13} className="text-slate-400" />
                 </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Shield size={16} className="text-gray-400 mt-0.5" />
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">最低権限</span>
-                  <span className="text-sm font-semibold text-gray-700">{ROLE_LABELS[caseDetail.requiredRole]}</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <User size={16} className="text-gray-400 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">担当</span>
-                  <span className="text-sm font-semibold text-gray-700">{OWNER_TYPE_LABELS[caseDetail.ownerType]}</span>
-                  <span
-                    className="text-xs text-gray-600 block mt-0.5 max-w-[180px] truncate"
-                    title={caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}
-                  >
-                    {caseDetail.ownerType === CaseOwnerType.USER
-                      ? resolveDisplayName(caseDetail.ownerId, userMap)
-                      : shortId(caseDetail.ownerId)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <User size={16} className="text-gray-400 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">作成者</span>
-                  <span className="text-xs text-gray-600 block max-w-[180px] truncate mt-0.5" title={resolveDisplayName(caseDetail.creatorId, userMap)}>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">作成者</span>
+                  <span className="text-xs text-slate-500 block max-w-[180px] truncate mt-0.5" title={resolveDisplayName(caseDetail.creatorId, userMap)}>
                     {resolveDisplayName(caseDetail.creatorId, userMap)}
                   </span>
                 </div>
@@ -1329,10 +687,12 @@ const CaseDetailPage = () => {
 
               {caseDetail.projectId && (
                 <div className="flex items-start gap-3">
-                  <FileText size={16} className="text-gray-400 mt-0.5" />
+                  <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileText size={13} className="text-slate-400" />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">プロジェクト</span>
-                    <span className="text-xs text-gray-500 font-mono bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.projectId}>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">プロジェクト</span>
+                    <span className="text-xs text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.projectId}>
                       {caseDetail.projectId}
                     </span>
                   </div>
@@ -1341,10 +701,12 @@ const CaseDetailPage = () => {
 
               {caseDetail.parentCaseId && (
                 <div className="flex items-start gap-3">
-                  <FileText size={16} className="text-gray-400 mt-0.5" />
+                  <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileText size={13} className="text-slate-400" />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">親案件</span>
-                    <span className="text-xs text-gray-500 font-mono bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.parentCaseId}>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">親案件</span>
+                    <span className="text-xs text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.parentCaseId}>
                       {caseDetail.parentCaseId}
                     </span>
                   </div>
@@ -1353,125 +715,67 @@ const CaseDetailPage = () => {
             </div>
           </div>
 
-          {/* Participant Companies List (Conditional on OPEN delivery) */}
+          {/* Participant companies */}
           {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
-                <h3 className="text-sm font-bold text-gray-800">参加会社</h3>
-                {currentUserId &&
-                  (caseDetail.creatorId === currentUserId ||
-                    (caseDetail.ownerType === CaseOwnerType.USER &&
-                      caseDetail.ownerId === currentUserId)) && (
-                    <button
-                      onClick={() => setShowInviteForm((v) => !v)}
-                      className="text-[10px] font-bold px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                      {showInviteForm ? "キャンセル" : "招待"}
-                    </button>
-                  )}
-              </div>
-
-              {showInviteForm && (
-                <div className="mb-4 p-3.5 bg-gray-50 rounded-xl border border-gray-150 space-y-2.5 animate-fadeIn">
-                  {inviteError && <ErrorAlert message={inviteError} />}
-                  <input
-                    type="text"
-                    value={inviteCompanyId}
-                    onChange={(e) => setInviteCompanyId(e.target.value)}
-                    placeholder="招待する会社のID..."
-                    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
-                  />
-                  <button
-                    onClick={handleInviteCompany}
-                    disabled={isInviting || !inviteCompanyId.trim()}
-                    className="w-full text-xs font-bold py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isInviting ? "招待中..." : "招待する"}
-                  </button>
-                </div>
-              )}
-
-              {isParticipantsLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900" />
-                </div>
-              ) : participantsError ? (
-                <ErrorAlert message={participantsError} />
-              ) : participantCompanies.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">参加会社はまだありません。</p>
-              ) : (
-                <ul className="space-y-2">
-                  {participantCompanies.map((p) => (
-                    <li key={p.companyId} className="flex items-center justify-between border border-gray-100 rounded-xl p-3 bg-gray-50/20">
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-gray-800 block truncate">{p.companyName ?? p.companyId}</span>
-                        <span className="text-[9px] text-gray-400 font-mono block truncate">{p.companyId}</span>
-                      </div>
-                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap ${PARTICIPANT_STATUS_STYLES[p.status]}`}>
-                        {PARTICIPANT_STATUS_LABELS[p.status]}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <CaseParticipantCompanySection
+              caseId={id as string}
+              caseDetail={caseDetail}
+              participantCompanies={participantCompanies}
+              isParticipantsLoading={isParticipantsLoading}
+              participantsError={participantsError}
+              currentUserId={currentUserId}
+              onRefresh={async () => { await Promise.all([fetchParticipantCompanies(), fetchCaseHistory()]); }}
+            />
           )}
 
-          {/* Claims (Conditional on OPEN delivery) */}
+          {/* Claims */}
           {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-3 mb-4">担当希望</h3>
-              
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
+              <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-4">担当希望</h3>
+
               {isClaimsLoading ? (
                 <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900" />
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500" />
                 </div>
               ) : claimsError ? (
                 <ErrorAlert message={claimsError} />
               ) : (
                 <div className="space-y-4">
                   {claimActionError && <ErrorAlert message={claimActionError} />}
-                  
+
                   {claimRequests.length > 0 && (
-                    <ul className="space-y-3.5">
+                    <ul className="space-y-3">
                       {claimRequests.map((req) => (
-                        <li key={req.claimRequestId} className="border border-gray-150 rounded-xl p-3 bg-gray-50/20 shadow-sm">
+                        <li key={req.claimRequestId} className="border border-slate-100 rounded-xl p-3 bg-slate-50/40">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] text-gray-600 font-medium truncate max-w-[120px]" title={resolveDisplayName(req.requesterId, userMap)}>
+                            <span className="text-[10px] text-slate-600 font-semibold truncate max-w-[120px]" title={resolveDisplayName(req.requesterId, userMap)}>
                               {resolveDisplayName(req.requesterId, userMap)}
                             </span>
-                            <span
-                              className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
-                                req.status === CaseClaimRequestStatus.PENDING
-                                  ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                                  : req.status === CaseClaimRequestStatus.APPROVED
-                                    ? "bg-green-50 text-green-700 border border-green-200"
-                                    : "bg-red-50 text-red-700 border border-red-200"
-                              }`}
-                            >
-                              {req.status === CaseClaimRequestStatus.PENDING
-                                ? "申請中"
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                              req.status === CaseClaimRequestStatus.PENDING
+                                ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80"
                                 : req.status === CaseClaimRequestStatus.APPROVED
-                                  ? "承認済"
-                                  : "却下"}
+                                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80"
+                                  : "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80"
+                            }`}>
+                              {req.status === CaseClaimRequestStatus.PENDING ? "申請中" : req.status === CaseClaimRequestStatus.APPROVED ? "承認済" : "却下"}
                             </span>
                           </div>
                           {req.message && (
-                            <p className="text-xs text-gray-700 bg-white p-2 rounded-lg border border-gray-100 mb-2 leading-relaxed">{req.message}</p>
+                            <p className="text-xs text-slate-700 bg-white p-2 rounded-lg border border-slate-100 mb-2 leading-relaxed">{req.message}</p>
                           )}
                           {req.rejectReason && (
-                            <p className="text-[10px] text-red-500 bg-red-50 p-2 rounded-lg border border-red-100 mb-2">却下理由: {req.rejectReason}</p>
+                            <p className="text-[10px] text-rose-500 bg-rose-50 p-2 rounded-lg border border-rose-100 mb-2">却下理由: {req.rejectReason}</p>
                           )}
                           {req.status === CaseClaimRequestStatus.PENDING &&
                             currentUserId &&
                             (caseDetail.creatorId === currentUserId ||
-                              (caseDetail.ownerType === CaseOwnerType.USER &&
-                                caseDetail.ownerId === currentUserId)) && (
+                              (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId)) && (
                               <div className="flex gap-2 mt-3 justify-end">
                                 <button
                                   onClick={() => handleClaimAction(req.claimRequestId, "APPROVED")}
                                   disabled={isProcessingClaimAction}
-                                  className="text-[10px] font-bold px-2.5 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                  className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                   承認
                                 </button>
@@ -1483,7 +787,7 @@ const CaseDetailPage = () => {
                                     }
                                   }}
                                   disabled={isProcessingClaimAction}
-                                  className="text-[10px] font-bold px-2.5 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                  className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                   却下
                                 </button>
@@ -1494,32 +798,23 @@ const CaseDetailPage = () => {
                     </ul>
                   )}
 
-                  {/* Submission Form */}
                   {currentUserId &&
                     caseDetail.creatorId !== currentUserId &&
-                    !(
-                      caseDetail.ownerType === CaseOwnerType.USER &&
-                      caseDetail.ownerId === currentUserId
-                    ) &&
-                    (claimsAccessDenied ||
-                      !claimRequests.some(
-                        (r) =>
-                          r.requesterId === currentUserId &&
-                          r.status === CaseClaimRequestStatus.PENDING,
-                      )) && (
-                      <div className="space-y-2 border-t border-gray-100 pt-3">
+                    !(caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId) &&
+                    (claimsAccessDenied || !claimRequests.some((r) => r.requesterId === currentUserId && r.status === CaseClaimRequestStatus.PENDING)) && (
+                      <div className="space-y-2 border-t border-slate-100 pt-4">
                         {claimSubmitError && <ErrorAlert message={claimSubmitError} />}
                         <textarea
                           value={claimMessage}
                           onChange={(e) => setClaimMessage(e.target.value)}
                           placeholder="担当したい理由（任意）..."
-                          rows={2.5}
-                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                          rows={2}
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 resize-none transition-all"
                         />
                         <button
                           onClick={handleSubmitClaim}
                           disabled={isSubmittingClaim}
-                          className="w-full text-xs font-bold py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="w-full text-xs font-bold py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 transition-all duration-200 shadow-md shadow-indigo-300/20"
                         >
                           {isSubmittingClaim ? "送信中..." : "担当を希望する"}
                         </button>
@@ -1527,165 +822,21 @@ const CaseDetailPage = () => {
                     )}
 
                   {claimRequests.length === 0 && !claimsAccessDenied && (
-                    <p className="text-xs text-gray-400 text-center py-4">
-                      担当希望はまだありません。
-                    </p>
+                    <p className="text-xs text-slate-400 text-center py-4">担当希望はまだありません。</p>
                   )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Timeline History Section */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-3 mb-4">履歴</h3>
-            
-            {isHistoryLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900" />
-              </div>
-            ) : historyError ? (
-              <ErrorAlert message={historyError} />
-            ) : caseHistory.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">履歴はまだありません。</p>
-            ) : (
-              <ul className="relative pl-3.5 border-l-2 border-gray-100 space-y-4 my-2">
-                {caseHistory.map((entry) => (
-                  <li key={entry.historyId} className="relative group">
-                    {/* Node Dot */}
-                    <div className="absolute left-[-20.5px] top-1.5 w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-white ring-4 ring-blue-50/50" />
-                    
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] text-gray-400 font-medium">
-                        {new Date(entry.createdAt).toLocaleString("ja-JP")}
-                      </span>
-                      <span className="text-[10px] text-gray-500 font-medium">
-                        {resolveDisplayName(entry.actorId, userMap)}
-                      </span>
-                      <span className="text-xs font-semibold text-gray-700">
-                        {HISTORY_ACTION_LABELS[entry.action]}
-                      </span>
-                      <p className="text-[11px] text-gray-500 leading-normal">{entry.detail}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
+          <CaseHistorySection
+            history={caseHistory}
+            isLoading={isHistoryLoading}
+            error={historyError}
+            userMap={userMap}
+          />
         </div>
       </div>
-
-      {/* Edit Task Modal */}
-      {editingTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-800">作業を編集</h3>
-            </div>
-            <div className="p-6 space-y-4">
-              {editTaskError && <ErrorAlert message={editTaskError} />}
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">タイトル</label>
-                <input
-                  value={editTaskTitle}
-                  onChange={(e) => setEditTaskTitle(e.target.value)}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">内容</label>
-                <textarea
-                  value={editTaskDescription}
-                  onChange={(e) => setEditTaskDescription(e.target.value)}
-                  rows={3}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">ステータス</label>
-                <select
-                  value={editTaskStatus}
-                  onChange={(e) => setEditTaskStatus(e.target.value as CaseTaskStatus)}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
-                >
-                  {Object.values(CaseTaskStatus).map((s) => (
-                    <option key={s} value={s}>{CASE_TASK_STATUS_LABELS[s]}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">担当者</label>
-                <select
-                  value={editTaskAssigneeId}
-                  onChange={(e) => setEditTaskAssigneeId(e.target.value)}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
-                >
-                  <option value="">担当者なし</option>
-                  {Array.from(userMap.entries()).map(([uid, u]) => (
-                    <option key={uid} value={uid}>{u.name || u.email || shortId(uid)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">期限（任意）</label>
-                <input
-                  type="date"
-                  value={editTaskDueDate}
-                  onChange={(e) => setEditTaskDueDate(e.target.value)}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                />
-              </div>
-            </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-              <button
-                onClick={() => setEditingTask(null)}
-                disabled={isEditingTask}
-                className="text-sm font-bold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={handleUpdateTask}
-                disabled={isEditingTask}
-                className="text-sm font-bold px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {isEditingTask ? "更新中..." : "更新"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Task Confirm Modal */}
-      {deletingTaskId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
-            <div className="p-6">
-              <h3 className="text-sm font-bold text-gray-800 mb-2">作業を削除</h3>
-              <p className="text-sm text-gray-500">この作業を削除してもよいですか？この操作は元に戻せません。</p>
-              {deleteTaskError && <div className="mt-3"><ErrorAlert message={deleteTaskError} /></div>}
-            </div>
-            <div className="p-6 pt-0 flex justify-end gap-3">
-              <button
-                onClick={() => { setDeletingTaskId(null); setDeleteTaskError(null); }}
-                disabled={isDeletingTask}
-                className="text-sm font-bold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={handleDeleteTask}
-                disabled={isDeletingTask}
-                className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {isDeletingTask ? "削除中..." : "削除する"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };

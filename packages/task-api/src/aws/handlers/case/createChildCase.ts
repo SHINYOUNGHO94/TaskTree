@@ -15,6 +15,9 @@ import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
 import { CaseVisibilityRepository } from "@/repositories/caseVisibilityRepository";
 import { UserRepository } from "@/repositories/userRepository";
+import { DivisionRepository } from "@/repositories/divisionRepository";
+import { DepartmentRepository } from "@/repositories/departmentRepository";
+import { TeamRepository } from "@/repositories/teamRepository";
 import {
   badRequest,
   forbidden,
@@ -24,12 +27,88 @@ import {
   unauthorized,
 } from "@/errors/utils";
 
-const ALLOWED_REQUIRED_ROLES: string[] = [UserRole.USER, UserRole.TEAM_ADMIN];
-const ALLOWED_DELIVERY_TYPES: string[] = [CaseDeliveryType.DIRECT, CaseDeliveryType.OPEN];
-const ALLOWED_TARGET_SCOPES: string[] = [CaseTargetScope.USER, CaseTargetScope.TEAM];
+const ROLE_RANK: Record<string, number> = {
+  [UserRole.GUEST]: 1,
+  [UserRole.USER]: 2,
+  [UserRole.TEAM_ADMIN]: 3,
+  [UserRole.DEPT_ADMIN]: 4,
+  [UserRole.DIVISION_ADMIN]: 5,
+  [UserRole.COMPANY_ADMIN]: 6,
+};
+
+const ALLOWED_TARGET_SCOPES_BY_ROLE: Record<UserRole, CaseTargetScope[]> = {
+  [UserRole.COMPANY_ADMIN]: [
+    CaseTargetScope.COMPANY,
+    CaseTargetScope.DIVISION,
+    CaseTargetScope.DEPARTMENT,
+    CaseTargetScope.TEAM,
+    CaseTargetScope.USER,
+  ],
+  [UserRole.DIVISION_ADMIN]: [
+    CaseTargetScope.DIVISION,
+    CaseTargetScope.DEPARTMENT,
+    CaseTargetScope.TEAM,
+    CaseTargetScope.USER,
+  ],
+  [UserRole.DEPT_ADMIN]: [
+    CaseTargetScope.DEPARTMENT,
+    CaseTargetScope.TEAM,
+    CaseTargetScope.USER,
+  ],
+  [UserRole.TEAM_ADMIN]: [CaseTargetScope.TEAM, CaseTargetScope.USER],
+  [UserRole.USER]: [CaseTargetScope.USER],
+  [UserRole.GUEST]: [CaseTargetScope.USER],
+};
+
+const ALL_DELIVERY_TYPES = new Set<string>(Object.values(CaseDeliveryType));
+const ALL_TARGET_SCOPES = new Set<string>(Object.values(CaseTargetScope));
+const ALL_USER_ROLES = new Set<string>(Object.values(UserRole));
 
 const isNonEmptyString = (v: unknown): v is string =>
   typeof v === "string" && v.trim().length > 0;
+
+const canManageCaseOwner = (
+  profile: {
+    role: UserRole;
+    divisionId?: string;
+    departmentId?: string;
+    teamId?: string;
+  },
+  parentCase: CaseDetail,
+): boolean => {
+  if (parentCase.ownerType === CaseOwnerType.COMPANY) {
+    return profile.role === UserRole.COMPANY_ADMIN;
+  }
+  if (parentCase.ownerType === CaseOwnerType.DIVISION) {
+    return (
+      profile.role === UserRole.COMPANY_ADMIN ||
+      (profile.role === UserRole.DIVISION_ADMIN &&
+        parentCase.divisionId === profile.divisionId)
+    );
+  }
+  if (parentCase.ownerType === CaseOwnerType.DEPARTMENT) {
+    return (
+      profile.role === UserRole.COMPANY_ADMIN ||
+      (profile.role === UserRole.DIVISION_ADMIN &&
+        parentCase.divisionId === profile.divisionId) ||
+      (profile.role === UserRole.DEPT_ADMIN &&
+        parentCase.departmentId === profile.departmentId)
+    );
+  }
+  if (parentCase.ownerType === CaseOwnerType.TEAM) {
+    return (
+      profile.role === UserRole.COMPANY_ADMIN ||
+      (profile.role === UserRole.DIVISION_ADMIN &&
+        parentCase.divisionId === profile.divisionId) ||
+      (profile.role === UserRole.DEPT_ADMIN &&
+        parentCase.departmentId === profile.departmentId) ||
+      (profile.role === UserRole.TEAM_ADMIN &&
+        parentCase.teamId === profile.teamId)
+    );
+  }
+  // ownerType=USER: org admin 권한 없음. creator / USER owner 경로만 허용.
+  return false;
+};
 
 export interface CreateChildCaseDeps {
   caseRepo: CaseRepository;
@@ -37,6 +116,9 @@ export interface CreateChildCaseDeps {
   assignmentRepo: CaseAssignmentRepository;
   visibilityRepo: CaseVisibilityRepository;
   userRepo: UserRepository;
+  divisionRepo: DivisionRepository;
+  deptRepo: DepartmentRepository;
+  teamRepo: TeamRepository;
 }
 
 const saveCaseAndAccessRecords = async (
@@ -99,17 +181,17 @@ export const createHandler =
       if (!isNonEmptyString(description)) {
         return badRequest("description is required");
       }
-      if (!isNonEmptyString(deliveryType) || !ALLOWED_DELIVERY_TYPES.includes(deliveryType)) {
-        return badRequest("deliveryType must be DIRECT or OPEN");
+      if (!isNonEmptyString(deliveryType) || !ALL_DELIVERY_TYPES.has(deliveryType)) {
+        return badRequest("deliveryType is invalid");
       }
-      if (!isNonEmptyString(targetScope) || !ALLOWED_TARGET_SCOPES.includes(targetScope)) {
-        return badRequest("targetScope must be USER or TEAM");
+      if (!isNonEmptyString(targetScope) || !ALL_TARGET_SCOPES.has(targetScope)) {
+        return badRequest("targetScope is invalid");
       }
       if (!isNonEmptyString(targetScopeId)) {
         return badRequest("targetScopeId is required");
       }
-      if (!isNonEmptyString(requiredRole) || !ALLOWED_REQUIRED_ROLES.includes(requiredRole)) {
-        return badRequest("requiredRole must be USER or TEAM_ADMIN");
+      if (!isNonEmptyString(requiredRole) || !ALL_USER_ROLES.has(requiredRole)) {
+        return badRequest("requiredRole is invalid");
       }
 
       if (body.dueDate !== null && body.dueDate !== undefined && typeof body.dueDate !== "string") {
@@ -140,26 +222,109 @@ export const createHandler =
       const isCreator = parentCase.creatorId === userId;
       const isUserOwner =
         parentCase.ownerType === CaseOwnerType.USER && parentCase.ownerId === userId;
+      const isOrgAdmin = canManageCaseOwner(profile, parentCase);
 
-      if (!isCreator && !isUserOwner) {
-        return forbidden("Only the case creator or owner can create child cases");
+      if (!isCreator && !isUserOwner && !isOrgAdmin) {
+        return forbidden("You do not have permission to create child cases");
       }
 
-      if (
-        targetScope === CaseTargetScope.TEAM &&
-        targetScopeId !== profile.teamId
-      ) {
-        return forbidden("TEAM target must use your own team id");
+      const allowedScopes = ALLOWED_TARGET_SCOPES_BY_ROLE[profile.role] ?? [];
+      if (!allowedScopes.includes(targetScope as CaseTargetScope)) {
+        return forbidden("Your role does not allow this target scope");
       }
 
-      if (targetScope === CaseTargetScope.USER) {
+      const callerRoleRank = ROLE_RANK[profile.role] ?? 0;
+      const requiredRoleRank = ROLE_RANK[requiredRole] ?? -1;
+      if (requiredRoleRank > callerRoleRank) {
+        return badRequest("requiredRole must not exceed your own role");
+      }
+
+      if (targetScope === CaseTargetScope.USER && deliveryType !== CaseDeliveryType.DIRECT) {
+        return badRequest("deliveryType must be DIRECT when targetScope is USER");
+      }
+
+      const typedScope = targetScope as CaseTargetScope;
+
+      if (typedScope === CaseTargetScope.COMPANY) {
+        if (targetScopeId !== profile.companyId) {
+          return forbidden("targetScopeId must match your companyId for COMPANY scope");
+        }
+      } else if (typedScope === CaseTargetScope.DIVISION) {
+        const division = await deps.divisionRepo.findById(profile.companyId, targetScopeId);
+        if (!division) return notFound("Division not found");
+        if (
+          profile.role === UserRole.DIVISION_ADMIN &&
+          division.divisionId !== profile.divisionId
+        ) {
+          return forbidden("DIVISION_ADMIN can only target their own division");
+        }
+      } else if (typedScope === CaseTargetScope.DEPARTMENT) {
+        const departments = await deps.deptRepo.findByCompanyId(profile.companyId);
+        const dept = departments.find((d) => d.departmentId === targetScopeId);
+        if (!dept) return notFound("Department not found");
+        if (
+          profile.role === UserRole.DIVISION_ADMIN &&
+          dept.divisionId !== profile.divisionId
+        ) {
+          return forbidden("DIVISION_ADMIN can only target departments within their division");
+        }
+        if (
+          profile.role === UserRole.DEPT_ADMIN &&
+          dept.departmentId !== profile.departmentId
+        ) {
+          return forbidden("DEPT_ADMIN can only target their own department");
+        }
+      } else if (typedScope === CaseTargetScope.TEAM) {
+        const teams = await deps.teamRepo.findByCompanyId(profile.companyId);
+        const team = teams.find((t) => t.teamId === targetScopeId);
+        if (!team) return notFound("Team not found");
+        if (
+          profile.role === UserRole.DIVISION_ADMIN &&
+          team.divisionId !== profile.divisionId
+        ) {
+          return forbidden("DIVISION_ADMIN can only target teams within their division");
+        }
+        if (
+          profile.role === UserRole.DEPT_ADMIN &&
+          team.departmentId !== profile.departmentId
+        ) {
+          return forbidden("DEPT_ADMIN can only target teams within their department");
+        }
+        if (
+          profile.role === UserRole.TEAM_ADMIN &&
+          team.teamId !== profile.teamId
+        ) {
+          return forbidden("TEAM_ADMIN can only target their own team");
+        }
+      } else if (typedScope === CaseTargetScope.USER) {
         const targetUser = await deps.userRepo.findByUserId(targetScopeId);
         if (!targetUser) return notFound("Target user not found");
         if (targetUser.companyId !== profile.companyId) {
           return forbidden("Target user belongs to a different company");
         }
-        if (targetUser.teamId !== profile.teamId) {
-          return forbidden("USER target must be within your own team");
+        if (
+          profile.role === UserRole.DIVISION_ADMIN &&
+          targetUser.divisionId !== profile.divisionId
+        ) {
+          return forbidden("DIVISION_ADMIN can only target users within their division");
+        }
+        if (
+          profile.role === UserRole.DEPT_ADMIN &&
+          targetUser.departmentId !== profile.departmentId
+        ) {
+          return forbidden("DEPT_ADMIN can only target users within their department");
+        }
+        if (
+          profile.role === UserRole.TEAM_ADMIN &&
+          targetUser.teamId !== profile.teamId
+        ) {
+          return forbidden("TEAM_ADMIN can only target users within their team");
+        }
+        if (
+          (profile.role === UserRole.USER || profile.role === UserRole.GUEST) &&
+          targetScopeId !== userId
+        ) {
+          return forbidden("Users can only target themselves");
         }
       }
 
@@ -178,7 +343,7 @@ export const createHandler =
         deliveryType: deliveryType as CaseDeliveryType,
         ownerType: CaseOwnerType.USER,
         ownerId: userId,
-        targetScope: targetScope as CaseTargetScope,
+        targetScope: typedScope,
         targetScopeId,
         requiredRole: requiredRole as UserRole,
         companyId: profile.companyId,
@@ -227,4 +392,7 @@ export const handler = createHandler({
   assignmentRepo: new CaseAssignmentRepository(tableName),
   visibilityRepo: new CaseVisibilityRepository(tableName),
   userRepo: new UserRepository(tableName),
+  divisionRepo: new DivisionRepository(tableName),
+  deptRepo: new DepartmentRepository(tableName),
+  teamRepo: new TeamRepository(tableName),
 });

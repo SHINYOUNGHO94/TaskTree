@@ -227,7 +227,7 @@ export default function TeamPage() {
   if (!profile || !ORG_ALLOWED_ROLES.includes(profile.role as UserRole)) {
     return (
       <div className="p-8">
-        <p className="text-gray-500">このページにアクセスする権限がありません。</p>
+        <p className="text-slate-400">このページにアクセスする権限がありません。</p>
       </div>
     );
   }
@@ -242,59 +242,77 @@ export default function TeamPage() {
     (profile.role === UserRole.DEPT_ADMIN && profile.departmentId === dept.departmentId);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto">
+      <div className="flex justify-between items-start mb-8 gap-6 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <Users className="text-gray-900" />
+          <h2 className="text-xl font-semibold flex items-center gap-2.5 text-slate-800">
+            <div className="w-8 h-8 rounded-md bg-indigo-600 flex items-center justify-center">
+              <Users size={15} className="text-white" />
+            </div>
             組織管理
-            <span className="text-sm font-normal bg-gray-100 px-2 py-1 rounded text-gray-500">
-              {members.length} 名
-            </span>
           </h2>
-          <p className="text-gray-500 text-sm mt-1">会社のメンバーと組織構造（部署・チーム）を管理します。</p>
+          <p className="text-slate-600 text-sm mt-1">会社のメンバーと組織構造（部署・チーム）を管理します。</p>
+          {!isLoading && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-700 border border-slate-300">
+                <Users size={11} /> {members.length} 名
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-700 border border-slate-300">
+                <Shield size={11} /> {divisions.length} 本部
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-700 border border-slate-300">
+                <Building size={11} /> {departments.length} 部署
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-700 border border-slate-300">
+                <Layers size={11} /> {teams.length} チーム
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2 flex-wrap justify-end flex-shrink-0">
           <button
             onClick={() => setIsDivModalOpen(true)}
-            className="bg-white text-gray-700 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
+            className="bg-white text-slate-700 px-3.5 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5"
           >
-            <Shield size={16} /> 本部追加
+            <Shield size={14} /> 本部追加
           </button>
           <button
             onClick={() => setIsDeptModalOpen(true)}
-            className="bg-white text-gray-700 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
+            className="bg-white text-slate-700 px-3.5 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5"
           >
-            <Building size={16} /> 部署追加
+            <Building size={14} /> 部署追加
           </button>
           <button
             onClick={() => setIsTeamModalOpen(true)}
-            className="bg-white text-gray-700 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
+            className="bg-white text-slate-700 px-3.5 py-2 border border-slate-300 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5"
           >
-            <Layers size={16} /> チーム追加
+            <Layers size={14} /> チーム追加
           </button>
           <button
             onClick={() => setIsInviteModalOpen(true)}
-            className="bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all shadow-sm flex items-center gap-2"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
           >
-            <Plus size={18} /> メンバー招待
+            <Plus size={14} /> メンバー招待
           </button>
         </div>
       </div>
 
       {orgMutationError && (
-        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+        <div className="mb-6 p-3.5 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
           {orgMutationError}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                <Building size={16} /> 組織ツリー
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 p-5">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <Building size={13} className="text-indigo-500" />
+                </div>
+                組織ツリー
               </h3>
             </div>
             <OrgTree

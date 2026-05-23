@@ -8,8 +8,8 @@
   --color-neon-purple: #7000ff;
 
   /* タイポグラフィ設定 */
-  --font-heading: "Outfit", sans-serif;
-  --font-body: "Inter", sans-serif;
+  --font-heading: "Inter", "Noto Sans JP", sans-serif;
+  --font-body: "Inter", "Noto Sans JP", sans-serif;
 
   /* カスタムエフェクト（光彩と影） */
   --shadow-neon: 0 0 15px rgba(0, 229, 255, 0.5);
