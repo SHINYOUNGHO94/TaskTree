@@ -8,7 +8,6 @@ import {
   CaseHistoryAction,
   CaseOwnerType,
   CaseTargetScope,
-  UserProfile,
 } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseClaimRequestRepository } from "@/repositories/caseClaimRequestRepository";
@@ -23,18 +22,25 @@ import {
   unauthorized,
 } from "@/errors/utils";
 
-const isAccessAllowed = (caseDetail: CaseDetail, userId: string, profile: UserProfile): boolean => {
+type OrgContext = {
+  companyId: string;
+  divisionId: string;
+  departmentId: string;
+  teamId: string;
+};
+
+const isAccessAllowed = (caseDetail: CaseDetail, userId: string, org: OrgContext): boolean => {
   if (caseDetail.creatorId === userId) return true;
   if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
   switch (caseDetail.targetScope) {
     case CaseTargetScope.COMPANY:
-      return caseDetail.targetScopeId === profile.companyId;
+      return caseDetail.targetScopeId === org.companyId;
     case CaseTargetScope.DIVISION:
-      return caseDetail.targetScopeId === profile.divisionId;
+      return caseDetail.targetScopeId === org.divisionId;
     case CaseTargetScope.DEPARTMENT:
-      return caseDetail.targetScopeId === profile.departmentId;
+      return caseDetail.targetScopeId === org.departmentId;
     case CaseTargetScope.TEAM:
-      return caseDetail.targetScopeId === profile.teamId;
+      return caseDetail.targetScopeId === org.teamId;
     case CaseTargetScope.USER:
       return caseDetail.targetScopeId === userId;
     default:
