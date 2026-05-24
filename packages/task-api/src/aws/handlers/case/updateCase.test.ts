@@ -80,6 +80,7 @@ const makeMockRepos = (overrides: {
   const save = overrides.saveMock ?? vi.fn().mockResolvedValue(undefined);
   const caseRepo = {
     findById: vi.fn().mockResolvedValue(overrides.caseResult),
+    findChildrenByParentCaseId: vi.fn().mockResolvedValue([]),
     save,
   } as unknown as CaseRepository;
   const caseHistoryRepo = {

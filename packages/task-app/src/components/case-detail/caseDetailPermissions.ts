@@ -67,6 +67,32 @@ export const canManageCaseOwner = (profile: UserProfile | null, caseDetail: Case
   return false;
 };
 
+// Upper-role users can approve child cases/tasks created by lower-role users
+// within their org jurisdiction
+export const canApproveByOrgRole = (profile: UserProfile, caseOrChild: CaseDetail): boolean => {
+  switch (profile.role) {
+    case UserRole.COMPANY_ADMIN:
+      return caseOrChild.companyId === profile.companyId;
+    case UserRole.DIVISION_ADMIN:
+      return (
+        caseOrChild.companyId === profile.companyId &&
+        caseOrChild.divisionId === profile.divisionId
+      );
+    case UserRole.DEPT_ADMIN:
+      return (
+        caseOrChild.companyId === profile.companyId &&
+        caseOrChild.departmentId === profile.departmentId
+      );
+    case UserRole.TEAM_ADMIN:
+      return (
+        caseOrChild.companyId === profile.companyId &&
+        caseOrChild.teamId === profile.teamId
+      );
+    default:
+      return false;
+  }
+};
+
 export const canManageCaseTask = (
   task: CaseTaskDetail,
   caseDetail: CaseDetail,

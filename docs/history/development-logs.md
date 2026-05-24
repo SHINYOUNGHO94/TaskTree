@@ -1140,6 +1140,87 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 
 ---
 
+## v2.1.0 - モバイル対応と案件タイプ別フロー分化
+
+> モバイル画面への完全対応と、REQUEST / STANDARD / PROJECT 三種の案件タイプを UI・権限・承認フローの面で明確に分化したバージョン。
+
+### モバイルレスポンシブ対応（全ダッシュボード画面）
+
+- サイドバーをスライドインドロワーに変更し、ハンバーガーボタン（モバイル専用）でトグル
+- モバイル用のバックドロップオーバーレイを追加し、タップで閉じられるようにした
+- ヘッダーをレスポンシブ化：ハンバーガーメニュー、小画面ではアイコン表示のみのログアウトボタン
+- タブバーのオーバーフローを `overflow-x-auto` スクロール対応に修正
+- リストビューのテーブルに `overflow-x-auto` と `min-width` を追加し、横スクロール対応
+- 取引先履歴テーブルのオーバーフロー修正
+- タスク行の構造を変更：ステータス・操作ボタンをモバイルでは 2 行目に折り返すよう改善
+- 全セクションのパディングを `p-6` → `p-4 md:p-6` に変換
+- 子案件作成フォームのグリッドを `grid-cols-1 sm:grid-cols-2` に変更（モバイルで 1 カラム）
+- 担当希望カードをモバイルで縦積みレイアウトに修正
+
+デスクトップレイアウトは変更なし。全変更は Tailwind `md:` ブレークポイント（768px）を使用。
+
+**API / デプロイ影響:** なし。フロントエンドのみ変更。
+
+---
+
+### 案件タイプ別フロー分化（REQUEST / STANDARD / PROJECT）
+
+v2.0.0 では三種の案件タイプ（REQUEST / STANDARD / PROJECT）が DynamoDB 上は別フィールドで区別されているものの、UI・権限・作成フロー・承認フローはすべて同一だった。本 Task では各タイプの目的・制約・承認フローを実装レベルで分化した。
+
+**各タイプの目的と制約:**
+
+| タイプ | 目的 | 子案件 | 送信先制限 |
+|---|---|---|---|
+| REQUEST（依頼） | チームリーダーが担当者に割り当てる小規模依頼 | なし | TEAM / USER のみ |
+| STANDARD（通常案件） | 部署レベルの中規模案件 | REQUEST 子案件を作成可 | 制限なし |
+| PROJECT（プロジェクト） | 大型クライアント案件 | STANDARD 子案件を作成可 | 制限なし |
+
+**案件作成 UI 分化（`CreateCaseModal`）:**
+
+- REQUEST 選択時は `targetScope` を TEAM / USER のみに制限し、COMPANY / DIVISION / DEPARTMENT スコープを選択不可に
+- REQUEST + TEAM の組み合わせでは `deliveryType` を OPEN に自動設定
+- タイプを切り替えた際に `targetScope` が許可外の場合は自動でリセット
+
+**案件詳細 UI 分化（`/dashboard/cases/[id]/page.tsx`）:**
+
+- REQUEST 詳細画面では「子案件」セクションを非表示（REQUEST は子案件を持てない）
+- REQUEST 詳細画面では「参加会社（取引先）」セクションを非表示
+- OPEN 案件の「担当申請」セクションは全タイプで維持
+
+**承認フロー実装（`CaseChildCasesSection` / `CaseTasksSection`）:**
+
+- 子案件または作業が `REVIEW_REQUESTED` 状態のとき、対象行に「承認」ボタンを表示
+- 承認ボタン表示条件：子案件の作成者、または組織階層の上位権限ユーザー
+  - `COMPANY_ADMIN`: 同社全案件を承認可
+  - `DIVISION_ADMIN`: 自事業部配下の案件を承認可
+  - `DEPT_ADMIN`: 自部署配下の案件を承認可
+  - `TEAM_ADMIN`: 自チーム配下の案件を承認可
+- 承認ボタン押下で `CaseService.updateCaseStatus(childCaseId, { status: COMPLETED })` を呼び出し
+- 作業（CaseTask）の承認ボタンも同様に `canApproveByOrgRole` を適用し、上位権限ユーザーも承認可能
+- `caseDetailPermissions.ts` に `canApproveByOrgRole` 関数を追加し、ChildCase / CaseTask 双方で共有
+
+**バックエンド自動伝播（`updateCase` Lambda）:**
+
+- 案件を `COMPLETED` に変更する前に、配下の全子案件が `COMPLETED` または `CANCELED` であることを検証（未完了の子案件が残る場合は 400 を返す）
+- 子案件が `COMPLETED` になったとき、兄弟案件が全て `COMPLETED` / `CANCELED` であれば親案件を自動で `REVIEW_REQUESTED` に変更
+- 自動伝播失敗はコンソールエラーのみで本処理は失敗させない（非同期継続）
+- 伝播時は `CaseHistory` に `"Status auto-changed to REVIEW_REQUESTED: all sub-cases completed"` を自動記録
+
+**デプロイ影響:**
+
+- `task-api` の `updateCase` Lambda コード変更あり → CDK deploy 必要
+- 新規 Lambda / API route / DynamoDB GSI: なし
+- IAM 変更なし
+
+**検証:**
+
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+
+---
+
 ## 開発メモ
 
 実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。

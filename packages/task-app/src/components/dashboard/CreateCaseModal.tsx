@@ -102,7 +102,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 }) => {
   const { t } = useTranslation('ui');
   const userRole = profile?.role ?? UserRole.USER;
-  const allowedScopes = ALLOWED_TARGET_SCOPES_BY_ROLE[userRole] ?? [CaseTargetScope.USER];
+  const roleAllowedScopes = ALLOWED_TARGET_SCOPES_BY_ROLE[userRole] ?? [CaseTargetScope.USER];
   const isOrgUser = userRole === UserRole.USER || userRole === UserRole.GUEST;
 
   const {
@@ -121,6 +121,11 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   });
 
   const selectedCaseType = watch('caseType');
+
+  const REQUEST_SCOPES: CaseTargetScope[] = [CaseTargetScope.TEAM, CaseTargetScope.USER];
+  const allowedScopes = selectedCaseType === CaseType.REQUEST
+    ? roleAllowedScopes.filter((s) => REQUEST_SCOPES.includes(s))
+    : roleAllowedScopes;
 
   // Delivery / scope / role state
   const [deliveryType, setDeliveryType] = useState<CaseDeliveryType>(CaseDeliveryType.DIRECT);
@@ -173,6 +178,13 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     void fetchOrgData();
   }, [isOpen, isOrgUser, fetchOrgData]);
 
+  // Reset targetScope when caseType changes and current scope is no longer allowed
+  useEffect(() => {
+    if (!allowedScopes.includes(targetScope)) {
+      setTargetScope(allowedScopes[0] ?? CaseTargetScope.USER);
+    }
+  }, [allowedScopes, targetScope]);
+
   // Reset cascade selectors when targetScope changes
   useEffect(() => {
     setFilterDivisionId('');
@@ -182,8 +194,10 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     if (targetScope === CaseTargetScope.USER) {
       setDeliveryType(CaseDeliveryType.DIRECT);
       setRequiredRole(UserRole.USER);
+    } else if (targetScope === CaseTargetScope.TEAM && selectedCaseType === CaseType.REQUEST) {
+      setDeliveryType(CaseDeliveryType.OPEN);
     }
-  }, [targetScope]);
+  }, [targetScope, selectedCaseType]);
 
   // Reset downstream when division filter changes
   useEffect(() => {

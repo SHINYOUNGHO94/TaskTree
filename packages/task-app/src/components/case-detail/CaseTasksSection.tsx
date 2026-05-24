@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, Calendar, CheckSquare, Square, User } from "lucide-react";
+import { AlertCircle, Calendar, CheckCircle, CheckSquare, Square, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   CaseDetail,
+  CaseOwnerType,
   CaseService,
   CaseTaskDetail,
   CaseTaskStatus,
@@ -12,7 +13,7 @@ import {
   UserProfile,
 } from "@task/core";
 import { CASE_TASK_STATUS_LABELS, resolveDisplayName, shortId } from "../dashboard/caseLabels";
-import { canManageCaseTask } from "./caseDetailPermissions";
+import { canApproveByOrgRole, canManageCaseTask } from "./caseDetailPermissions";
 
 const TASK_STATUS_STYLES: Record<CaseTaskStatus, string> = {
   [CaseTaskStatus.TODO]: "bg-gray-100 text-gray-600 border border-gray-200",
@@ -73,6 +74,26 @@ export const CaseTasksSection = ({
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [deleteTaskError, setDeleteTaskError] = useState<string | null>(null);
+  const [approvingTaskId, setApprovingTaskId] = useState<string | null>(null);
+
+  const canApproveTask = (task: CaseTaskDetail) =>
+    !!currentUserId &&
+    task.status === CaseTaskStatus.REVIEW_REQUESTED &&
+    (caseDetail.creatorId === currentUserId ||
+      (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId) ||
+      (!!currentProfile && canApproveByOrgRole(currentProfile, caseDetail)));
+
+  const handleApproveTask = async (taskId: string) => {
+    setApprovingTaskId(taskId);
+    try {
+      await CaseService.updateCaseTask(caseId, taskId, { status: CaseTaskStatus.DONE });
+      await onTaskChange();
+    } catch (err) {
+      console.error("Failed to approve task", err);
+    } finally {
+      setApprovingTaskId(null);
+    }
+  };
 
   const handleCreateTask = async () => {
     if (!newTaskTitle.trim()) {
@@ -265,6 +286,16 @@ export const CaseTasksSection = ({
                               <Calendar size={12} />
                               {task.dueDate}
                             </span>
+                          )}
+                          {canApproveTask(task) && (
+                            <button
+                              onClick={() => void handleApproveTask(task.taskId)}
+                              disabled={approvingTaskId === task.taskId}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                            >
+                              <CheckCircle size={11} />
+                              {approvingTaskId === task.taskId ? t("Approving...") : t("Approve")}
+                            </button>
                           )}
                           {canManageTask && (
                             <>
