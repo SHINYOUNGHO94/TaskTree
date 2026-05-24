@@ -127,6 +127,20 @@ const LoginContent = () => {
         </div>
       )}
 
+      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">デモアカウント</p>
+        <div className="space-y-1 text-sm text-gray-700">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 w-20 text-xs">Email</span>
+            <code className="font-mono text-gray-900">test@tasktree.dev</code>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 w-20 text-xs">Password</span>
+            <code className="font-mono text-gray-900">TaskTree123@</code>
+          </div>
+        </div>
+      </div>
+
       {authError && (
         <div className="mb-6 p-3 bg-red-50 border border-red-100 rounded text-red-600 text-sm flex items-center gap-2">
           <AlertCircle size={16} />
