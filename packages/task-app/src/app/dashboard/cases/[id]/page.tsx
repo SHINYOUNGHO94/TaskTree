@@ -535,19 +535,21 @@ const CaseDetailPage = () => {
             </div>
           </div>
 
-          <CaseChildCasesSection
-            caseDetail={caseDetail}
-            currentUserId={currentUserId}
-            currentProfile={currentProfile}
-            childCases={childCases}
-            isChildCasesLoading={isChildCasesLoading}
-            childCasesError={childCasesError}
-            requestChildrenByStandard={requestChildrenByStandard}
-            nestedChildCasesError={nestedChildCasesError}
-            isNestedLoading={isNestedLoading}
-            onCreated={async () => { await Promise.all([fetchChildCases(), fetchCaseHistory()]); }}
-            onNavigate={(caseId) => router.push(`/dashboard/cases/${caseId}`)}
-          />
+          {caseDetail.caseType !== CaseType.REQUEST && (
+            <CaseChildCasesSection
+              caseDetail={caseDetail}
+              currentUserId={currentUserId}
+              currentProfile={currentProfile}
+              childCases={childCases}
+              isChildCasesLoading={isChildCasesLoading}
+              childCasesError={childCasesError}
+              requestChildrenByStandard={requestChildrenByStandard}
+              nestedChildCasesError={nestedChildCasesError}
+              isNestedLoading={isNestedLoading}
+              onCreated={async () => { await Promise.all([fetchChildCases(), fetchCaseHistory()]); }}
+              onNavigate={(caseId) => router.push(`/dashboard/cases/${caseId}`)}
+            />
+          )}
 
           <CaseTasksSection
             caseId={id as string}
@@ -718,7 +720,7 @@ const CaseDetailPage = () => {
           </div>
 
           {/* Participant companies */}
-          {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
+          {caseDetail.deliveryType === CaseDeliveryType.OPEN && caseDetail.caseType !== CaseType.REQUEST && (
             <CaseParticipantCompanySection
               caseId={id as string}
               caseDetail={caseDetail}
