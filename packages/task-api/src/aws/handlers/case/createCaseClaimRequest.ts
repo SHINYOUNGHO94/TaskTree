@@ -8,6 +8,7 @@ import {
   CaseHistoryAction,
   CaseOwnerType,
   CaseTargetScope,
+  UserProfile,
 } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseClaimRequestRepository } from "@/repositories/caseClaimRequestRepository";
@@ -22,14 +23,23 @@ import {
   unauthorized,
 } from "@/errors/utils";
 
-const isAccessAllowed = (caseDetail: CaseDetail, userId: string, teamId: string): boolean => {
+const isAccessAllowed = (caseDetail: CaseDetail, userId: string, profile: UserProfile): boolean => {
   if (caseDetail.creatorId === userId) return true;
   if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
-  if (caseDetail.targetScope === CaseTargetScope.USER && caseDetail.targetScopeId === userId)
-    return true;
-  if (caseDetail.targetScope === CaseTargetScope.TEAM && caseDetail.targetScopeId === teamId)
-    return true;
-  return false;
+  switch (caseDetail.targetScope) {
+    case CaseTargetScope.COMPANY:
+      return caseDetail.targetScopeId === profile.companyId;
+    case CaseTargetScope.DIVISION:
+      return caseDetail.targetScopeId === profile.divisionId;
+    case CaseTargetScope.DEPARTMENT:
+      return caseDetail.targetScopeId === profile.departmentId;
+    case CaseTargetScope.TEAM:
+      return caseDetail.targetScopeId === profile.teamId;
+    case CaseTargetScope.USER:
+      return caseDetail.targetScopeId === userId;
+    default:
+      return false;
+  }
 };
 
 export interface CreateCaseClaimRequestDeps {
@@ -88,7 +98,7 @@ export const createHandler =
         return forbidden("Claim requests are only allowed for OPEN cases");
       }
 
-      if (!isAccessAllowed(existingCase, userId, profile.teamId)) {
+      if (!isAccessAllowed(existingCase, userId, profile)) {
         return forbidden("You do not have access to this case");
       }
 
