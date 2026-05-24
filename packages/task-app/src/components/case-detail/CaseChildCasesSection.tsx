@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, Calendar, CornerDownRight } from "lucide-react";
+import { AlertCircle, Calendar, CheckCircle, CornerDownRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   CaseDetail,
   CaseOwnerType,
+  CaseService,
   CaseStatus,
   CaseType,
   UserProfile,
 } from "@task/core";
 import { CASE_STATUS_LABELS, CASE_TYPE_LABELS } from "../dashboard/caseLabels";
-import { canManageCaseOwner } from "./caseDetailPermissions";
+import { canApproveByOrgRole, canManageCaseOwner } from "./caseDetailPermissions";
 import { CreateChildCaseForm } from "./CreateChildCaseForm";
 
 const STATUS_STYLES: Record<CaseStatus, string> = {
@@ -66,6 +67,26 @@ export const CaseChildCasesSection = ({
 }: CaseChildCasesSectionProps) => {
   const { t } = useTranslation("ui");
   const [showChildCaseForm, setShowChildCaseForm] = useState(false);
+  const [approvingCaseId, setApprovingCaseId] = useState<string | null>(null);
+
+  const canApproveChild = (child: CaseDetail) =>
+    !!currentUserId &&
+    child.status === CaseStatus.REVIEW_REQUESTED &&
+    (child.creatorId === currentUserId ||
+      (!!currentProfile && canApproveByOrgRole(currentProfile, child)));
+
+  const handleApprove = async (childCaseId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setApprovingCaseId(childCaseId);
+    try {
+      await CaseService.updateCaseStatus(childCaseId, { status: CaseStatus.COMPLETED });
+      await onCreated();
+    } catch (err) {
+      console.error("Failed to approve child case", err);
+    } finally {
+      setApprovingCaseId(null);
+    }
+  };
 
   const canCreate =
     (caseDetail.caseType === CaseType.STANDARD || caseDetail.caseType === CaseType.PROJECT) &&
@@ -145,6 +166,16 @@ export const CaseChildCasesSection = ({
                         {standardChild.dueDate}
                       </span>
                     )}
+                    {canApproveChild(standardChild) && (
+                      <button
+                        onClick={(e) => void handleApprove(standardChild.caseId, e)}
+                        disabled={approvingCaseId === standardChild.caseId}
+                        className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                      >
+                        <CheckCircle size={11} />
+                        {approvingCaseId === standardChild.caseId ? t("Approving...") : t("Approve")}
+                      </button>
+                    )}
                   </div>
                   {isNestedLoading ? (
                     <div className="px-6 py-4 flex items-center gap-2 border-t border-gray-50">
@@ -172,6 +203,16 @@ export const CaseChildCasesSection = ({
                               <Calendar size={12} />
                               {requestChild.dueDate}
                             </span>
+                          )}
+                          {canApproveChild(requestChild) && (
+                            <button
+                              onClick={(e) => void handleApprove(requestChild.caseId, e)}
+                              disabled={approvingCaseId === requestChild.caseId}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                            >
+                              <CheckCircle size={11} />
+                              {approvingCaseId === requestChild.caseId ? t("Approving...") : t("Approve")}
+                            </button>
                           )}
                         </li>
                       ))}
@@ -201,6 +242,16 @@ export const CaseChildCasesSection = ({
                     <Calendar size={12} />
                     {child.dueDate}
                   </span>
+                )}
+                {canApproveChild(child) && (
+                  <button
+                    onClick={(e) => void handleApprove(child.caseId, e)}
+                    disabled={approvingCaseId === child.caseId}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                  >
+                    <CheckCircle size={11} />
+                    {approvingCaseId === child.caseId ? t("Approving...") : t("Approve")}
+                  </button>
                 )}
               </li>
             ))}

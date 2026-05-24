@@ -94,10 +94,24 @@ export const createHandler =
         return forbidden("You do not have permission to update this case");
       }
 
+      const newStatus = status as CaseStatus;
+
+      // Validate: cannot complete a case if child cases are still incomplete
+      if (newStatus === CaseStatus.COMPLETED) {
+        const children = await deps.caseRepo.findChildrenByParentCaseId(existingCase.caseId);
+        const incomplete = children.filter(
+          (c) => c.status !== CaseStatus.COMPLETED && c.status !== CaseStatus.CANCELED,
+        );
+        if (incomplete.length > 0) {
+          return badRequest("All sub-cases must be completed before completing this case");
+        }
+      }
+
+      const now = new Date().toISOString();
       const updatedCase = {
         ...existingCase,
-        status: status as CaseStatus,
-        updatedAt: new Date().toISOString(),
+        status: newStatus,
+        updatedAt: now,
       };
 
       await saveCaseAndAccessRecords(deps, updatedCase);
@@ -109,11 +123,52 @@ export const createHandler =
           companyId: profile.companyId,
           actorId: userId,
           action: CaseHistoryAction.STATUS_CHANGED,
-          detail: `Status changed from ${existingCase.status} to ${status as string}`,
-          createdAt: updatedCase.updatedAt,
+          detail: `Status changed from ${existingCase.status} to ${newStatus}`,
+          createdAt: now,
         });
       } catch (historyError) {
         console.error("Failed to write case history", historyError);
+      }
+
+      // Auto-propagate: if completed and has parent, check if all siblings done → parent → REVIEW_REQUESTED
+      if (newStatus === CaseStatus.COMPLETED && existingCase.parentCaseId) {
+        try {
+          const siblings = await deps.caseRepo.findChildrenByParentCaseId(existingCase.parentCaseId);
+          const allSiblingsDone = siblings.every(
+            (s) =>
+              s.caseId === existingCase.caseId
+                ? true // current case already updated to COMPLETED
+                : s.status === CaseStatus.COMPLETED || s.status === CaseStatus.CANCELED,
+          );
+          if (allSiblingsDone) {
+            const parentCase = await deps.caseRepo.findById(existingCase.parentCaseId);
+            if (
+              parentCase &&
+              parentCase.status !== CaseStatus.COMPLETED &&
+              parentCase.status !== CaseStatus.REVIEW_REQUESTED &&
+              parentCase.status !== CaseStatus.CANCELED
+            ) {
+              const parentNow = new Date().toISOString();
+              const updatedParent = {
+                ...parentCase,
+                status: CaseStatus.REVIEW_REQUESTED,
+                updatedAt: parentNow,
+              };
+              await saveCaseAndAccessRecords(deps, updatedParent);
+              await deps.caseHistoryRepo.save({
+                historyId: randomUUID(),
+                caseId: parentCase.caseId,
+                companyId: parentCase.companyId,
+                actorId: userId,
+                action: CaseHistoryAction.STATUS_CHANGED,
+                detail: `Status auto-changed to REVIEW_REQUESTED: all sub-cases completed`,
+                createdAt: parentNow,
+              });
+            }
+          }
+        } catch (propagationError) {
+          console.error("Failed to propagate completion to parent case", propagationError);
+        }
       }
 
       return {
