@@ -277,7 +277,10 @@ const ja = {
   "Submit Claim": "担当を希望する",
   "No claim requests yet.": "担当希望はまだありません。",
   "Enter rejection reason": "却下理由を入力してください",
-
+  "Delete Case" : "案件 削除",
+  "Deletes this case and all sub-cases, tasks, and history permanently." : "この案件とすべての子案件、タスク、履歴を完全に削除します。",
+  "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone." : "これにより、この案件とすべての子案件、タスク、コメント、および履歴が完全に削除されます。この操作は元に戻せません。",
+  
   // CreateCaseModal
   "Create Project": "プロジェクト作成",
   "Create Standard Case": "通常案件作成",
