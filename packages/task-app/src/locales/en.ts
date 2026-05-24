@@ -277,6 +277,9 @@ const en = {
   "Submit Claim": "Submit Claim",
   "No claim requests yet.": "No claim requests yet.",
   "Enter rejection reason": "Enter rejection reason",
+  "Delete Case" : "Delete Case",
+  "Deletes this case and all sub-cases, tasks, and history permanently." : "Deletes this case and all sub-cases, tasks, and history permanently.",
+  "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone." : "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone.",
 
   // CreateCaseModal
   "Create Project": "Create Project",

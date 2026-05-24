@@ -277,6 +277,9 @@ const ko = {
   "Submit Claim": "담당 신청하기",
   "No claim requests yet.": "담당 신청이 아직 없습니다.",
   "Enter rejection reason": "거절 이유를 입력해 주세요",
+  "Delete Case" : "안건 삭제",
+  "Deletes this case and all sub-cases, tasks, and history permanently." : "이 안건과 모든 하위 안건, 작업, 이력이 영구적으로 삭제됩니다.",
+  "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone."  : "이 안건과 모든 하위 안건, 작업, 댓글, 이력이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
 
   // CreateCaseModal
   "Create Project": "프로젝트 생성",
