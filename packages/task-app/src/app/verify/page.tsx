@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
 import { AuthService } from "@task/core";
+import { changeUILanguage, getStoredLang, SupportedLang } from "../../locales";
 
 // バリデーションスキーマ
 const verifySchema = z.object({
@@ -87,23 +88,45 @@ const VerifyContent = () => {
         </button>
       </form>
       
-      <div className="mt-6 text-center">
-        <p className="text-xs text-gray-400">
-          メールが届かない場合は、迷惑メールフォルダをご確認ください。
-        </p>
+      <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-xs text-yellow-800 leading-relaxed">
+        ⚠️ メールが届かない場合は、<strong>迷惑メール（スパム）フォルダ</strong>をご確認ください。AWS Cognitoからの自動送信メールはスパム判定されることがあります。
       </div>
     </div>
   );
 };
 
+const LANGS: { code: SupportedLang; label: string }[] = [
+  { code: "en", label: "EN" },
+  { code: "ja", label: "日" },
+  { code: "ko", label: "한" },
+];
+
 const VerifyPage = () => {
+  const [lang, setLang] = useState<SupportedLang>(getStoredLang());
+
+  const handleLangChange = (code: SupportedLang) => {
+    changeUILanguage(code);
+    setLang(code);
+  };
+
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center relative">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             TaskTree
           </h1>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1">
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => handleLangChange(l.code)}
+                className={`text-xs px-2 py-1 rounded font-bold transition-colors ${lang === l.code ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-700"}`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <Suspense fallback={<div className="text-center py-10">読み込み中...</div>}>

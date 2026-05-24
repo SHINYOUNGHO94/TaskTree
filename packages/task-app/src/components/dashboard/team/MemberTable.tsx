@@ -65,7 +65,7 @@ export function MemberTable({
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed text-sm text-left">
+        <table className="w-full table-auto text-sm text-left">
           <thead className="text-xs text-slate-400 uppercase bg-slate-50/80 border-b border-slate-100">
             <tr>
               <th className="px-6 py-4 font-semibold tracking-wide whitespace-nowrap min-w-[200px]">{t("Member (table header)")}</th>

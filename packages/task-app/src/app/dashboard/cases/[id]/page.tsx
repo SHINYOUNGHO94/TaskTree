@@ -144,6 +144,9 @@ const CaseDetailPage = () => {
   const [selectedStatus, setSelectedStatus] = useState<CaseStatus | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [isDeletingCase, setIsDeletingCase] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [caseTasks, setCaseTasks] = useState<CaseTaskDetail[]>([]);
   const [isTasksLoading, setIsTasksLoading] = useState(false);
   const [tasksError, setTasksError] = useState<string | null>(null);
@@ -199,6 +202,19 @@ const CaseDetailPage = () => {
       // display name resolution is best-effort
     }
   }, []);
+
+  const handleDeleteCase = async () => {
+    if (!caseDetail) return;
+    setIsDeletingCase(true);
+    setDeleteError(null);
+    try {
+      await CaseService.deleteCase(caseDetail.caseId);
+      router.push(buildBackUrl());
+    } catch {
+      setDeleteError(t("Failed to delete case. Please try again."));
+      setIsDeletingCase(false);
+    }
+  };
 
   const handleStatusUpdate = async () => {
     if (!selectedStatus || !caseDetail || selectedStatus === caseDetail.status) return;
@@ -606,6 +622,24 @@ const CaseDetailPage = () => {
             </div>
           </div>
 
+          {/* Delete case (creator only) */}
+          {currentUserId && caseDetail.creatorId === currentUserId && (
+            <div className="bg-white border border-red-100 rounded-2xl p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-red-700 mb-3">{t("Delete Case")}</h3>
+              <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                {t("Deletes this case and all sub-cases, tasks, and history permanently.")}
+              </p>
+              {deleteError && <ErrorAlert message={t(deleteError)} />}
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeletingCase}
+                className="w-full text-sm font-bold px-4 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {t("Delete Case")}
+              </button>
+            </div>
+          )}
+
           {/* Details & specs */}
           <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
             <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5">{t("Case Specs")}</h3>
@@ -841,6 +875,37 @@ const CaseDetailPage = () => {
           />
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="p-6">
+              <h3 className="text-sm font-bold text-gray-900 mb-2">{t("Delete Case")}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {t("This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone.")}
+              </p>
+              {deleteError && <div className="mt-3"><ErrorAlert message={t(deleteError)} /></div>}
+            </div>
+            <div className="p-6 pt-0 flex justify-end gap-3">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+                disabled={isDeletingCase}
+                className="text-sm font-bold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+              >
+                {t("Cancel")}
+              </button>
+              <button
+                onClick={handleDeleteCase}
+                disabled={isDeletingCase}
+                className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isDeletingCase ? t("Deleting...") : t("Delete (confirm)")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
