@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
 import { AuthService } from "@task/core";
+import { changeUILanguage, getStoredLang, SupportedLang } from "../../locales";
 
 const signupSchema = z.object({
   companyName: z.string().min(1, { message: "会社名を入力してください。" }),
@@ -20,9 +21,21 @@ const signupSchema = z.object({
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
+const LANGS: { code: SupportedLang; label: string }[] = [
+  { code: "en", label: "EN" },
+  { code: "ja", label: "日" },
+  { code: "ko", label: "한" },
+];
+
 const SignupPage = () => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [lang, setLang] = useState<SupportedLang>(getStoredLang());
+
+  const handleLangChange = (code: SupportedLang) => {
+    changeUILanguage(code);
+    setLang(code);
+  };
 
   const {
     register,
@@ -59,11 +72,22 @@ const SignupPage = () => {
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center relative">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             TaskTree
           </h1>
           <p className="text-gray-600 mt-2 text-sm">新規登録</p>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1">
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => handleLangChange(l.code)}
+                className={`text-xs px-2 py-1 rounded font-bold transition-colors ${lang === l.code ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-700"}`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">

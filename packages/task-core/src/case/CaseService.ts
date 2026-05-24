@@ -487,6 +487,25 @@ export const CaseService = {
     }
   },
 
+  deleteCase: async (caseId: string): Promise<void> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = del({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}`,
+        options: {
+          headers: { Authorization: idToken || '' },
+        },
+      });
+      await restOperation.response;
+    } catch (error) {
+      console.error('Error deleting case:', error);
+      throw error;
+    }
+  },
+
   deleteCaseTask: async (caseId: string, taskId: string): Promise<void> => {
     try {
       const { tokens } = await fetchAuthSession();
