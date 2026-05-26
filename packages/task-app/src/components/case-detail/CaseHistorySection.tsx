@@ -8,6 +8,7 @@ import { resolveDisplayName } from "../dashboard/caseLabels";
 const HISTORY_ACTION_KEY: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.CASE_CREATED]: "Case Created",
   [CaseHistoryAction.STATUS_CHANGED]: "Status Changed",
+  [CaseHistoryAction.CASE_UPDATED]: "Case Updated",
   [CaseHistoryAction.TASK_CREATED]: "Task Added",
   [CaseHistoryAction.TASK_UPDATED]: "Task Updated",
   [CaseHistoryAction.TASK_STATUS_CHANGED]: "Task Status Changed",

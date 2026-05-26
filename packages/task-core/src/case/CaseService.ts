@@ -487,6 +487,35 @@ export const CaseService = {
     }
   },
 
+  updateCase: async (
+    caseId: string,
+    input: { title?: string; description?: string; dueDate?: string | null },
+  ): Promise<{ caseId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const body: Record<string, string | null> = {};
+      if (input.title !== undefined) body.title = input.title;
+      if (input.description !== undefined) body.description = input.description;
+      if (input.dueDate !== undefined) body.dueDate = input.dueDate ?? null;
+
+      const restOperation = put({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body,
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { caseId: string };
+    } catch (error) {
+      console.error('Error updating case:', error);
+      throw error;
+    }
+  },
+
   deleteCase: async (caseId: string): Promise<void> => {
     try {
       const { tokens } = await fetchAuthSession();

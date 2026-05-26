@@ -96,6 +96,7 @@ const zh = {
   "No cases (PROJECT)": "没有项目案件。",
   "No results matching filters": "没有符合当前筛选条件的案件。",
   "Reset filters": "重置筛选",
+  "Show all": "显示全部",
   "My Cases description": "您创建或拥有的案件",
   "Open Cases description": "在您权限范围内的公开案件",
   "Org Cases description": "针对组织、科室或团队的案件",
@@ -280,6 +281,17 @@ const zh = {
   "Delete Case": "删除案件",
   "Deletes this case and all sub-cases, tasks, and history permanently.": "永久删除此案件及其所有子案件、任务和历史记录。",
   "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone.": "这将永久删除案件及其所有子案件、任务、评论和历史记录。此操作无法撤销。",
+
+  // EditCaseModal
+  "Edit Case": "编辑案件",
+  "Edit case title *": "标题 *",
+  "Edit case description": "描述",
+  "Edit case dueDate": "截止日期",
+  "Case Updated": "案件已更新",
+  "Failed to update case. Please try again.": "更新案件失败，请重试。",
+  "Overdue": "已逾期",
+  "Due soon": "即将到期",
+  "Sub-case": "子案件",
 
   // CreateCaseModal
   "Create Project": "创建项目",

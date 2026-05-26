@@ -138,8 +138,93 @@ describe("updateCase", () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it("status 以外の field が含まれる場合は 400", async () => {
+  it("許可されていない field が含まれる場合は 400", async () => {
     const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
+    const response = await handler(
+      makeEvent({
+        sub: "user-1",
+        id: "CASE-1",
+        body: { unknownField: "value" },
+      }),
+    );
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("title のみ更新できる", async () => {
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
+      caseResult: baseCase,
+      profileResult: mockProfile,
+    });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
+    const response = await handler(
+      makeEvent({ sub: "user-1", id: "CASE-1", body: { title: "New title" } }),
+    );
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as { caseId: string };
+    expect(body.caseId).toBe("CASE-1");
+  });
+
+  it("title と description と dueDate を同時に更新できる", async () => {
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
+      caseResult: baseCase,
+      profileResult: mockProfile,
+    });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
+    const response = await handler(
+      makeEvent({
+        sub: "user-1",
+        id: "CASE-1",
+        body: { title: "Updated", description: "New desc", dueDate: "2026-12-31" },
+      }),
+    );
+    expect(response.statusCode).toBe(200);
+  });
+
+  it("不正な dueDate 形式は 400", async () => {
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
+    const response = await handler(
+      makeEvent({ sub: "user-1", id: "CASE-1", body: { dueDate: "abc" } }),
+    );
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("存在しない日付の dueDate は 400", async () => {
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
+    const response = await handler(
+      makeEvent({ sub: "user-1", id: "CASE-1", body: { dueDate: "2026-99-99" } }),
+    );
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("月末を超える dueDate (2026-02-30) は 400", async () => {
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({});
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
+    const response = await handler(
+      makeEvent({ sub: "user-1", id: "CASE-1", body: { dueDate: "2026-02-30" } }),
+    );
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("dueDate を null にクリアできる", async () => {
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
+      caseResult: { ...baseCase, dueDate: "2026-01-01" },
+      profileResult: mockProfile,
+    });
+    const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
+    const response = await handler(
+      makeEvent({ sub: "user-1", id: "CASE-1", body: { dueDate: null } }),
+    );
+    expect(response.statusCode).toBe(200);
+  });
+
+  it("status と title を同時に更新できる", async () => {
+    const { caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo } = makeMockRepos({
+      caseResult: baseCase,
+      profileResult: mockProfile,
+    });
     const handler = createHandler({ caseRepo, caseHistoryRepo, assignmentRepo, visibilityRepo, userRepo });
     const response = await handler(
       makeEvent({
@@ -148,7 +233,7 @@ describe("updateCase", () => {
         body: { status: "IN_PROGRESS", title: "Updated title" },
       }),
     );
-    expect(response.statusCode).toBe(400);
+    expect(response.statusCode).toBe(200);
   });
 
   it("user profile が存在しない場合は 500", async () => {
