@@ -1,11 +1,14 @@
 import { useTranslation } from "react-i18next";
-import { CaseDetail, CaseStatus } from "@task/core";
+import { CaseDetail, CaseOwnerType, CaseStatus } from "@task/core";
 import { CaseCard } from "./CaseCard";
 import { CASE_STATUS_LABELS } from "./caseLabels";
 
 interface CaseBoardViewProps {
   cases: CaseDetail[];
   onCaseClick: (caseId: string) => void;
+  onEditCase?: (caseDetail: CaseDetail) => void;
+  currentUserId?: string;
+  emptyMessage?: string;
 }
 
 const BOARD_COLUMNS: { status: CaseStatus; accentClass: string; countClass: string }[] = [
@@ -18,9 +21,12 @@ const BOARD_COLUMNS: { status: CaseStatus; accentClass: string; countClass: stri
   { status: CaseStatus.CANCELED,          accentClass: "from-rose-500 to-red-600",       countClass: "bg-rose-100 text-rose-700" },
 ];
 
-export const CaseBoardView: React.FC<CaseBoardViewProps> = ({ cases, onCaseClick }) => {
+export const CaseBoardView: React.FC<CaseBoardViewProps> = ({ cases, onCaseClick, onEditCase, currentUserId, emptyMessage }) => {
   const { t } = useTranslation("ui");
   const byStatus = (status: CaseStatus) => cases.filter((c) => c.status === status);
+  const canEdit = (c: CaseDetail) =>
+    !!onEditCase && !!currentUserId &&
+    (c.creatorId === currentUserId || (c.ownerType === CaseOwnerType.USER && c.ownerId === currentUserId));
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">
@@ -39,11 +45,11 @@ export const CaseBoardView: React.FC<CaseBoardViewProps> = ({ cases, onCaseClick
               <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-0.5">
                 {column.length === 0 ? (
                   <div className="py-10 text-center text-slate-300 text-xs border border-dashed border-slate-200 rounded-md bg-slate-50/40">
-                    {t("No cases (MY)")}
+                    {emptyMessage ?? t("No cases (MY)")}
                   </div>
                 ) : (
                   column.map((c) => (
-                    <CaseCard key={c.caseId} caseDetail={c} onClick={onCaseClick} />
+                    <CaseCard key={c.caseId} caseDetail={c} onClick={onCaseClick} onEdit={canEdit(c) ? onEditCase : undefined} />
                   ))
                 )}
               </div>

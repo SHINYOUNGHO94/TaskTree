@@ -96,6 +96,7 @@ const ja = {
   "No cases (PROJECT)": "プロジェクト案件はありません。",
   "No results matching filters": "フィルターに一致する案件はありません。",
   "Reset filters": "フィルターをリセット",
+  "Show all": "すべて表示",
   "My Cases description": "自分が作成・担当する案件（案件 = 業務依頼・協業単位）",
   "Open Cases description": "権限範囲内で担当希望できる公開案件",
   "Org Cases description": "組織・部署・チームへ向けた案件",
@@ -281,6 +282,17 @@ const ja = {
   "Deletes this case and all sub-cases, tasks, and history permanently." : "この案件とすべての子案件、タスク、履歴を完全に削除します。",
   "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone." : "これにより、この案件とすべての子案件、タスク、コメント、および履歴が完全に削除されます。この操作は元に戻せません。",
   
+  // EditCaseModal
+  "Edit Case": "案件を編集",
+  "Edit case title *": "タイトル *",
+  "Edit case description": "説明",
+  "Edit case dueDate": "期限",
+  "Case Updated": "案件を更新しました",
+  "Failed to update case. Please try again.": "案件の更新に失敗しました。再度お試しください。",
+  "Overdue": "期限超過",
+  "Due soon": "期限間近",
+  "Sub-case": "子案件",
+
   // CreateCaseModal
   "Create Project": "プロジェクト作成",
   "Create Standard Case": "通常案件作成",

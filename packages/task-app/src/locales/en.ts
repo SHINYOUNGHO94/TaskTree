@@ -96,6 +96,7 @@ const en = {
   "No cases (PROJECT)": "No project cases.",
   "No results matching filters": "No cases match the current filters.",
   "Reset filters": "Reset filters",
+  "Show all": "Show all",
   "My Cases description": "Cases you created or own",
   "Open Cases description": "Open cases within your permission scope",
   "Org Cases description": "Cases targeted to org, dept, or team",
@@ -280,6 +281,17 @@ const en = {
   "Delete Case" : "Delete Case",
   "Deletes this case and all sub-cases, tasks, and history permanently." : "Deletes this case and all sub-cases, tasks, and history permanently.",
   "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone." : "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone.",
+
+  // EditCaseModal
+  "Edit Case": "Edit Case",
+  "Edit case title *": "Title *",
+  "Edit case description": "Description",
+  "Edit case dueDate": "Due Date",
+  "Case Updated": "Case updated",
+  "Failed to update case. Please try again.": "Failed to update case. Please try again.",
+  "Overdue": "Overdue",
+  "Due soon": "Due soon",
+  "Sub-case": "Sub-case",
 
   // CreateCaseModal
   "Create Project": "Create Project",

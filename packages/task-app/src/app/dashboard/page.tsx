@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { FileText, LayoutGrid, List, Plus, RefreshCw, Search, Mail, X } from "lucide-react";
+import { FileText, LayoutGrid, List, Plus, RefreshCw, Search, Mail, X, Pencil } from "lucide-react";
 import {
   CaseDeliveryType,
   CaseDetail,
+  CaseOwnerType,
   CaseParticipantCompanyStatus,
   CaseService,
   CaseStatus,
@@ -16,7 +17,9 @@ import {
 } from "@task/core";
 import { useUser } from "../../components/providers/UserProvider";
 import { CaseBoardView } from "../../components/dashboard/CaseBoardView";
+import { CaseCard } from "../../components/dashboard/CaseCard";
 import { CreateCaseModal } from "../../components/dashboard/CreateCaseModal";
+import { EditCaseModal } from "../../components/dashboard/EditCaseModal";
 import { CASE_DELIVERY_TYPE_LABELS, CASE_STATUS_LABELS, CASE_TYPE_LABELS } from "../../components/dashboard/caseLabels";
 
 type ViewMode = "list" | "board";
@@ -57,6 +60,26 @@ const CASE_TYPE_BADGE: Record<CaseType, string> = {
   [CaseType.REQUEST]:  'bg-amber-50 text-amber-700',
   [CaseType.STANDARD]: 'bg-blue-50 text-blue-700',
   [CaseType.PROJECT]:  'bg-violet-50 text-violet-700',
+};
+
+const STATUS_PILL_IDLE: Record<CaseStatus, string> = {
+  [CaseStatus.IN_PROGRESS]:      'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100',
+  [CaseStatus.REVIEW_REQUESTED]: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100',
+  [CaseStatus.WAITING]:          'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200',
+  [CaseStatus.REOPENED]:         'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100',
+  [CaseStatus.ON_HOLD]:          'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
+  [CaseStatus.COMPLETED]:        'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
+  [CaseStatus.CANCELED]:         'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100',
+};
+
+const STATUS_PILL_ACTIVE: Record<CaseStatus, string> = {
+  [CaseStatus.IN_PROGRESS]:      'bg-sky-500 text-white border-sky-500',
+  [CaseStatus.REVIEW_REQUESTED]: 'bg-violet-500 text-white border-violet-500',
+  [CaseStatus.WAITING]:          'bg-slate-400 text-white border-slate-400',
+  [CaseStatus.REOPENED]:         'bg-orange-400 text-white border-orange-400',
+  [CaseStatus.ON_HOLD]:          'bg-amber-400 text-white border-amber-400',
+  [CaseStatus.COMPLETED]:        'bg-emerald-500 text-white border-emerald-500',
+  [CaseStatus.CANCELED]:         'bg-rose-500 text-white border-rose-500',
 };
 
 function filterByArea(cases: CaseDetail[], tab: CaseAreaTab, userId: string): CaseDetail[] {
@@ -156,6 +179,7 @@ const DashboardPage = () => {
   const [casesLoading, setCasesLoading] = useState(true);
   const [casesError, setCasesError] = useState<string | null>(null);
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
+  const [editingCase, setEditingCase] = useState<CaseDetail | null>(null);
 
   const [invitations, setInvitations] = useState<ParticipantCompanyInvitation[]>([]);
   const [invitationsLoading, setInvitationsLoading] = useState(false);
@@ -164,6 +188,7 @@ const DashboardPage = () => {
   const [invitationActionErrors, setInvitationActionErrors] = useState<Record<string, string>>({});
 
   const [activeTab, setActiveTab] = useState<CaseAreaTab>("MY");
+  const [activePill, setActivePill] = useState<CaseStatus | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const [caseTypeFilter, setCaseTypeFilter] = useState<CaseTypeFilter>((searchParams.get("caseType") as CaseTypeFilter) ?? "ALL");
   const [statusFilter, setStatusFilter] = useState<CaseStatusFilter>((searchParams.get("status") as CaseStatusFilter) ?? "ALL");
@@ -256,8 +281,32 @@ const DashboardPage = () => {
 
   const handleTabChange = (tab: CaseAreaTab) => {
     setActiveTab(tab);
+    setActivePill("ALL");
     resetFilters();
   };
+
+  const handleEditCase = (caseDetail: CaseDetail) => {
+    setEditingCase(caseDetail);
+  };
+
+  const handleEditSuccess = (
+    updatedFields: { title: string; description: string; dueDate: string | null },
+  ) => {
+    if (!editingCase) return;
+    setCases((prev) =>
+      prev.map((c) =>
+        c.caseId === editingCase.caseId
+          ? { ...c, ...updatedFields, updatedAt: new Date().toISOString() }
+          : c,
+      ),
+    );
+  };
+
+  const handlePillClick = (status: CaseStatus | "ALL") => {
+    setActivePill(status);
+  };
+
+  const isPillFiltered = activePill !== "ALL";
 
   const tabFilteredCases = useMemo(
     () => filterByArea(cases, activeTab, user?.id ?? ""),
@@ -267,6 +316,11 @@ const DashboardPage = () => {
   const filteredCases = useMemo(
     () => applyFiltersAndSort(tabFilteredCases, user?.id ?? "", searchQuery, caseTypeFilter, statusFilter, deliveryTypeFilter, ownershipFilter, sortKey),
     [tabFilteredCases, user?.id, searchQuery, caseTypeFilter, statusFilter, deliveryTypeFilter, ownershipFilter, sortKey],
+  );
+
+  const pillFilteredCases = useMemo(
+    () => isPillFiltered ? filteredCases.filter((c) => c.status === activePill) : filteredCases,
+    [filteredCases, isPillFiltered, activePill],
   );
 
   if (!user) return null;
@@ -299,31 +353,71 @@ const DashboardPage = () => {
       {/* Case section */}
       <div className="mb-10">
         {/* Area tabs */}
-        <div className="overflow-x-auto mb-5">
-        <div className="flex gap-0.5 bg-slate-100 p-1 rounded-md border border-slate-200 w-fit">
-          {(["MY", "OPEN", "ORG", "PROJECT"] as CaseAreaTab[]).map((tab) => {
-            const count = filterByArea(cases, tab, user.id).length;
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                className={`px-3.5 py-1.5 rounded-sm text-xs font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-                  isActive
-                    ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {TAB_LABELS[tab]}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
-                  isActive ? "bg-indigo-50 text-indigo-600" : "text-slate-400"
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+        <div className="overflow-x-auto mb-4">
+          <div className="flex gap-1 bg-slate-100 p-1.5 rounded-lg border border-slate-200 w-fit">
+            {(["MY", "OPEN", "ORG", "PROJECT"] as CaseAreaTab[]).map((tab) => {
+              const count = filterByArea(cases, tab, user.id).length;
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={`px-5 py-2 rounded-md text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap ${
+                    isActive
+                      ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {TAB_LABELS[tab]}
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                    isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-200 text-slate-500"
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Status pills */}
+        <div className="overflow-x-auto mb-4">
+          <div className="flex gap-2 w-max">
+            {/* ALL pill */}
+            <button
+              onClick={() => handlePillClick("ALL")}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap ${
+                activePill === "ALL"
+                  ? "bg-slate-800 text-white border-slate-800"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {t("All")}
+              <span className="ml-1.5 text-[10px] font-bold opacity-80">
+                {filteredCases.length}
+              </span>
+            </button>
+            {(Object.values(CaseStatus) as CaseStatus[]).map((status) => {
+              const count = filteredCases.filter((c) => c.status === status).length;
+              const isActive = activePill === status;
+              const isEmpty = count === 0;
+              return (
+                <button
+                  key={status}
+                  onClick={() => handlePillClick(status)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap ${
+                    isActive
+                      ? STATUS_PILL_ACTIVE[status]
+                      : `${STATUS_PILL_IDLE[status]} ${isEmpty ? "opacity-40 cursor-default" : ""}`
+                  }`}
+                  disabled={isEmpty && !isActive}
+                >
+                  {t(CASE_STATUS_LABELS[status])}
+                  <span className="ml-1.5 text-[10px] font-bold opacity-80">{count}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <p className="text-xs text-slate-600 mb-4 leading-relaxed">{TAB_DESCRIPTIONS[activeTab]}</p>
@@ -458,8 +552,31 @@ const DashboardPage = () => {
               {t("Reset filters")}
             </button>
           </div>
+        ) : isPillFiltered && pillFilteredCases.length === 0 ? (
+          <div className="py-16 text-center bg-white border border-slate-200 rounded-lg flex flex-col items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mb-3">
+              <Search size={20} className="text-slate-400" />
+            </div>
+            <p className="text-sm text-slate-500 mb-1">{t("No results matching filters")}</p>
+            <button
+              onClick={() => setActivePill("ALL")}
+              className="mt-3 px-4 py-1.5 border border-slate-200 bg-white text-slate-600 rounded-md hover:bg-slate-50 transition-colors text-xs font-medium"
+            >
+              {t("Show all")}
+            </button>
+          </div>
+        ) : isPillFiltered ? (
+          /* Pill-filtered grid: show only selected status in card grid */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pillFilteredCases.map((c) => {
+              const canEdit = c.creatorId === user.id || (c.ownerType === CaseOwnerType.USER && c.ownerId === user.id);
+              return (
+                <CaseCard key={c.caseId} caseDetail={c} onClick={handleCaseClick} onEdit={canEdit ? handleEditCase : undefined} />
+              );
+            })}
+          </div>
         ) : viewMode === "board" ? (
-          <CaseBoardView cases={filteredCases} onCaseClick={handleCaseClick} />
+          <CaseBoardView cases={filteredCases} onCaseClick={handleCaseClick} onEditCase={handleEditCase} currentUserId={user.id} emptyMessage={TAB_EMPTY_MESSAGES[activeTab]} />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full min-w-[580px] text-sm">
@@ -470,14 +587,21 @@ const DashboardPage = () => {
                   <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-32">{t("Status")}</th>
                   <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">{t("Due Date (optional)")}</th>
                   <th className="px-4 py-2.5 text-[11px] font-semibold text-slate-600 uppercase tracking-wide w-28">{t("Updated")}</th>
+                  <th className="px-4 py-2.5 w-10" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCases.map((c) => (
+                {filteredCases.map((c) => {
+                  const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+                  const soonLimit = (() => { const d = new Date(); d.setDate(d.getDate() + 3); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+                  const isDueDateOverdue = c.dueDate && c.dueDate < today;
+                  const isDueDateSoon = c.dueDate && !isDueDateOverdue && c.dueDate <= soonLimit;
+                  const canEdit = c.creatorId === user.id || (c.ownerType === CaseOwnerType.USER && c.ownerId === user.id);
+                  return (
                   <tr
                     key={c.caseId}
                     onClick={() => handleCaseClick(c.caseId)}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors"
+                    className="hover:bg-slate-50 cursor-pointer transition-colors group"
                   >
                     <td className="px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${CASE_TYPE_BADGE[c.caseType]}`}>
@@ -496,10 +620,25 @@ const DashboardPage = () => {
                         <span className="text-xs font-medium text-slate-700">{t(CASE_STATUS_LABELS[c.status])}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs font-medium text-slate-600">{c.dueDate ?? "—"}</td>
+                    <td className={`px-4 py-3 text-xs font-medium ${isDueDateOverdue ? 'text-rose-600' : isDueDateSoon ? 'text-amber-600' : 'text-slate-600'}`}>
+                      {c.dueDate ?? "—"}
+                    </td>
                     <td className="px-4 py-3 text-xs text-slate-500">{new Date(c.updatedAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleEditCase(c); }}
+                          className="p-1 rounded text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100"
+                          title={t("Edit Case")}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -615,6 +754,15 @@ const DashboardPage = () => {
         profile={profile}
         userId={user.id}
       />
+
+      {editingCase && (
+        <EditCaseModal
+          isOpen={editingCase !== null}
+          onClose={() => setEditingCase(null)}
+          caseDetail={editingCase}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </section>
   );
 };

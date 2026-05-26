@@ -1140,6 +1140,91 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 
 ---
 
+## v2.2.0 - Dashboard 操作性改善・状態集中表示
+
+> v2.2.0 の開始 Task として、Dashboard のタブ UI と状態確認フローを改善した。状態 pill による集中表示、カード表示の情報強化、権限付きの案件編集を追加し、日常運用で「見たい状態の案件だけをすばやく確認・更新する」導線を整えた。
+
+### Task A: Dashboard status pills and case edit
+
+**Dashboard UI:**
+
+- Dashboard の `MY` / `OPEN` / `ORG` / `PROJECT` タブボタンを拡大し、選択しやすくした
+- タブ下に状態 pill を追加した
+  - `All`
+  - `IN_PROGRESS`
+  - `REVIEW_REQUESTED`
+  - `COMPLETED`
+  - `WAITING`
+  - `ON_HOLD`
+  - `CANCELED`
+  - `REOPENED`
+- 各 pill に現在の検索・種別・配信・担当 filter を反映した件数 badge を表示した
+- 件数 0 の pill は dim 表示にし、誤クリックを防ぐため disabled にした
+- pill 列はモバイルで横スクロールできるようにした
+- `All` pill は状態 filter を解除し、現在の `board` / `list` view を維持する仕様にした
+- 特定状態 pill 選択時は、その状態の案件だけをカードグリッドで表示する仕様にした
+- pill 選択結果が 0 件の場合、空状態と `Show all` ボタンを表示して pill を解除できるようにした
+- 既存の status dropdown filter とは別に `activePill` state を持たせ、pill 操作と通常 filter 操作を分離した
+- タブ変更時は pill を `All` にリセットするようにした
+
+**CaseCard 改善:**
+
+- カードに sub-case badge を追加した
+- OPEN 案件 badge を追加した
+- owner type / owner id の補助情報を表示した
+- due date の状態を表示した
+  - overdue は強調表示
+  - 3 日以内の due date は soon 表示
+  - date-only 文字列比較に変更し、UTC 起因の「今日が期限なのに overdue」になる問題を避けた
+- 編集可能な案件にのみ edit button を表示するようにした
+- edit button の click / keydown event propagation を抑止し、カード詳細遷移と競合しないようにした
+
+**案件編集 UI / API:**
+
+- `EditCaseModal` を追加し、Dashboard から title / description / dueDate を編集できるようにした
+- 編集ボタン表示条件は creator または USER owner のみとした
+- `CaseService.updateCase` を追加し、`PUT /cases/{id}` へ title / description / dueDate を送信できるようにした
+- `updateCase` Lambda で status 以外に title / description / dueDate 更新を受け付けるようにした
+- 更新時は `CaseHistoryAction.CASE_UPDATED` を記録するようにした
+- `CaseHistorySection` に `CASE_UPDATED` 表示を追加した
+- dueDate は `YYYY-MM-DD` 形式、`Invalid Date`、round-trip 検証を行い、`2026-02-30` のような補正される日付も 400 にするようにした
+- `dueDate: null` による期限クリアを許可した
+
+**多言語対応:**
+
+- Dashboard status pill / edit modal / case card 追加文言を EN / JA / KO / ZH に追加した
+
+**変更ファイル:**
+
+- `packages/task-app/src/app/dashboard/page.tsx`
+- `packages/task-app/src/components/dashboard/CaseCard.tsx`
+- `packages/task-app/src/components/dashboard/CaseBoardView.tsx`
+- `packages/task-app/src/components/dashboard/EditCaseModal.tsx`
+- `packages/task-app/src/components/case-detail/CaseHistorySection.tsx`
+- `packages/task-app/src/locales/en.ts`
+- `packages/task-app/src/locales/ja.ts`
+- `packages/task-app/src/locales/ko.ts`
+- `packages/task-app/src/locales/zh.ts`
+- `packages/task-core/src/case/CaseService.ts`
+- `packages/task-core/src/types/case.ts`
+- `packages/task-api/src/aws/handlers/case/updateCase.ts`
+- `packages/task-api/src/aws/handlers/case/updateCase.test.ts`
+
+**API / デプロイ影響:**
+
+- `PUT /cases/{id}` の API contract を拡張した
+- `updateCase` Lambda コード変更あり → Lambda / API の再デプロイが必要
+- 新規 Lambda / API route / DynamoDB GSI: なし
+- IAM 変更なし
+- インフラ定義変更なし
+
+**検証:**
+
+- `tsc` — pass（実施報告）
+- `updateCase` 関連テスト 21/21 — pass（実施報告）
+
+---
+
 ## v2.1.0 - モバイル対応・案件フロー分化・多言語拡充
 
 > モバイル画面への完全対応、REQUEST / STANDARD / PROJECT 三種の案件タイプの UI・権限・承認フロー分化、ログイン/会員登録/認証画面の多言語対応修正、中国語（簡体字）追加を一本化したバージョン。

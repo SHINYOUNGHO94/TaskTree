@@ -96,6 +96,7 @@ const ko = {
   "No cases (PROJECT)": "프로젝트 안건이 없습니다.",
   "No results matching filters": "필터에 맞는 안건이 없습니다.",
   "Reset filters": "필터 초기화",
+  "Show all": "전체 보기",
   "My Cases description": "내가 생성하거나 담당하는 안건",
   "Open Cases description": "권한 범위 내에서 담당 신청 가능한 공개 안건",
   "Org Cases description": "조직·부서·팀 대상 안건",
@@ -280,6 +281,17 @@ const ko = {
   "Delete Case" : "안건 삭제",
   "Deletes this case and all sub-cases, tasks, and history permanently." : "이 안건과 모든 하위 안건, 작업, 이력이 영구적으로 삭제됩니다.",
   "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone."  : "이 안건과 모든 하위 안건, 작업, 댓글, 이력이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+
+  // EditCaseModal
+  "Edit Case": "안건 편집",
+  "Edit case title *": "제목 *",
+  "Edit case description": "내용",
+  "Edit case dueDate": "마감일",
+  "Case Updated": "안건을 업데이트했습니다",
+  "Failed to update case. Please try again.": "안건 업데이트에 실패했습니다. 다시 시도해 주세요.",
+  "Overdue": "기한 초과",
+  "Due soon": "마감 임박",
+  "Sub-case": "하위 안건",
 
   // CreateCaseModal
   "Create Project": "프로젝트 생성",

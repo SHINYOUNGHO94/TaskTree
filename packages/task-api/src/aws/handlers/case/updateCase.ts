@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { CaseDetail, CaseHistoryAction, CaseOwnerType, CaseStatus } from "@task/core";
+
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
@@ -64,14 +65,46 @@ export const createHandler =
         return invalidRequestBody();
       }
 
-      const allowedFields = new Set(["status"]);
+      const allowedFields = new Set(["status", "title", "description", "dueDate"]);
       if (Object.keys(body).some((key) => !allowedFields.has(key))) {
-        return badRequest("Only status can be updated");
+        return badRequest("Only status, title, description, and dueDate can be updated");
       }
 
-      const { status } = body;
-      if (!status || !(Object.values(CaseStatus) as string[]).includes(status as string)) {
-        return badRequest("Invalid or missing status value");
+      const { status, title, description, dueDate } = body;
+
+      if (
+        status === undefined &&
+        title === undefined &&
+        description === undefined &&
+        dueDate === undefined
+      ) {
+        return badRequest("At least one field must be provided");
+      }
+
+      if (
+        status !== undefined &&
+        !(Object.values(CaseStatus) as string[]).includes(status as string)
+      ) {
+        return badRequest("Invalid status value");
+      }
+      if (title !== undefined && (typeof title !== "string" || !title.trim())) {
+        return badRequest("Title must be a non-empty string");
+      }
+      if (description !== undefined && typeof description !== "string") {
+        return badRequest("Description must be a string");
+      }
+      if (dueDate !== undefined && dueDate !== null) {
+        if (typeof dueDate !== "string") {
+          return badRequest("dueDate must be a string or null");
+        }
+        const parsedDate = new Date(dueDate);
+        if (
+          !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) ||
+          isNaN(parsedDate.getTime()) ||
+          parsedDate.toISOString().slice(0, 10) !== dueDate
+        ) {
+          return badRequest("dueDate must be a valid date in YYYY-MM-DD format");
+        }
       }
 
       const [profile, existingCase] = await Promise.all([
@@ -94,10 +127,9 @@ export const createHandler =
         return forbidden("You do not have permission to update this case");
       }
 
-      const newStatus = status as CaseStatus;
+      const newStatus = status !== undefined ? (status as CaseStatus) : existingCase.status;
 
-      // Validate: cannot complete a case if child cases are still incomplete
-      if (newStatus === CaseStatus.COMPLETED) {
+      if (status !== undefined && newStatus === CaseStatus.COMPLETED) {
         const children = await deps.caseRepo.findChildrenByParentCaseId(existingCase.caseId);
         const incomplete = children.filter(
           (c) => c.status !== CaseStatus.COMPLETED && c.status !== CaseStatus.CANCELED,
@@ -108,8 +140,11 @@ export const createHandler =
       }
 
       const now = new Date().toISOString();
-      const updatedCase = {
+      const updatedCase: CaseDetail = {
         ...existingCase,
+        ...(title !== undefined ? { title: (title as string).trim() } : {}),
+        ...(description !== undefined ? { description: description as string } : {}),
+        ...(dueDate !== undefined ? { dueDate: dueDate as string | null } : {}),
         status: newStatus,
         updatedAt: now,
       };
@@ -117,27 +152,43 @@ export const createHandler =
       await saveCaseAndAccessRecords(deps, updatedCase);
 
       try {
-        await deps.caseHistoryRepo.save({
-          historyId: randomUUID(),
-          caseId,
-          companyId: profile.companyId,
-          actorId: userId,
-          action: CaseHistoryAction.STATUS_CHANGED,
-          detail: `Status changed from ${existingCase.status} to ${newStatus}`,
-          createdAt: now,
-        });
+        if (status !== undefined) {
+          await deps.caseHistoryRepo.save({
+            historyId: randomUUID(),
+            caseId,
+            companyId: profile.companyId,
+            actorId: userId,
+            action: CaseHistoryAction.STATUS_CHANGED,
+            detail: `Status changed from ${existingCase.status} to ${newStatus}`,
+            createdAt: now,
+          });
+        }
+        const fieldChanges: string[] = [];
+        if (title !== undefined) fieldChanges.push(`title updated`);
+        if (description !== undefined) fieldChanges.push(`description updated`);
+        if (dueDate !== undefined) fieldChanges.push(`dueDate updated to ${dueDate ?? "none"}`);
+        if (fieldChanges.length > 0) {
+          await deps.caseHistoryRepo.save({
+            historyId: randomUUID(),
+            caseId,
+            companyId: profile.companyId,
+            actorId: userId,
+            action: CaseHistoryAction.CASE_UPDATED,
+            detail: fieldChanges.join(", "),
+            createdAt: now,
+          });
+        }
       } catch (historyError) {
         console.error("Failed to write case history", historyError);
       }
 
-      // Auto-propagate: if completed and has parent, check if all siblings done → parent → REVIEW_REQUESTED
-      if (newStatus === CaseStatus.COMPLETED && existingCase.parentCaseId) {
+      if (status !== undefined && newStatus === CaseStatus.COMPLETED && existingCase.parentCaseId) {
         try {
           const siblings = await deps.caseRepo.findChildrenByParentCaseId(existingCase.parentCaseId);
           const allSiblingsDone = siblings.every(
             (s) =>
               s.caseId === existingCase.caseId
-                ? true // current case already updated to COMPLETED
+                ? true
                 : s.status === CaseStatus.COMPLETED || s.status === CaseStatus.CANCELED,
           );
           if (allSiblingsDone) {
