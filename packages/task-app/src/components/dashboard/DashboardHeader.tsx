@@ -13,6 +13,7 @@ const LANG_OPTIONS: { code: SupportedLang; label: string }[] = [
   { code: 'en', label: 'EN' },
   { code: 'ja', label: '日' },
   { code: 'ko', label: '한' },
+  { code: 'zh', label: '中' },
 ];
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ userName = "Guest", onSignOut, onMenuOpen }) => {

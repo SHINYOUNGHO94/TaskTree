@@ -74,7 +74,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick }) => {
           </div>
           <div className="flex items-center gap-1 group-hover:text-indigo-500 transition-colors duration-200">
             <span>{createdDate}</span>
-            <ArrowRight size={11} className="opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200" />
+            <ArrowRight size={11} className="md:opacity-0 md:group-hover:opacity-100 md:-translate-x-1 md:group-hover:translate-x-0 transition-all duration-200" />
           </div>
         </div>
       </div>

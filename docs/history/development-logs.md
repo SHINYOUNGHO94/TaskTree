@@ -1140,9 +1140,9 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 
 ---
 
-## v2.1.0 - モバイル対応と案件タイプ別フロー分化
+## v2.1.0 - モバイル対応・案件フロー分化・多言語拡充
 
-> モバイル画面への完全対応と、REQUEST / STANDARD / PROJECT 三種の案件タイプを UI・権限・承認フローの面で明確に分化したバージョン。
+> モバイル画面への完全対応、REQUEST / STANDARD / PROJECT 三種の案件タイプの UI・権限・承認フロー分化、ログイン/会員登録/認証画面の多言語対応修正、中国語（簡体字）追加を一本化したバージョン。
 
 ### モバイルレスポンシブ対応（全ダッシュボード画面）
 
@@ -1218,6 +1218,46 @@ v2.0.0 では三種の案件タイプ（REQUEST / STANDARD / PROJECT）が Dynam
 - `yarn.cmd type-check:api` — pass
 - `yarn.cmd workspace @task/app lint` — pass
 - `yarn.cmd workspace @task/app build` — pass
+
+---
+
+### 認証画面の多言語対応修正と中国語（簡体字）追加
+
+**問題:** ログイン・会員登録・認証コード入力画面に言語スイッチャー UI は存在したが、言語切替後もテキストが変わらなかった。原因はこれらの画面が `useTranslation("ui")` を使っておらず、すべての文字列がハードコードされていたため。
+
+**修正内容:**
+
+- `app/page.tsx`（ログイン）、`app/signup/page.tsx`（会員登録）、`app/verify/page.tsx`（認証コード）に `useTranslation("ui")` を追加
+- すべての JSX テキストを `t("English key")` パターンに変更
+- Zod バリデーションメッセージを英語キー文字列に変更し、描画時に `t(errors.field.message!)` で翻訳
+- エラー state も英語キーで保持し、描画時に `t(error)` で翻訳
+- `verify/page.tsx` の i18next interpolation に JSX 要素を渡していたバグを修正（`{ email: <span> }` → `{ email }` 文字列）
+- `locales/en.ts`、`locales/ja.ts`、`locales/ko.ts` に Auth 用キーを追加（Login / Signup / Verify / Zod バリデーション各セクション）
+
+**中国語（簡体字）追加:**
+
+- `locales/zh.ts` を新規作成（全キー簡体字翻訳）
+- `locales/index.ts` に `"zh"` を SUPPORTED に追加、bundle 登録
+- `app/page.tsx`、`app/signup/page.tsx`、`app/verify/page.tsx` の LANGS 配列に `{ code: "zh", label: "中" }` 追加
+- `DashboardHeader.tsx` の LANG_OPTIONS に `{ code: 'zh', label: '中' }` 追加
+
+**変更ファイル:**
+
+- `packages/task-app/src/locales/zh.ts` — 新規
+- `packages/task-app/src/locales/index.ts` — zh 追加
+- `packages/task-app/src/locales/en.ts` — Auth キー追加
+- `packages/task-app/src/locales/ja.ts` — Auth キー追加
+- `packages/task-app/src/locales/ko.ts` — Auth キー追加
+- `packages/task-app/src/app/page.tsx` — useTranslation 追加・zh スイッチャー追加
+- `packages/task-app/src/app/signup/page.tsx` — useTranslation 追加・zh スイッチャー追加
+- `packages/task-app/src/app/verify/page.tsx` — useTranslation 追加・interpolation バグ修正・zh スイッチャー追加
+- `packages/task-app/src/components/dashboard/DashboardHeader.tsx` — zh スイッチャー追加
+
+**API / デプロイ影響:** なし。フロントエンドのみ変更。
+
+**検証:**
+
+- `yarn.cmd workspace @task/app tsc --noEmit` — pass
 
 ---
 

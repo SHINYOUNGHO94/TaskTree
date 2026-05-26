@@ -401,6 +401,49 @@ const ja = {
   "Team (membership)": "所属チーム",
   "Unassigned (membership)": "未配属",
   "Send Invitation": "招待を送信",
+
+  // Auth - Login
+  "Login": "ログイン",
+  "Password": "パスワード",
+  "Logging in...": "ログイン中...",
+  "Create Account": "新規アカウント作成",
+  "Clear Session": "セッション削除",
+  "Demo Account": "デモアカウント",
+  "Email verified. Please log in.": "認証が完了しました。ログインしてください。",
+  "Authentication failed.": "認証に失敗しました。",
+  "Reset Password": "パスワードの再設定",
+  "You logged in with an initial password. Please set a new password for security.": "初期パスワードでログインしました。セキュリティのため、新しいパスワードを設定してください。",
+  "New Password": "新しいパスワード",
+  "8+ characters": "8文字以上",
+  "Set Password & Login": "パスワードを設定してログイン",
+  "Failed to change password.": "パスワードの変更に失敗しました。",
+
+  // Auth - Signup
+  "Sign Up": "新規登録",
+  "Back to Login": "ログイン",
+  "Confirm Password": "パスワード（確認）",
+  "Re-enter password": "再度入力",
+  "Passwords do not match.": "パスワードが一致しません。",
+  "Registration failed.": "登録に失敗しました。",
+  "This email is already registered.": "このメールアドレスは既に登録されています。",
+  "Invalid input. Check password requirements.": "入力内容が正しくありません。パスワードの規則などを確認してください。",
+
+  // Auth - Verify
+  "Enter Verification Code": "認証コード入力",
+  "Enter the code sent to {{email}}.": "{{email}} に送信されたコードを入力してください。",
+  "Invalid or expired verification code.": "認証コードが正しくないか、期限が切れています。",
+  "Verifying...": "確認中...",
+  "Verify": "認証",
+  "Check spam if email not received.": "メールが届かない場合は、迷惑メール（スパム）フォルダをご確認ください。AWS Cognitoからの自動送信メールはスパム判定されることがあります。",
+
+  // Zod validation keys (used as i18n keys in auth forms)
+  "Enter a valid email address.": "有効なメールアドレスを入力してください。",
+  "Password must be at least 6 characters.": "パスワードは6文字以上で入力してください。",
+  "Password must be at least 8 characters.": "パスワードは8文字以上で入力してください。",
+  "Enter your last name.": "姓を入力してください。",
+  "Enter your first name.": "名を入力してください。",
+  "Enter confirm password.": "確認用パスワードを入力してください。",
+  "Enter a 6-digit verification code.": "6桁の認証コードを入力してください。",
 } as const;
 
 export default ja;

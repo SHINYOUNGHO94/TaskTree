@@ -401,6 +401,49 @@ const ko = {
   "Team (membership)": "소속 팀",
   "Unassigned (membership)": "미배치",
   "Send Invitation": "초대 전송",
+
+  // Auth - Login
+  "Login": "로그인",
+  "Password": "비밀번호",
+  "Logging in...": "로그인 중...",
+  "Create Account": "계정 생성",
+  "Clear Session": "세션 삭제",
+  "Demo Account": "데모 계정",
+  "Email verified. Please log in.": "이메일 인증이 완료되었습니다. 로그인해 주세요.",
+  "Authentication failed.": "인증에 실패했습니다.",
+  "Reset Password": "비밀번호 재설정",
+  "You logged in with an initial password. Please set a new password for security.": "초기 비밀번호로 로그인했습니다. 보안을 위해 새 비밀번호를 설정해 주세요.",
+  "New Password": "새 비밀번호",
+  "8+ characters": "8자 이상",
+  "Set Password & Login": "비밀번호 설정 후 로그인",
+  "Failed to change password.": "비밀번호 변경에 실패했습니다.",
+
+  // Auth - Signup
+  "Sign Up": "회원가입",
+  "Back to Login": "로그인으로 돌아가기",
+  "Confirm Password": "비밀번호 확인",
+  "Re-enter password": "다시 입력",
+  "Passwords do not match.": "비밀번호가 일치하지 않습니다.",
+  "Registration failed.": "등록에 실패했습니다.",
+  "This email is already registered.": "이미 등록된 이메일 주소입니다.",
+  "Invalid input. Check password requirements.": "입력 내용이 올바르지 않습니다. 비밀번호 규칙 등을 확인해 주세요.",
+
+  // Auth - Verify
+  "Enter Verification Code": "인증 코드 입력",
+  "Enter the code sent to {{email}}.": "{{email}} 로 전송된 코드를 입력해 주세요.",
+  "Invalid or expired verification code.": "인증 코드가 올바르지 않거나 만료되었습니다.",
+  "Verifying...": "확인 중...",
+  "Verify": "인증",
+  "Check spam if email not received.": "이메일을 받지 못한 경우 스팸 폴더를 확인해 주세요. AWS Cognito 자동 발송 이메일은 스팸으로 분류될 수 있습니다.",
+
+  // Zod validation keys (used as i18n keys in auth forms)
+  "Enter a valid email address.": "유효한 이메일 주소를 입력해 주세요.",
+  "Password must be at least 6 characters.": "비밀번호는 6자 이상이어야 합니다.",
+  "Password must be at least 8 characters.": "비밀번호는 8자 이상이어야 합니다.",
+  "Enter your last name.": "성을 입력해 주세요.",
+  "Enter your first name.": "이름을 입력해 주세요.",
+  "Enter confirm password.": "확인용 비밀번호를 입력해 주세요.",
+  "Enter a 6-digit verification code.": "6자리 인증 코드를 입력해 주세요.",
 } as const;
 
 export default ko;
