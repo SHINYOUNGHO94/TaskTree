@@ -7,12 +7,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { AuthService } from "@task/core";
 import { changeUILanguage, getStoredLang, SupportedLang } from "../../locales";
 
-// バリデーションスキーマ
 const verifySchema = z.object({
-  code: z.string().length(6, { message: "6桁の認証コードを入力してください。" }),
+  code: z.string().length(6, { message: "Enter a 6-digit verification code." }),
 });
 
 type VerifyFormValues = z.infer<typeof verifySchema>;
@@ -23,6 +23,7 @@ const VerifyContent = () => {
   const email = searchParams.get("email") || "";
   const companyName = searchParams.get("company") || "";
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation("ui");
 
   const {
     register,
@@ -35,61 +36,61 @@ const VerifyContent = () => {
   const onSubmit = async (data: VerifyFormValues) => {
     setError(null);
     const result = await AuthService.confirmSignUp(email, data.code, companyName);
-    
+
     if (result.success) {
       router.push("/?verified=true");
     } else {
-      setError("認証コードが正しくないか、期限が切れています。");
+      setError("Invalid or expired verification code.");
     }
   };
 
   return (
     <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
-      <Link 
-        href="/signup" 
+      <Link
+        href="/signup"
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
       >
         <ArrowLeft size={16} />
-        <span>戻る</span>
+        <span>{t("Back")}</span>
       </Link>
 
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">認証コード入力</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">{t("Enter Verification Code")}</h2>
         <p className="text-sm text-gray-600 leading-relaxed">
-          <span className="font-semibold text-gray-800">{email}</span> に送信されたコードを入力してください。
+          {t("Enter the code sent to {{email}}.", { email })}
         </p>
       </div>
 
       {error && (
         <div className="mb-6 p-3 bg-red-50 border border-red-100 rounded text-red-600 text-sm flex items-center gap-2">
           <AlertCircle size={16} />
-          <span>{error}</span>
+          <span>{t(error)}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-2">
-          <input 
+          <input
             {...register("code")}
             placeholder="000000"
             maxLength={6}
             className="w-full border border-gray-300 rounded-md py-3 px-4 text-center text-2xl font-bold tracking-[0.5em] text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
           />
-          {errors.code && <p className="text-xs text-red-500 mt-1">{errors.code.message}</p>}
+          {errors.code && <p className="text-xs text-red-500 mt-1">{t(errors.code.message!)}</p>}
         </div>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={isSubmitting || !email}
           className="w-full bg-gray-900 text-white font-bold py-3 rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           <ShieldCheck size={18} />
-          {isSubmitting ? "確認中..." : "認証"}
+          {isSubmitting ? t("Verifying...") : t("Verify")}
         </button>
       </form>
-      
+
       <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-xs text-yellow-800 leading-relaxed">
-        ⚠️ メールが届かない場合は、<strong>迷惑メール（スパム）フォルダ</strong>をご確認ください。AWS Cognitoからの自動送信メールはスパム判定されることがあります。
+        ⚠️ {t("Check spam if email not received.")}
       </div>
     </div>
   );
@@ -99,10 +100,12 @@ const LANGS: { code: SupportedLang; label: string }[] = [
   { code: "en", label: "EN" },
   { code: "ja", label: "日" },
   { code: "ko", label: "한" },
+  { code: "zh", label: "中" },
 ];
 
 const VerifyPage = () => {
   const [lang, setLang] = useState<SupportedLang>(getStoredLang());
+  const { t } = useTranslation("ui");
 
   const handleLangChange = (code: SupportedLang) => {
     changeUILanguage(code);
@@ -113,9 +116,7 @@ const VerifyPage = () => {
     <main className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center relative">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            TaskTree
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">TaskTree</h1>
           <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1">
             {LANGS.map((l) => (
               <button
@@ -129,13 +130,11 @@ const VerifyPage = () => {
           </div>
         </div>
 
-        <Suspense fallback={<div className="text-center py-10">読み込み中...</div>}>
+        <Suspense fallback={<div className="text-center py-10">{t("Loading...")}</div>}>
           <VerifyContent />
         </Suspense>
 
-        <div className="mt-8 text-center text-xs text-gray-400">
-          © 2026 TaskTree
-        </div>
+        <div className="mt-8 text-center text-xs text-gray-400">© 2026 TaskTree</div>
       </div>
     </main>
   );
