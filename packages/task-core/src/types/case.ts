@@ -67,13 +67,35 @@ export interface CaseSummary {
   updatedAt: string;
 }
 
+export type DescriptionFormat = "plain" | "tiptap_json";
+
 export interface CaseDetail extends CaseSummary {
   description: string;
+  descriptionFormat?: DescriptionFormat;
+  descriptionText?: string;
+}
+
+export interface GetUploadPresignedUrlInput {
+  caseId: string;
+  contentType: string;
+  fileSize: number;
+}
+
+export interface GetUploadPresignedUrlOutput {
+  url: string;
+  fields: Record<string, string>;
+  objectKey: string;
+}
+
+export interface GetReadPresignedUrlOutput {
+  readUrl: string;
 }
 
 export interface CreateRootCaseInput {
   title: string;
   description: string;
+  descriptionFormat?: DescriptionFormat;
+  descriptionText?: string;
   caseType: CaseType;
   deliveryType: CaseDeliveryType;
 
@@ -90,6 +112,8 @@ export interface UpdateCaseInput {
   caseId: string;
   title?: string;
   description?: string;
+  descriptionFormat?: DescriptionFormat;
+  descriptionText?: string;
   status?: CaseStatus;
   dueDate?: string | null;
 }

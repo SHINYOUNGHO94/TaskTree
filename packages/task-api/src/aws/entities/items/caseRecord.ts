@@ -18,6 +18,8 @@ export interface CaseRecordType extends DynamoDBRecord {
   visibilitySortKey: string;
   name: string;
   description: string;
+  descriptionFormat?: string;
+  descriptionText?: string;
   caseType: CaseType;
   status: CaseStatus;
   deliveryType: CaseDeliveryType;
@@ -77,6 +79,7 @@ const fromDetail = (detail: CaseDetail): CaseRecordType => {
     name: detail.title,
     description: detail.description,
     caseType: detail.caseType,
+    // descriptionFormat and descriptionText set below (omit-if-absent pattern)
     status: detail.status,
     deliveryType: detail.deliveryType,
     ownerType: detail.ownerType,
@@ -96,6 +99,8 @@ const fromDetail = (detail: CaseDetail): CaseRecordType => {
   if (detail.projectId !== null) record.projectId = detail.projectId;
   if (detail.parentCaseId !== null) record.parentCaseId = detail.parentCaseId;
   if (detail.dueDate !== null) record.dueDate = detail.dueDate;
+  if (detail.descriptionFormat !== undefined) record.descriptionFormat = detail.descriptionFormat;
+  if (detail.descriptionText !== undefined) record.descriptionText = detail.descriptionText;
 
   return record;
 };
@@ -104,6 +109,8 @@ const toDetail = (record: CaseRecordType): CaseDetail => ({
   caseId: record.sk.replace(/^Case#/, ""),
   title: record.name,
   description: record.description,
+  ...(record.descriptionFormat !== undefined ? { descriptionFormat: record.descriptionFormat as "plain" | "tiptap_json" } : {}),
+  ...(record.descriptionText !== undefined ? { descriptionText: record.descriptionText } : {}),
   caseType: record.caseType,
   status: record.status,
   deliveryType: record.deliveryType,

@@ -105,9 +105,11 @@ function applyFiltersAndSort(
   const q = query.trim().toLowerCase();
   let result = cases.filter((c) => {
     if (q) {
+      const searchableDescription =
+        c.descriptionText ?? (c.descriptionFormat !== "tiptap_json" ? c.description : "");
       const match =
         c.title.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q) ||
+        searchableDescription.toLowerCase().includes(q) ||
         c.caseId.toLowerCase().includes(q) ||
         c.caseType.toLowerCase().includes(q) ||
         c.status.toLowerCase().includes(q);

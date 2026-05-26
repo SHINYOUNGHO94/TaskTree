@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Suffix, StagingEnvironment } from '@task/core';
@@ -56,6 +57,22 @@ export class TaskInfraStack extends cdk.Stack {
         resources: [tableArn, tableIndexesArn],
       }));
     };
+
+    // APP_ORIGIN env var restricts S3 CORS to the deployed app domain (e.g. https://app.example.com).
+    // Falls back to '*' for local dev if not set — lock this down before prod.
+    const appOrigin = process.env.APP_ORIGIN;
+    const caseImagesBucket = new s3.Bucket(this, 'CaseImagesBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      cors: [
+        {
+          allowedOrigins: appOrigin ? [appOrigin] : ['*'],
+          allowedMethods: [s3.HttpMethods.POST, s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.HEAD],
+          allowedHeaders: ['*'],
+          exposedHeaders: ['ETag'],
+          maxAge: 3000,
+        },
+      ],
+    });
 
     const postConfirmationFn = new NodejsFunction(this, 'PostConfirmationFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -500,6 +517,30 @@ export class TaskInfraStack extends cdk.Stack {
     });
     grantCaseMutation(createCaseCommentFn, ['dynamodb:PutItem']);
 
+    const getUploadPresignedUrlFn = new NodejsFunction(this, 'GetUploadPresignedUrlFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/upload/getUploadPresignedUrl.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        CASE_IMAGES_BUCKET: caseImagesBucket.bucketName,
+      },
+    });
+    grantTableRead(getUploadPresignedUrlFn);
+    caseImagesBucket.grantPut(getUploadPresignedUrlFn);
+
+    const getReadPresignedUrlFn = new NodejsFunction(this, 'GetReadPresignedUrlFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/upload/getReadPresignedUrl.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        CASE_IMAGES_BUCKET: caseImagesBucket.bucketName,
+      },
+    });
+    grantTableRead(getReadPresignedUrlFn);
+    caseImagesBucket.grantRead(getReadPresignedUrlFn);
+
     const api = new apigateway.RestApi(this, 'TaskApi', {
       restApiName: 'Task Tree API',
       description: 'API for TaskTree management - v2',
@@ -706,6 +747,18 @@ export class TaskInfraStack extends cdk.Stack {
 
     const participantCompanyInvitationsResource = casesResource.addResource('participant-company-invitations');
     participantCompanyInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getParticipantCompanyInvitationsFn), { authorizer });
+
+    const uploadResource = api.root.addResource('upload');
+    const uploadPresignedUrlResource = uploadResource.addResource('presigned-url');
+    uploadPresignedUrlResource.addMethod('POST', new apigateway.LambdaIntegration(getUploadPresignedUrlFn), { authorizer });
+
+    const uploadReadUrlResource = uploadResource.addResource('read-url');
+    uploadReadUrlResource.addMethod('GET', new apigateway.LambdaIntegration(getReadPresignedUrlFn), { authorizer });
+
+    new cdk.CfnOutput(this, 'CaseImagesBucketName', {
+      value: caseImagesBucket.bucketName,
+      description: 'S3 bucket for case images (set as NEXT_PUBLIC_CASE_IMAGES_BUCKET if needed)',
+    });
 
     new cdk.CfnOutput(this, 'CognitoUserPoolId', {
       value: userPool.userPoolId,

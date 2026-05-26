@@ -45,6 +45,7 @@ import { CaseTasksSection } from "../../../../components/case-detail/CaseTasksSe
 import { CaseHistorySection } from "../../../../components/case-detail/CaseHistorySection";
 import { CaseCommentsSection } from "../../../../components/case-detail/CaseCommentsSection";
 import { CaseParticipantCompanySection } from "../../../../components/case-detail/CaseParticipantCompanySection";
+import { RichEditor } from "../../../../components/editor/RichEditor";
 
 type ErrorType = "notFound" | "forbidden" | "error";
 
@@ -542,11 +543,11 @@ const CaseDetailPage = () => {
 
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">{t("Description")}</h3>
-                <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap min-h-[100px] bg-slate-50/60 rounded-xl p-4 border border-slate-100">
-                  {caseDetail.description || (
-                    <span className="text-slate-300 italic">{t("No description")}</span>
-                  )}
-                </div>
+                <RichEditor
+                  description={caseDetail.description}
+                  descriptionFormat={caseDetail.descriptionFormat}
+                  readOnly
+                />
               </div>
             </div>
           </div>

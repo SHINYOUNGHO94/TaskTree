@@ -65,17 +65,19 @@ export const createHandler =
         return invalidRequestBody();
       }
 
-      const allowedFields = new Set(["status", "title", "description", "dueDate"]);
+      const allowedFields = new Set(["status", "title", "description", "descriptionFormat", "descriptionText", "dueDate"]);
       if (Object.keys(body).some((key) => !allowedFields.has(key))) {
-        return badRequest("Only status, title, description, and dueDate can be updated");
+        return badRequest("Only status, title, description, descriptionFormat, descriptionText, and dueDate can be updated");
       }
 
-      const { status, title, description, dueDate } = body;
+      const { status, title, description, descriptionFormat, descriptionText, dueDate } = body;
 
       if (
         status === undefined &&
         title === undefined &&
         description === undefined &&
+        descriptionFormat === undefined &&
+        descriptionText === undefined &&
         dueDate === undefined
       ) {
         return badRequest("At least one field must be provided");
@@ -92,6 +94,12 @@ export const createHandler =
       }
       if (description !== undefined && typeof description !== "string") {
         return badRequest("Description must be a string");
+      }
+      if (descriptionFormat !== undefined && descriptionFormat !== "plain" && descriptionFormat !== "tiptap_json") {
+        return badRequest("descriptionFormat must be 'plain' or 'tiptap_json'");
+      }
+      if (descriptionText !== undefined && typeof descriptionText !== "string") {
+        return badRequest("descriptionText must be a string");
       }
       if (dueDate !== undefined && dueDate !== null) {
         if (typeof dueDate !== "string") {
@@ -144,6 +152,8 @@ export const createHandler =
         ...existingCase,
         ...(title !== undefined ? { title: (title as string).trim() } : {}),
         ...(description !== undefined ? { description: description as string } : {}),
+        ...(descriptionFormat !== undefined ? { descriptionFormat: descriptionFormat as "plain" | "tiptap_json" } : {}),
+        ...(descriptionText !== undefined ? { descriptionText: descriptionText as string } : {}),
         ...(dueDate !== undefined ? { dueDate: dueDate as string | null } : {}),
         status: newStatus,
         updatedAt: now,

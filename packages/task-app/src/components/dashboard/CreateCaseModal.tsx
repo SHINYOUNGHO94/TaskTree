@@ -20,6 +20,7 @@ import {
   UserService,
 } from '@task/core';
 import { CASE_DELIVERY_TYPE_LABELS, CASE_TYPE_LABELS, USER_ROLE_LABELS } from './caseLabels';
+import { RichEditor, type RichEditorOutput } from '../editor/RichEditor';
 
 interface CreateCaseModalProps {
   isOpen: boolean;
@@ -31,7 +32,6 @@ interface CreateCaseModalProps {
 
 interface FormValues {
   title: string;
-  description: string;
   dueDate: string;
   caseType: CaseType;
 }
@@ -114,7 +114,6 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   } = useForm<FormValues>({
     defaultValues: {
       title: '',
-      description: '',
       dueDate: '',
       caseType: CaseType.REQUEST,
     },
@@ -149,6 +148,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   // Modal result
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [succeeded, setSucceeded] = useState(false);
+  const [richDesc, setRichDesc] = useState<RichEditorOutput>({ description: '', descriptionFormat: 'tiptap_json', descriptionText: '' });
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
 
   // Org data fetch
   const fetchOrgData = useCallback(async () => {
@@ -414,9 +416,12 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleClose = () => {
-    reset({ title: '', description: '', dueDate: '', caseType: CaseType.REQUEST });
+    reset({ title: '', dueDate: '', caseType: CaseType.REQUEST });
     setSubmitError(null);
     setSucceeded(false);
+    setRichDesc({ description: '', descriptionFormat: 'tiptap_json', descriptionText: '' });
+    setDescriptionError(null);
+    setEditorKey((k) => k + 1);
     setDeliveryType(CaseDeliveryType.DIRECT);
     setTargetScope(getDefaultScope(userRole));
     setRequiredRole(UserRole.USER);
@@ -429,6 +434,12 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
   const onSubmit = async (data: FormValues) => {
     setSubmitError(null);
+    setDescriptionError(null);
+
+    if (!richDesc.descriptionText.trim()) {
+      setDescriptionError(t('Please enter a description.'));
+      return;
+    }
 
     const { scope: submitScope, scopeId: submitScopeId } = effectiveSubmitScope;
 
@@ -439,7 +450,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
     const input: CreateRootCaseInput = {
       title: data.title.trim(),
-      description: data.description.trim(),
+      description: richDesc.description,
+      descriptionFormat: richDesc.descriptionFormat,
+      descriptionText: richDesc.descriptionText,
       caseType: data.caseType,
       deliveryType,
       targetScope: submitScope,
@@ -580,16 +593,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 {/* ── Description ── */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700">{t('Content')}</label>
-                  <textarea
-                    {...register('description', {
-                      required: t('Please enter a description.'),
-                      validate: (v) => v.trim().length > 0 || t('Please enter a description.'),
-                    })}
-                    placeholder={t('Enter case details...')}
-                    className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors h-24 resize-none bg-white placeholder:text-slate-400"
+                  <RichEditor
+                    key={editorKey}
+                    description={richDesc.description}
+                    descriptionFormat={richDesc.descriptionFormat}
+                    onChange={(output) => { setRichDesc(output); setDescriptionError(null); }}
                   />
-                  {errors.description && (
-                    <p className="text-xs text-red-600">{errors.description.message}</p>
+                  {descriptionError && (
+                    <p className="text-xs text-red-600">{descriptionError}</p>
                   )}
                 </div>
 

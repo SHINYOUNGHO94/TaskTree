@@ -1223,6 +1223,78 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 - `tsc` — pass（実施報告）
 - `updateCase` 関連テスト 21/21 — pass（実施報告）
 
+### Task B: Case rich editor and private image upload
+
+**Rich editor:**
+
+- `CreateCaseModal`、`EditCaseModal`、Case 詳細画面の description 入力・表示を Tiptap ベースの `RichEditor` に置き換えた
+- bold / italic / H1 / H2 / bullet list / ordered list / image insert の基本 toolbar を追加した
+- legacy plain text description は paragraph として表示・編集できるようにし、既存データとの互換性を維持した
+- 新形式では description を Tiptap JSON として保存し、検索・カード preview 用に `descriptionText` を別フィールドで保持するようにした
+- Dashboard の検索と `CaseCard` preview は `descriptionText` を優先し、`tiptap_json` の JSON 文字列が画面に露出しないようにした
+- 画像表示用の presigned GET URL は client module-level cache で 50 分保持し、同一 objectKey の再取得を抑制した
+- 画像 file picker に加え、drag & drop と clipboard paste による画像挿入を追加した
+- caseId がない新規作成中は画像挿入を無効化し、作成後の編集画面で画像を追加する仕様にした
+
+**Image upload / read API:**
+
+- `POST /upload/presigned-url` を追加し、caseId / contentType / fileSize 検証後に S3 presigned POST を返すようにした
+- `GET /upload/read-url?key=...` を追加し、objectKey の case 所属と閲覧権限を検証して presigned GET URL を返すようにした
+- content type は `image/png`、`image/jpeg`、`image/webp` のみ許可した
+- file size は最大 5MB に制限した
+- S3 object key は server 側で `{companyId}/cases/{caseId}/images/{uuid}.{ext}` 形式で生成し、client のファイル名は信頼しない設計にした
+- upload 権限は case creator または USER owner に限定した
+- read 権限は Case 詳細閲覧権限と同じ範囲に合わせ、同一会社ユーザーと参加会社ユーザーの読み取りを制御した
+- upload / read Lambda の成功応答にも CORS header を付与し、browser から presigned URL 応答を読めるようにした
+
+**Data model / API contract:**
+
+- `CaseDetail` / `CreateRootCaseInput` / `UpdateCaseInput` に `descriptionFormat?: "plain" | "tiptap_json"` と `descriptionText?: string` を追加した
+- `CaseRecord` の fromDetail / toDetail mapping に `descriptionFormat` と `descriptionText` を追加し、DynamoDB に保存・復元できるようにした
+- `createCase` / `updateCase` Lambda は `descriptionFormat` の不正値を 400 として拒否するようにした
+
+**Infrastructure:**
+
+- private S3 bucket `CaseImagesBucket` を CDK に追加した
+- `GetUploadPresignedUrlFunction` と `GetReadPresignedUrlFunction` を追加した
+- API Gateway に `/upload/presigned-url` と `/upload/read-url` route を追加した
+- upload Lambda には `s3:PutObject`、read Lambda には `s3:GetObject` を付与した
+- S3 CORS は `APP_ORIGIN` 環境変数がある場合はその origin に限定し、未設定時は local dev 用に `*` fallback とした
+
+**変更ファイル:**
+
+- `packages/task-app/src/components/editor/RichEditor.tsx`
+- `packages/task-app/src/components/dashboard/CreateCaseModal.tsx`
+- `packages/task-app/src/components/dashboard/EditCaseModal.tsx`
+- `packages/task-app/src/components/dashboard/CaseCard.tsx`
+- `packages/task-app/src/app/dashboard/page.tsx`
+- `packages/task-app/src/app/dashboard/cases/[id]/page.tsx`
+- `packages/task-app/src/app/globals.css`
+- `packages/task-core/src/types/case.ts`
+- `packages/task-core/src/case/CaseService.ts`
+- `packages/task-api/src/aws/entities/items/caseRecord.ts`
+- `packages/task-api/src/aws/handlers/case/createCase.ts`
+- `packages/task-api/src/aws/handlers/case/updateCase.ts`
+- `packages/task-api/src/aws/handlers/upload/getUploadPresignedUrl.ts`
+- `packages/task-api/src/aws/handlers/upload/getReadPresignedUrl.ts`
+- `packages/task-infra/lib/task-infra-stack.ts`
+- `packages/task-api/package.json`
+- `packages/task-app/package.json`
+- `yarn.lock`
+
+**API / デプロイ影響:**
+
+- S3 bucket、2 つの Lambda、2 つの API route を追加したため CDK deploy が必要
+- `CASE_IMAGES_BUCKET` は CDK から各 upload Lambda の環境変数として注入される
+- production deploy では `APP_ORIGIN` を設定して S3 CORS を本番 app domain に制限する必要がある
+- DynamoDB migration は不要。既存 Case は `descriptionFormat` 未設定の plain text として扱う
+- 画像 resize handle は MVP から外し、表示は `max-w-full h-auto` とした。drag resize は後続 v2.3 の候補
+
+**検証:**
+
+- TypeScript 0 errors（実施報告）
+- Task B 修正後の追加確認 0 errors（実施報告）
+
 ---
 
 ## v2.1.0 - モバイル対応・案件フロー分化・多言語拡充
