@@ -401,6 +401,49 @@ const en = {
   "Team (membership)": "Team",
   "Unassigned (membership)": "Unassigned",
   "Send Invitation": "Send Invitation",
+
+  // Auth - Login
+  "Login": "Login",
+  "Password": "Password",
+  "Logging in...": "Logging in...",
+  "Create Account": "Create Account",
+  "Clear Session": "Clear Session",
+  "Demo Account": "Demo Account",
+  "Email verified. Please log in.": "Email verified. Please log in.",
+  "Authentication failed.": "Authentication failed.",
+  "Reset Password": "Reset Password",
+  "You logged in with an initial password. Please set a new password for security.": "You logged in with an initial password. Please set a new password for security.",
+  "New Password": "New Password",
+  "8+ characters": "8+ characters",
+  "Set Password & Login": "Set Password & Login",
+  "Failed to change password.": "Failed to change password.",
+
+  // Auth - Signup
+  "Sign Up": "Sign Up",
+  "Back to Login": "Back to Login",
+  "Confirm Password": "Confirm Password",
+  "Re-enter password": "Re-enter",
+  "Passwords do not match.": "Passwords do not match.",
+  "Registration failed.": "Registration failed.",
+  "This email is already registered.": "This email is already registered.",
+  "Invalid input. Check password requirements.": "Invalid input. Check password requirements.",
+
+  // Auth - Verify
+  "Enter Verification Code": "Enter Verification Code",
+  "Enter the code sent to {{email}}.": "Enter the code sent to {{email}}.",
+  "Invalid or expired verification code.": "Invalid or expired verification code.",
+  "Verifying...": "Verifying...",
+  "Verify": "Verify",
+  "Check spam if email not received.": "If you don't receive the email, check your spam folder. AWS Cognito emails may be flagged as spam.",
+
+  // Zod validation keys (used as i18n keys in auth forms)
+  "Enter a valid email address.": "Enter a valid email address.",
+  "Password must be at least 6 characters.": "Password must be at least 6 characters.",
+  "Password must be at least 8 characters.": "Password must be at least 8 characters.",
+  "Enter your last name.": "Enter your last name.",
+  "Enter your first name.": "Enter your first name.",
+  "Enter confirm password.": "Enter confirm password.",
+  "Enter a 6-digit verification code.": "Enter a 6-digit verification code.",
 } as const;
 
 export default en;

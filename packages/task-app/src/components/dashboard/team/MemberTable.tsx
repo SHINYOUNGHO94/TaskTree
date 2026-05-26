@@ -167,7 +167,7 @@ export function MemberTable({
                         type="button"
                         onClick={() => onDeleteMember(member)}
                         disabled={isMutating}
-                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-200 disabled:opacity-50 rounded-lg opacity-0 group-hover:opacity-100"
+                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-200 disabled:opacity-50 rounded-lg md:opacity-0 md:group-hover:opacity-100"
                         title={t("Delete tooltip")}
                       >
                         <Trash2 size={14} />
