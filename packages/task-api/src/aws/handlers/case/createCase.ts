@@ -80,6 +80,8 @@ export interface CreateCaseDeps {
 interface CreateCaseBody {
   title?: unknown;
   description?: unknown;
+  descriptionFormat?: unknown;
+  descriptionText?: unknown;
   caseType?: unknown;
   deliveryType?: unknown;
   targetScope?: unknown;
@@ -142,6 +144,14 @@ export const createHandler =
         !(Object.values(UserRole) as string[]).includes(requiredRole)
       ) {
         return requiredFieldsMissing();
+      }
+
+      if (
+        body.descriptionFormat !== undefined &&
+        body.descriptionFormat !== "plain" &&
+        body.descriptionFormat !== "tiptap_json"
+      ) {
+        return badRequest("descriptionFormat must be 'plain' or 'tiptap_json'");
       }
 
       const creatorProfile = await deps.userRepo.findByUserId(creatorId);
@@ -246,6 +256,10 @@ export const createHandler =
         caseId: randomUUID(),
         title: title.trim(),
         description: description.trim(),
+        ...(typeof body.descriptionFormat === "string" && (body.descriptionFormat === "plain" || body.descriptionFormat === "tiptap_json")
+          ? { descriptionFormat: body.descriptionFormat as "plain" | "tiptap_json" }
+          : {}),
+        ...(typeof body.descriptionText === "string" ? { descriptionText: body.descriptionText } : {}),
         caseType: caseType as CaseType,
         status: CaseStatus.WAITING,
         deliveryType: deliveryType as CaseDeliveryType,

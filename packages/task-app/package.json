@@ -11,6 +11,10 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@tiptap/extension-image": "^3.23.6",
+    "@tiptap/pm": "^3.23.6",
+    "@tiptap/react": "^3.23.6",
+    "@tiptap/starter-kit": "^3.23.6",
     "aws-amplify": "^6.17.0",
     "i18next": "^24.2.3",
     "lucide-react": "^1.14.0",

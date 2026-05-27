@@ -72,7 +72,7 @@ packages/
 - **v1.0.0 (技術検証フェーズ)**: Cognito, DynamoDB, API Gateway, CDK を用いたサーバーレスアーキテクチャと基本的な権限管理・タスク管理の技術的実現性を検証したバージョン。
 - **v2.0.0（業務アプリ品質改善フェーズ）**: AIエージェントチーム（Claude / GPT / Gemini）を活用しながら、RBAC・テナント分離・B2B協業フロー・CI/CD自動化・多言語UIを段階的に実装し、技術検証用ポートフォリオから、より実際の業務アプリに近い構成へ改善したバージョン。
 - **v2.1.0（モバイル対応・案件フロー分化・多言語拡充）**: モバイル全画面対応、REQUEST / STANDARD / PROJECT の案件タイプ別フロー分化、ログイン・会員登録・認証画面への多言語対応拡張、中国語（簡体字）追加。
-- **v2.2.0（Dashboard 操作性改善フェーズ）**: Dashboard の状態 pill UI とカードグリッド集中表示を追加し、CaseCard の情報密度を改善。あわせて権限付きの案件編集 UI と `PUT /cases/{id}` の title / description / dueDate 更新対応を追加。
+- **v2.2.0（Dashboard 操作性改善・リッチエディタ導入フェーズ）**: Dashboard の状態 pill UI とカードグリッド集中表示を追加し、CaseCard の情報密度を改善。あわせて権限付きの案件編集 UI、`PUT /cases/{id}` の title / description / dueDate 更新対応、Tiptap リッチエディタと private S3 presigned URL 画像アップロードを追加。
 
 これまでの具体的な実装フェーズ・アーキテクチャ設計・テストに関する詳細なログは、以下の別ファイルをご参照ください。
 

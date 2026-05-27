@@ -15,6 +15,9 @@ import {
   CreateCaseTaskInput,
   CreateChildCaseInput,
   CreateRootCaseInput,
+  GetUploadPresignedUrlInput,
+  GetUploadPresignedUrlOutput,
+  GetReadPresignedUrlOutput,
   InviteParticipantCompanyInput,
   ParticipantCompanyInvitation,
   UpdateCaseClaimRequestInput,
@@ -489,7 +492,13 @@ export const CaseService = {
 
   updateCase: async (
     caseId: string,
-    input: { title?: string; description?: string; dueDate?: string | null },
+    input: {
+      title?: string;
+      description?: string;
+      descriptionFormat?: "plain" | "tiptap_json";
+      descriptionText?: string;
+      dueDate?: string | null;
+    },
   ): Promise<{ caseId: string }> => {
     try {
       const { tokens } = await fetchAuthSession();
@@ -498,6 +507,8 @@ export const CaseService = {
       const body: Record<string, string | null> = {};
       if (input.title !== undefined) body.title = input.title;
       if (input.description !== undefined) body.description = input.description;
+      if (input.descriptionFormat !== undefined) body.descriptionFormat = input.descriptionFormat;
+      if (input.descriptionText !== undefined) body.descriptionText = input.descriptionText;
       if (input.dueDate !== undefined) body.dueDate = input.dueDate ?? null;
 
       const restOperation = put({
@@ -635,5 +646,32 @@ export const CaseService = {
       console.error('Error searching companies:', error);
       throw error;
     }
+  },
+
+  getUploadPresignedUrl: async (input: GetUploadPresignedUrlInput): Promise<GetUploadPresignedUrlOutput> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+    const restOperation = post({
+      apiName: 'TaskApi',
+      path: 'upload/presigned-url',
+      options: {
+        headers: { Authorization: idToken || '' },
+        body: { ...input },
+      },
+    });
+    const { body } = await restOperation.response;
+    return await body.json() as unknown as GetUploadPresignedUrlOutput;
+  },
+
+  getReadPresignedUrl: async (objectKey: string): Promise<GetReadPresignedUrlOutput> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+    const restOperation = get({
+      apiName: 'TaskApi',
+      path: `upload/read-url?key=${encodeURIComponent(objectKey)}`,
+      options: { headers: { Authorization: idToken || '' } },
+    });
+    const { body } = await restOperation.response;
+    return await body.json() as unknown as GetReadPresignedUrlOutput;
   },
 };

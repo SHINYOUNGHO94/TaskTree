@@ -131,7 +131,11 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseDetail, onClick, onEdit 
 
         {/* Description */}
         <p className="text-xs text-slate-500 line-clamp-2 mb-3 leading-relaxed">
-          {caseDetail.description || <span className="italic">{t('No description')}</span>}
+          {(() => {
+            const preview = caseDetail.descriptionText?.trim() ||
+              (caseDetail.descriptionFormat !== "tiptap_json" ? caseDetail.description?.trim() : "");
+            return preview || <span className="italic">{t('No description')}</span>;
+          })()}
         </p>
 
         {/* Owner info */}
