@@ -46,7 +46,7 @@ const makeFileEvent = (
   sub: string,
   caseId: string,
   fileId: string,
-  suffix: string,
+  _suffix: string,
 ): APIGatewayProxyEvent =>
   ({
     requestContext: { authorizer: { claims: { sub } } },
@@ -58,18 +58,6 @@ const makeBodyEvent = (sub: string, caseId: string, body: unknown): APIGatewayPr
   ({
     requestContext: { authorizer: { claims: { sub } } },
     pathParameters: { id: caseId },
-    body: JSON.stringify(body),
-  }) as unknown as APIGatewayProxyEvent;
-
-const makeFileBodyEvent = (
-  sub: string,
-  caseId: string,
-  fileId: string,
-  body: unknown,
-): APIGatewayProxyEvent =>
-  ({
-    requestContext: { authorizer: { claims: { sub } } },
-    pathParameters: { id: caseId, fileId },
     body: JSON.stringify(body),
   }) as unknown as APIGatewayProxyEvent;
 

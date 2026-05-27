@@ -5,7 +5,7 @@ import {
   AlertCircle,
   Download,
   FileText,
-  Image,
+  Image as ImageIcon,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -284,7 +284,6 @@ export const CaseFileSection = ({
             >
               {isImageFile(file.contentType) ? (
                 previewUrls.get(file.fileId) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={previewUrls.get(file.fileId)}
                     alt={file.fileName}
@@ -292,7 +291,7 @@ export const CaseFileSection = ({
                     loading="lazy"
                   />
                 ) : (
-                  <Image size={20} className="text-indigo-400 flex-shrink-0 mt-0.5" />
+                  <ImageIcon size={20} className="text-indigo-400 flex-shrink-0 mt-0.5" />
                 )
               ) : (
                 <FileText size={20} className="text-slate-400 flex-shrink-0 mt-0.5" />
