@@ -32,7 +32,6 @@ async function fetchReadUrl(objectKey: string): Promise<string> {
 // ── Custom image node view ─────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ImageNodeView(props: any) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   const attrs = props.node?.attrs ?? {};
   const objectKey = attrs.objectKey as string | null;
   const staticSrc = attrs.src as string | null;
