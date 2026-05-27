@@ -493,6 +493,12 @@ const ja = {
   "Failed to delete file.": "ファイルの削除に失敗しました。",
   "File Uploaded": "ファイルをアップロード",
   "File Deleted": "ファイルを削除",
+  "Notifications": "通知",
+  "No notifications.": "通知はありません。",
+  "Quick templates:": "クイックテンプレート:",
+  "template title REQUEST": "【依頼】",
+  "template title STANDARD": "【案件】",
+  "template title PROJECT": "【プロジェクト】",
 } as const;
 
 export default ja;

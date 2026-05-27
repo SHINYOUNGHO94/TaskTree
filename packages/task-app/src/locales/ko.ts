@@ -493,6 +493,12 @@ const ko = {
   "Failed to delete file.": "파일 삭제에 실패했습니다.",
   "File Uploaded": "파일 업로드",
   "File Deleted": "파일 삭제",
+  "Notifications": "알림",
+  "No notifications.": "알림이 없습니다.",
+  "Quick templates:": "빠른 템플릿:",
+  "template title REQUEST": "【요청】",
+  "template title STANDARD": "【안건】",
+  "template title PROJECT": "【프로젝트】",
 } as const;
 
 export default ko;

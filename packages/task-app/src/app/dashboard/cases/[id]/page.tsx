@@ -35,6 +35,7 @@ import {
   CaseTaskDetail,
   CaseType,
   UserProfile,
+  UserRole,
   UserService,
 } from "@task/core";
 import {
@@ -96,6 +97,19 @@ const OWNER_TYPE_LABELS: Record<CaseOwnerType, string> = {
   [CaseOwnerType.DEPARTMENT]: "Department",
   [CaseOwnerType.DIVISION]:   "Division",
   [CaseOwnerType.COMPANY]:    "Company",
+};
+
+const getDueDateColorClass = (dueDate: string | null | undefined): string => {
+  if (!dueDate) return "text-slate-400";
+  const today = new Date();
+  const [year, month, day] = dueDate.split("-").map(Number);
+  if (!year || !month || !day) return "text-slate-700";
+  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const dueUtc = Date.UTC(year, month - 1, day);
+  const diffDays = Math.round((dueUtc - todayUtc) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return "text-rose-600";
+  if (diffDays <= 3) return "text-amber-600";
+  return "text-slate-700";
 };
 
 const resolveErrorType = (error: unknown): ErrorType => {
@@ -514,10 +528,24 @@ const CaseDetailPage = () => {
 
   if (!caseDetail) return null;
 
-  const canEdit =
-    currentUserId !== null &&
-    (caseDetail.creatorId === currentUserId ||
-      (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId));
+  const canEdit = (() => {
+    if (!currentUserId || !currentProfile) return false;
+    if (currentProfile.companyId !== caseDetail.companyId) return false;
+    if (caseDetail.creatorId === currentUserId) return true;
+    if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId) return true;
+    switch (currentProfile.role) {
+      case UserRole.COMPANY_ADMIN:
+        return currentProfile.companyId === caseDetail.companyId;
+      case UserRole.DIVISION_ADMIN:
+        return currentProfile.divisionId === caseDetail.divisionId;
+      case UserRole.DEPT_ADMIN:
+        return currentProfile.departmentId === caseDetail.departmentId;
+      case UserRole.TEAM_ADMIN:
+        return currentProfile.teamId === caseDetail.teamId;
+      default:
+        return false;
+    }
+  })();
 
   const isOwnerCompany = currentProfile?.companyId === caseDetail.companyId;
   const clientParticipantRecord = isOwnerCompany
@@ -856,7 +884,7 @@ const CaseDetailPage = () => {
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Due Date")}</span>
-                  <span className="text-sm font-semibold text-slate-700">{caseDetail.dueDate ?? t("No due date")}</span>
+                  <span className={`text-sm font-semibold ${getDueDateColorClass(caseDetail.dueDate)}`}>{caseDetail.dueDate ?? t("No due date")}</span>
                 </div>
               </div>
 

@@ -846,6 +846,36 @@ export class TaskInfraStack extends cdk.Stack {
       resources: [`${caseImagesBucket.bucketArn}/*`],
     }));
 
+    const getNotificationsFn = new NodejsFunction(this, 'GetNotificationsFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/notification/getNotifications.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getNotificationsFn);
+
+    const markNotificationReadFn = new NodejsFunction(this, 'MarkNotificationReadFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/notification/markNotificationRead.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    markNotificationReadFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:UpdateItem'],
+      resources: [tableArn, tableIndexesArn],
+    }));
+
+    const notificationsResource = api.root.addResource('notifications');
+    notificationsResource.addMethod('GET', new apigateway.LambdaIntegration(getNotificationsFn), { authorizer });
+
+    const notificationIdResource = notificationsResource.addResource('{notificationId}');
+    const notificationReadResource = notificationIdResource.addResource('read');
+    notificationReadResource.addMethod('PATCH', new apigateway.LambdaIntegration(markNotificationReadFn), { authorizer });
+
     const caseFilesResource = caseIdResource.addResource('files');
     caseFilesResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseFilesFn), { authorizer });
     caseFilesResource.addMethod('POST', new apigateway.LambdaIntegration(confirmCaseFileUploadFn), { authorizer });

@@ -1585,6 +1585,75 @@ v2.0.0 では三種の案件タイプ（REQUEST / STANDARD / PROJECT）が Dynam
 
 ---
 
+### Task G: Notification minimal
+
+> 重要な案件イベントをヘッダーの通知ベルで確認できるようにした。WebSocket / SSE は導入せず、DynamoDB notification record と client polling による最小構成で実装した。
+
+**主な実装:**
+
+- `Notification` 型、`NotificationService`、`NotificationRecord`、`NotificationRepository` を追加
+- `GET /notifications` を追加し、ログインユーザー宛の最新通知を取得できるようにした
+- `PATCH /notifications/{notificationId}/read` を追加し、通知クリック時に単件既読化できるようにした
+- Notification record は `pk = User#${recipientId}#Notification` / `sk = Notification#${notificationId}` とし、新規 GSI なしで main table Query できる access pattern にした
+- `notificationId` は `${epochMs}_${uuid}` 形式にし、URL path で安全に扱えるようにした
+- `createCaseComment` で `COMMENT_ADDED`、`updateCase` で status 変更時の `STATUS_CHANGED` 通知を best-effort で保存するようにした
+- 受信者は same company の `creatorId` と USER owner を対象にし、actor 自身は除外した
+- Dashboard header に `NotificationBell` を追加し、30秒 polling、未読 count badge、dropdown、case 詳細への遷移、empty / loading / error state を実装した
+- EN / JA / KO / ZH の通知文言を追加した
+
+**Task G-1 範囲外:**
+
+- WebSocket / Server-Sent Events
+- mobile push notification
+- email notification
+- read-all API
+- claim 承認/却下、participant 招待、CLIENT review、担当者変更の通知
+- 外部参加会社への個別ユーザー通知
+
+**Deployment Impact:**
+
+- CDK deploy 必要（新規 Lambda 2個 + API route 2本）
+- DynamoDB table / GSI 追加なし
+- `MarkNotificationReadFunction` には `dynamodb:UpdateItem` 権限を付与
+
+**検証:**
+
+- `tsc`: clean（実施報告）
+- `yarn test:api`: 441 passed（実施報告）
+
+---
+
+### Task H: Due date warning color and case templates
+
+> 案件の期限が近い・過ぎている状態を詳細画面で視覚的に把握できるようにし、案件作成時に REQUEST / STANDARD / PROJECT の入力テンプレートを選べるようにした。
+
+**Due date warning color:**
+
+- 案件詳細画面の due date 表示に `getDueDateColorClass()` を追加
+- 期限切れは red、3日以内は amber、通常は slate、期限なしは muted 表示にした
+- `YYYY-MM-DD` を `new Date()` で直接 parse せず、date-only UTC 計算に変更し、timezone によって「今日の期限」が前日扱いになる問題を避けた
+
+**Case templates:**
+
+- `CreateCaseModal` に REQUEST / STANDARD / PROJECT の quick template button を追加
+- template 適用時に case type、title prefix、Tiptap JSON description をまとめて反映するようにした
+- REQUEST template: Request Details / Expected Outcome / Deadline / Priority
+- STANDARD template: Background / Scope / Expected Outcome
+- PROJECT template: Overview / Goals / Schedule / Team
+- template 適用直後も `descriptionText` が空にならないようにし、submit validation で弾かれないよう修正した
+- EN / JA / KO / ZH の template 関連文言を追加した
+
+**Deployment Impact:**
+
+- CDK deploy 不要
+- app build / hosting deploy のみ
+
+**検証:**
+
+- `yarn.cmd workspace @task/app type-check` — pass
+
+---
+
 ## 開発メモ
 
 実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。

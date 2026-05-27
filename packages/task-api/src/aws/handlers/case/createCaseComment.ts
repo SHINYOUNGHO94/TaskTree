@@ -1,11 +1,13 @@
 import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseComment } from "@task/core";
+import { CaseComment, NotificationAction } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseCommentRepository } from "@/repositories/caseCommentRepository";
 import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
+import { NotificationRepository } from "@/repositories/notificationRepository";
 import { UserRepository } from "@/repositories/userRepository";
 import { canReadCase, canReadCaseAsAnyParticipant } from "@/services/casePermissionService";
+import { saveNotificationsForCase } from "@/services/notificationHelperService";
 import {
   badRequest,
   forbidden,
@@ -19,6 +21,7 @@ export interface CreateCaseCommentDeps {
   caseRepo: CaseRepository;
   caseCommentRepo: CaseCommentRepository;
   participantCompanyRepo: CaseParticipantCompanyRepository;
+  notifRepo: NotificationRepository;
   userRepo: UserRepository;
 }
 
@@ -99,6 +102,19 @@ export const createHandler =
 
       await deps.caseCommentRepo.save(comment);
 
+      try {
+        await saveNotificationsForCase(
+          deps.notifRepo,
+          existingCase,
+          userId,
+          NotificationAction.COMMENT_ADDED,
+          `New comment on "${existingCase.title}"`,
+          now,
+        );
+      } catch (notifError) {
+        console.error("Failed to save notifications", notifError);
+      }
+
       return {
         statusCode: 201,
         headers: { "Access-Control-Allow-Origin": "*" },
@@ -115,5 +131,6 @@ export const handler = createHandler({
   caseRepo: new CaseRepository(tableName),
   caseCommentRepo: new CaseCommentRepository(tableName),
   participantCompanyRepo: new CaseParticipantCompanyRepository(tableName),
+  notifRepo: new NotificationRepository(tableName),
   userRepo: new UserRepository(tableName),
 });
