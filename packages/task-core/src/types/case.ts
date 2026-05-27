@@ -180,6 +180,8 @@ export enum CaseHistoryAction {
   PARTICIPANT_COMPANY_REJECTED = "PARTICIPANT_COMPANY_REJECTED",
   CLIENT_REVIEW_APPROVED = "CLIENT_REVIEW_APPROVED",
   CLIENT_REVIEW_REJECTED = "CLIENT_REVIEW_REJECTED",
+  FILE_UPLOADED = "FILE_UPLOADED",
+  FILE_DELETED = "FILE_DELETED",
 }
 
 export enum CaseParticipantType {
@@ -322,4 +324,35 @@ export interface CreateChildCaseInput {
   targetScopeId: string;
   requiredRole: UserRole;
   dueDate: string | null;
+}
+
+export interface CaseFile {
+  fileId: string;
+  caseId: string;
+  companyId: string;
+  uploaderCompanyId: string;
+  uploadedBy: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  createdAt: string;
+}
+
+export interface GetCaseFileUploadUrlInput {
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+}
+
+export interface GetCaseFileUploadUrlOutput {
+  url: string;
+  fields: Record<string, string>;
+  fileId: string;
+}
+
+export interface ConfirmCaseFileUploadInput {
+  fileId: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
 }

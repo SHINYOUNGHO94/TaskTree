@@ -23,6 +23,8 @@ const HISTORY_ACTION_KEY: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.PARTICIPANT_COMPANY_REJECTED]: "External Company Rejected",
   [CaseHistoryAction.CLIENT_REVIEW_APPROVED]: "Client Review Approved",
   [CaseHistoryAction.CLIENT_REVIEW_REJECTED]: "Client Review Rejected",
+  [CaseHistoryAction.FILE_UPLOADED]: "File Uploaded",
+  [CaseHistoryAction.FILE_DELETED]: "File Deleted",
 };
 
 const ErrorAlert = ({ message }: { message: string }) => (

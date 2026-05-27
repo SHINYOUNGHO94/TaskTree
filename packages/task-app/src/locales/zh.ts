@@ -479,6 +479,20 @@ const zh = {
   "Enter your first name.": "请输入您的名。",
   "Enter confirm password.": "请输入确认密码。",
   "Enter a 6-digit verification code.": "请输入6位验证码。",
+
+  // File sharing
+  "Files": "文件",
+  "Upload File": "上传文件",
+  "No files uploaded yet.": "暂无文件。",
+  "Download": "下载",
+  "Delete File": "删除文件",
+  "Are you sure you want to delete this file?": "确定要删除此文件吗？",
+  "Failed to upload file.": "文件上传失败。",
+  "Failed to load files.": "文件列表加载失败。",
+  "Failed to download file.": "文件下载失败。",
+  "Failed to delete file.": "文件删除失败。",
+  "File Uploaded": "文件上传",
+  "File Deleted": "文件删除",
 } as const;
 
 export default zh;

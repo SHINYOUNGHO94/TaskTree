@@ -479,6 +479,20 @@ const ja = {
   "Enter your first name.": "名を入力してください。",
   "Enter confirm password.": "確認用パスワードを入力してください。",
   "Enter a 6-digit verification code.": "6桁の認証コードを入力してください。",
+
+  // File sharing
+  "Files": "ファイル",
+  "Upload File": "ファイルをアップロード",
+  "No files uploaded yet.": "まだファイルがありません。",
+  "Download": "ダウンロード",
+  "Delete File": "ファイルを削除",
+  "Are you sure you want to delete this file?": "このファイルを削除してもよろしいですか？",
+  "Failed to upload file.": "ファイルのアップロードに失敗しました。",
+  "Failed to load files.": "ファイルの読み込みに失敗しました。",
+  "Failed to download file.": "ファイルのダウンロードに失敗しました。",
+  "Failed to delete file.": "ファイルの削除に失敗しました。",
+  "File Uploaded": "ファイルをアップロード",
+  "File Deleted": "ファイルを削除",
 } as const;
 
 export default ja;

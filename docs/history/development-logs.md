@@ -1538,6 +1538,53 @@ v2.0.0 では三種の案件タイプ（REQUEST / STANDARD / PROJECT）が Dynam
 
 ---
 
+### Task F: File Sharing タブ
+
+> 案件詳細画面に Files タブを追加し、案件ごとのファイルアップロード / ダウンロード / 削除を実装した。Task B で追加した private S3 bucket と presigned URL パターンを再利用し、ファイル共有を案件詳細の業務フロー内に統合した。
+
+**主な実装:**
+
+- `CaseFile` 型、`CaseFileRecord`、`CaseFileRepository` を追加
+- `buildCaseFileKey()` / `parseCaseFileKey()` を `s3KeyService.ts` に分離し、S3 key の検証を共通化
+- S3 key は `{companyId}/cases/{caseId}/files/{fileId}` 形式に統一し、API response には `objectKey` を含めない設計にした
+- 2-step upload flow を採用
+  - `POST /cases/{id}/files/upload-url`: presigned POST を発行し、DynamoDB には保存しない
+  - client が S3 へ直接 POST
+  - `POST /cases/{id}/files`: S3 `HeadObject` で存在・size・contentType を確認してから `CaseFile` record を保存
+- ファイル一覧 / upload-url 発行 / upload 確定 / download-url 発行 / 削除の 5 API を追加
+- download-url 発行前に S3 `HeadObject` を実行し、DynamoDB record だけが残った orphan file を検出できるようにした
+- 削除は S3 `DeleteObject` 成功後に DynamoDB record を削除する方針とし、S3 削除失敗時は metadata を保持するようにした
+- `FILE_UPLOADED` / `FILE_DELETED` を `CaseHistoryAction` に追加
+- 案件詳細のタブに Files を追加し、ファイル一覧、画像 preview、download、delete、upload loading/error state、empty state を実装
+- EN / JA / KO / ZH の翻訳キーを追加
+
+**権限設計:**
+
+- list / download: 案件を読めるユーザー、外部 COLLABORATOR、CLIENT が利用可能
+- upload / delete: 同一会社の creator または USER owner のみに制限
+- CLIENT は list / download のみ可能
+- すべての file API は case 権限確認後に file record を取得する順序を維持し、file existence leak を防止
+
+**実装上の判断:**
+
+- Files tab count は lazy loading とし、Files タブ初回表示後に正確な件数へ更新する。案件詳細初期表示時の追加 API 呼び出しを避けるため、初期値は 0 とした。
+- 画像 preview は download-url API を再利用する。`Content-Disposition: attachment` が付与されるが、`img src` 表示には支障がないため Task F では preview 専用 endpoint は追加しない。
+
+**Deployment Impact:**
+
+- CDK deploy 必要（新規 Lambda 5個 + API route 5本 + S3 IAM）
+- 新規 S3 bucket なし（既存 `caseImagesBucket` を再利用）
+- DynamoDB GSI 追加なし（既存 `byCase` GSI を再利用）
+- DynamoDB migration なし（新規 record type のみ追加）
+
+**検証:**
+
+- `yarn.cmd type-check:api` — pass（実施報告）
+- `yarn.cmd workspace @task/app tsc --noEmit` — pass（実施報告）
+- `yarn.cmd test:api -- caseFile`: 441 passed（実施報告）
+
+---
+
 ## 開発メモ
 
 実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。
