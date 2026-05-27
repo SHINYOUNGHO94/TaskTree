@@ -1330,6 +1330,58 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 - lint: 0 errors
 - build: 成功（Next.js 15）
 
+### Task D: 取引先タブ UX 再構成
+
+> 取引先タブを実際の運用画面として再設計。受信招待 / 送信済み招待 / 協業履歴の 3タブ構成に分離し、送信済み招待用の新規 API を追加。取引先会社グループカードビューの導入、会社名検索・参加状態フィルタを実装した。
+
+**変更ファイル:**
+
+- `packages/task-core/src/types/case.ts` — `CaseInvitationSummary` に `dueDate` 追加
+- `packages/task-core/src/case/CaseService.ts` — `getSentParticipantCompanyInvitations()` 追加
+- `packages/task-api/src/repositories/caseRepository.ts` — `findCaseIdsByUser(userId, companyId)` 追加（`byAssignee` GSI の `USER#userId` キーで検索）
+- `packages/task-api/src/aws/handlers/case/getParticipantCompanyInvitations.ts` — `REJECTED` / `REMOVED` ステータス追加、`dueDate` をレスポンスに含める
+- `packages/task-api/src/aws/handlers/case/getSentParticipantCompanyInvitations.ts` — 新規 Lambda
+- `packages/task-api/src/aws/handlers/case/getSentParticipantCompanyInvitations.test.ts` — 新規テスト（6ケース）
+- `packages/task-infra/lib/task-infra-stack.ts` — 新規 Lambda + `GET /cases/participant-company-sent-invitations` route 追加
+- `packages/task-app/src/app/dashboard/partners/page.tsx` — 全面再設計
+- `packages/task-app/src/locales/{en,ja,ko,zh}.ts` — 新規翻訳キー追加
+
+**新規 API:**
+
+- `GET /cases/participant-company-sent-invitations`
+- 認証: Cognito JWT
+- ロジック: `byAssignee` GSI で `USER#userId` 検索 → `byCase` GSI fan-out → participant company 取得
+- Tenant 分離: `participant.ownerCompanyId !== companyId` フィルタで他社データ遮断
+- GSI 追加なし
+
+**UIリデザイン:**
+
+- 受信タブ: 未対応の招待（メール招待・通常招待）
+- 送信タブ: 自分の担当案件に招待した外部会社をグループカード表示（折りたたみ、進行中件数・最新案件プレビュー）
+- 履歴タブ: 通常時はグループカード、検索・フィルタ時はフラットテーブル
+- case status を color pill で表示（ダッシュボードと統一）
+- dueDate カラム追加・最新順ソート
+- 会社名検索・参加状態フィルタ追加
+- 各セクション別 empty state
+
+**レビュー後修正（P1/P2）:**
+
+- `findCaseIdsByOwnerCompany(COMPANY#companyId)` → `findCaseIdsByUser(USER#userId, companyId)`: すべての case が `ownerType: USER` で作成されるため USER key で検索するよう修正
+- `getParticipantCompanyInvitations` に `REJECTED` / `REMOVED` ステータスを追加: 履歴タブで拒否・削除状態が表示されない問題を修正
+
+**Deployment Impact:**
+
+- CDK deploy 必要（新規 Lambda + API route）
+- Lambda code deploy 含む
+- DynamoDB 変更なし
+
+**検証:**
+
+- `yarn test:api`: 390 passed（35 files）
+- `yarn type-check:api`: 0 errors
+- `yarn type-check:core`: 0 errors
+- `yarn workspace @task/app build`: 成功
+
 ---
 
 ## v2.1.0 - モバイル対応・案件フロー分化・多言語拡充

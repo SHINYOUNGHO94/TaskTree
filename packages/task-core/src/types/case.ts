@@ -209,6 +209,7 @@ export interface CaseInvitationSummary {
   deliveryType: CaseDeliveryType;
   ownerCompanyId: string;
   createdAt: string;
+  dueDate?: string | null;
 }
 
 export interface ParticipantCompanyInvitation {

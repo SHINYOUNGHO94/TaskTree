@@ -11,6 +11,10 @@ import {
   CaseVisibilityRecordType,
 } from "@/aws/entities/items/caseVisibilityRecord";
 
+interface CaseIdProjection {
+  caseId: string;
+}
+
 export class CaseRepository extends BaseRepository<CaseRecordType> {
   constructor(tableName: string) {
     super(tableName);
@@ -168,5 +172,22 @@ export class CaseRepository extends BaseRepository<CaseRecordType> {
 
     const details = await Promise.all(uniqueCaseIds.map((caseId) => this.findById(caseId)));
     return details.filter((detail): detail is CaseDetail => detail !== undefined);
+  }
+
+  async findCaseIdsByUser(userId: string, companyId: string): Promise<string[]> {
+    const response = await this.docClient.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        IndexName: "byAssignee",
+        KeyConditionExpression: "assigneeKey = :assigneeKey",
+        FilterExpression: "ownerCompanyId = :companyId",
+        ProjectionExpression: "caseId",
+        ExpressionAttributeValues: {
+          ":assigneeKey": CaseAssignmentRecord.makeAssigneeKey(CaseOwnerType.USER, userId),
+          ":companyId": companyId,
+        },
+      }),
+    );
+    return ((response.Items ?? []) as CaseIdProjection[]).map((item) => item.caseId);
   }
 }
