@@ -23,7 +23,12 @@ export const createHandler =
 
       const participants = await deps.participantCompanyRepo.findByParticipantCompanyId(
         profile.companyId,
-        [CaseParticipantCompanyStatus.INVITED, CaseParticipantCompanyStatus.ACTIVE],
+        [
+          CaseParticipantCompanyStatus.INVITED,
+          CaseParticipantCompanyStatus.ACTIVE,
+          CaseParticipantCompanyStatus.REJECTED,
+          CaseParticipantCompanyStatus.REMOVED,
+        ],
       );
 
       const invitations: ParticipantCompanyInvitation[] = [];
@@ -51,6 +56,7 @@ export const createHandler =
             deliveryType: caseDetail.deliveryType,
             ownerCompanyId: caseDetail.companyId,
             createdAt: caseDetail.createdAt,
+            dueDate: caseDetail.dueDate,
           },
         });
       }

@@ -434,6 +434,26 @@ export const CaseService = {
     }
   },
 
+  getSentParticipantCompanyInvitations: async (): Promise<ParticipantCompanyInvitation[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: 'cases/participant-company-sent-invitations',
+        options: {
+          headers: { Authorization: idToken || '' },
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as ParticipantCompanyInvitation[];
+    } catch (error) {
+      console.error('Error fetching sent participant company invitations:', error);
+      throw error;
+    }
+  },
+
   updateParticipantCompanyStatus: async (
     caseId: string,
     participantCompanyId: string,

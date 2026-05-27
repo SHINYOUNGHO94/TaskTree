@@ -750,6 +750,19 @@ export class TaskInfraStack extends cdk.Stack {
     const participantCompanyInvitationsResource = casesResource.addResource('participant-company-invitations');
     participantCompanyInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getParticipantCompanyInvitationsFn), { authorizer });
 
+    const getSentParticipantCompanyInvitationsFn = new NodejsFunction(this, 'GetSentParticipantCompanyInvitationsFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getSentParticipantCompanyInvitations.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getSentParticipantCompanyInvitationsFn);
+
+    const sentParticipantCompanyInvitationsResource = casesResource.addResource('participant-company-sent-invitations');
+    sentParticipantCompanyInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getSentParticipantCompanyInvitationsFn), { authorizer });
+
     const uploadResource = api.root.addResource('upload');
     const uploadPresignedUrlResource = uploadResource.addResource('presigned-url');
     uploadPresignedUrlResource.addMethod('POST', new apigateway.LambdaIntegration(getUploadPresignedUrlFn), { authorizer });
