@@ -479,6 +479,20 @@ const en = {
   "Enter your first name.": "Enter your first name.",
   "Enter confirm password.": "Enter confirm password.",
   "Enter a 6-digit verification code.": "Enter a 6-digit verification code.",
+
+  // File sharing
+  "Files": "Files",
+  "Upload File": "Upload File",
+  "No files uploaded yet.": "No files uploaded yet.",
+  "Download": "Download",
+  "Delete File": "Delete File",
+  "Are you sure you want to delete this file?": "Are you sure you want to delete this file?",
+  "Failed to upload file.": "Failed to upload file.",
+  "Failed to load files.": "Failed to load files.",
+  "Failed to download file.": "Failed to download file.",
+  "Failed to delete file.": "Failed to delete file.",
+  "File Uploaded": "File Uploaded",
+  "File Deleted": "File Deleted",
 } as const;
 
 export default en;

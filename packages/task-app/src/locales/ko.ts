@@ -479,6 +479,20 @@ const ko = {
   "Enter your first name.": "이름을 입력해 주세요.",
   "Enter confirm password.": "확인용 비밀번호를 입력해 주세요.",
   "Enter a 6-digit verification code.": "6자리 인증 코드를 입력해 주세요.",
+
+  // File sharing
+  "Files": "파일",
+  "Upload File": "파일 업로드",
+  "No files uploaded yet.": "아직 파일이 없습니다.",
+  "Download": "다운로드",
+  "Delete File": "파일 삭제",
+  "Are you sure you want to delete this file?": "이 파일을 삭제하시겠습니까?",
+  "Failed to upload file.": "파일 업로드에 실패했습니다.",
+  "Failed to load files.": "파일 목록을 불러오지 못했습니다.",
+  "Failed to download file.": "파일 다운로드에 실패했습니다.",
+  "Failed to delete file.": "파일 삭제에 실패했습니다.",
+  "File Uploaded": "파일 업로드",
+  "File Deleted": "파일 삭제",
 } as const;
 
 export default ko;

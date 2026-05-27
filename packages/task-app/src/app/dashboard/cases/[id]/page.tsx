@@ -51,11 +51,12 @@ import { CaseTasksSection } from "../../../../components/case-detail/CaseTasksSe
 import { CaseHistorySection } from "../../../../components/case-detail/CaseHistorySection";
 import { CaseCommentsSection } from "../../../../components/case-detail/CaseCommentsSection";
 import { CaseParticipantCompanySection } from "../../../../components/case-detail/CaseParticipantCompanySection";
+import { CaseFileSection } from "../../../../components/case-detail/CaseFileSection";
 import { RichEditor } from "../../../../components/editor/RichEditor";
 import { EditCaseModal } from "../../../../components/dashboard/EditCaseModal";
 
 type ErrorType = "notFound" | "forbidden" | "error";
-type DetailTab = "tasks" | "comments" | "history" | "children";
+type DetailTab = "tasks" | "comments" | "history" | "children" | "files";
 
 const UPDATABLE_STATUSES: CaseStatus[] = [
   CaseStatus.WAITING,
@@ -163,6 +164,7 @@ const CaseDetailPage = () => {
   const [historyError, setHistoryError]               = useState<string | null>(null);
   const [caseComments, setCaseComments]               = useState<CaseComment[]>([]);
   const [isCommentsLoading, setIsCommentsLoading]     = useState(false);
+  const [caseFilesCount, setCaseFilesCount]           = useState(0);
   const [commentsError, setCommentsError]             = useState<string | null>(null);
   const [currentUserId, setCurrentUserId]             = useState<string | null>(null);
   const [currentProfile, setCurrentProfile]           = useState<UserProfile | null>(null);
@@ -568,6 +570,7 @@ const CaseDetailPage = () => {
   const tabs: { id: DetailTab; label: string; count: number }[] = [
     { id: "tasks",    label: t("Tasks"),     count: totalTasks },
     { id: "comments", label: t("Comments"),  count: caseComments.length },
+    { id: "files",    label: t("Files"),     count: caseFilesCount },
     { id: "history",  label: t("History"),   count: caseHistory.length },
     ...(hasChildren ? [{ id: "children" as DetailTab, label: t("Sub-cases"), count: childCases.length }] : []),
   ];
@@ -711,6 +714,17 @@ const CaseDetailPage = () => {
                   isLoading={isHistoryLoading}
                   error={historyError}
                   userMap={userMap}
+                />
+              )}
+              {activeTab === "files" && (
+                <CaseFileSection
+                  caseId={id as string}
+                  caseDetail={caseDetail}
+                  currentUserId={currentUserId}
+                  currentProfile={currentProfile}
+                  userMap={userMap}
+                  onHistoryRefresh={fetchCaseHistory}
+                  onFilesLoaded={setCaseFilesCount}
                 />
               )}
               {activeTab === "children" && hasChildren && (

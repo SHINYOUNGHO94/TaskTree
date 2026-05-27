@@ -3,7 +3,9 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import {
   CaseClaimRequest,
   CaseComment,
+  CaseFile,
   ClientReviewCaseInput,
+  ConfirmCaseFileUploadInput,
   CompanySearchResult,
   EmailInvitation,
   InviteCompanyByEmailInput,
@@ -16,6 +18,8 @@ import {
   CreateCaseTaskInput,
   CreateChildCaseInput,
   CreateRootCaseInput,
+  GetCaseFileUploadUrlInput,
+  GetCaseFileUploadUrlOutput,
   GetUploadPresignedUrlInput,
   GetUploadPresignedUrlOutput,
   GetReadPresignedUrlOutput,
@@ -722,5 +726,109 @@ export const CaseService = {
     });
     const { body } = await restOperation.response;
     return await body.json() as unknown as GetReadPresignedUrlOutput;
+  },
+
+  getCaseFiles: async (caseId: string): Promise<CaseFile[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files`,
+        options: { headers: { Authorization: idToken || '' } },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as CaseFile[];
+    } catch (error) {
+      console.error('Error fetching case files:', error);
+      throw error;
+    }
+  },
+
+  getCaseFileUploadUrl: async (
+    caseId: string,
+    input: GetCaseFileUploadUrlInput,
+  ): Promise<GetCaseFileUploadUrlOutput> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files/upload-url`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body: { fileName: input.fileName, contentType: input.contentType, fileSize: input.fileSize },
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as GetCaseFileUploadUrlOutput;
+    } catch (error) {
+      console.error('Error getting file upload URL:', error);
+      throw error;
+    }
+  },
+
+  confirmCaseFileUpload: async (
+    caseId: string,
+    input: ConfirmCaseFileUploadInput,
+  ): Promise<CaseFile> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body: {
+            fileId: input.fileId,
+            fileName: input.fileName,
+            contentType: input.contentType,
+            fileSize: input.fileSize,
+          },
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as CaseFile;
+    } catch (error) {
+      console.error('Error confirming file upload:', error);
+      throw error;
+    }
+  },
+
+  getCaseFileDownloadUrl: async (
+    caseId: string,
+    fileId: string,
+  ): Promise<{ downloadUrl: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files/${fileId}/download-url`,
+        options: { headers: { Authorization: idToken || '' } },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as { downloadUrl: string };
+    } catch (error) {
+      console.error('Error getting file download URL:', error);
+      throw error;
+    }
+  },
+
+  deleteCaseFile: async (caseId: string, fileId: string): Promise<void> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = del({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files/${fileId}`,
+        options: { headers: { Authorization: idToken || '' } },
+      });
+      await restOperation.response;
+    } catch (error) {
+      console.error('Error deleting case file:', error);
+      throw error;
+    }
   },
 };
