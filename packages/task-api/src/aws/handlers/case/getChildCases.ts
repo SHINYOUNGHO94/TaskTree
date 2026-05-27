@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
-import { canReadCase, canReadCaseAsParticipant } from "@/services/casePermissionService";
+import { canReadCase, canReadCaseAsAnyParticipant } from "@/services/casePermissionService";
 import {
   forbidden,
   internalServerError,
@@ -41,11 +41,17 @@ export const createHandler =
           return forbidden("You do not have access to this case");
         }
       } else {
-        const participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
+        let participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
           caseId,
           profile.companyId,
         );
-        if (!canReadCaseAsParticipant(parentCase, participantRecord, profile.companyId)) {
+        if (!participantRecord && parentCase.projectId) {
+          participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
+            parentCase.projectId,
+            profile.companyId,
+          );
+        }
+        if (!canReadCaseAsAnyParticipant(parentCase, participantRecord, profile.companyId)) {
           return forbidden("You do not have access to this case");
         }
       }

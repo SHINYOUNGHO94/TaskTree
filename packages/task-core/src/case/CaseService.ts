@@ -3,6 +3,7 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import {
   CaseClaimRequest,
   CaseComment,
+  ClientReviewCaseInput,
   CompanySearchResult,
   EmailInvitation,
   InviteCompanyByEmailInput,
@@ -398,12 +399,14 @@ export const CaseService = {
       const { tokens } = await fetchAuthSession();
       const idToken = tokens?.idToken?.toString();
 
+      const body: Record<string, string> = { companyId: input.companyId };
+      if (input.participantType) body.participantType = input.participantType;
       const restOperation = post({
         apiName: 'TaskApi',
         path: `cases/${caseId}/participant-companies`,
         options: {
           headers: { Authorization: idToken || '' },
-          body: { companyId: input.companyId },
+          body,
         },
       });
       const response = await restOperation.response;
@@ -450,6 +453,32 @@ export const CaseService = {
       return await body.json() as unknown as ParticipantCompanyInvitation[];
     } catch (error) {
       console.error('Error fetching sent participant company invitations:', error);
+      throw error;
+    }
+  },
+
+  clientReviewCase: async (
+    caseId: string,
+    input: ClientReviewCaseInput,
+  ): Promise<{ caseId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const body: Record<string, string> = { action: input.action };
+      if (input.reason) body.reason = input.reason;
+      const restOperation = put({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/client-review`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body,
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { caseId: string };
+    } catch (error) {
+      console.error('Error submitting client review:', error);
       throw error;
     }
   },

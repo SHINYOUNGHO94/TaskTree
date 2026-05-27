@@ -178,6 +178,13 @@ export enum CaseHistoryAction {
   PARTICIPANT_COMPANY_INVITED = "PARTICIPANT_COMPANY_INVITED",
   PARTICIPANT_COMPANY_ACCEPTED = "PARTICIPANT_COMPANY_ACCEPTED",
   PARTICIPANT_COMPANY_REJECTED = "PARTICIPANT_COMPANY_REJECTED",
+  CLIENT_REVIEW_APPROVED = "CLIENT_REVIEW_APPROVED",
+  CLIENT_REVIEW_REJECTED = "CLIENT_REVIEW_REJECTED",
+}
+
+export enum CaseParticipantType {
+  COLLABORATOR = "COLLABORATOR",
+  CLIENT = "CLIENT",
 }
 
 export enum CaseParticipantCompanyStatus {
@@ -194,6 +201,7 @@ export interface CaseParticipantCompany {
   companyId: string;
   companyName: string | null;
   status: CaseParticipantCompanyStatus;
+  participantType: CaseParticipantType;
   invitedBy: string;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -219,6 +227,12 @@ export interface ParticipantCompanyInvitation {
 
 export interface InviteParticipantCompanyInput {
   companyId: string;
+  participantType?: CaseParticipantType;
+}
+
+export interface ClientReviewCaseInput {
+  action: "APPROVE" | "REJECT";
+  reason?: string;
 }
 
 export interface UpdateParticipantCompanyStatusInput {

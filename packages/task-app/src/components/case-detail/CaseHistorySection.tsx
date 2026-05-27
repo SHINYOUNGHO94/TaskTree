@@ -21,6 +21,8 @@ const HISTORY_ACTION_KEY: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.PARTICIPANT_COMPANY_INVITED]: "External Company Invited",
   [CaseHistoryAction.PARTICIPANT_COMPANY_ACCEPTED]: "External Company Accepted",
   [CaseHistoryAction.PARTICIPANT_COMPANY_REJECTED]: "External Company Rejected",
+  [CaseHistoryAction.CLIENT_REVIEW_APPROVED]: "Client Review Approved",
+  [CaseHistoryAction.CLIENT_REVIEW_REJECTED]: "Client Review Rejected",
 };
 
 const ErrorAlert = ({ message }: { message: string }) => (

@@ -194,6 +194,8 @@ const ja = {
   "External Company Invited": "外部会社招待",
   "External Company Accepted": "外部会社参加承認",
   "External Company Rejected": "外部会社参加拒否",
+  "Client Review Approved": "クライアント承認",
+  "Client Review Rejected": "クライアント却下",
 
   // Sub-cases
   "Sub-cases": "子案件",
@@ -204,6 +206,10 @@ const ja = {
 
   // Participant companies
   "Participant Companies": "参加会社",
+  "Collaborator": "コラボレーター",
+  "Client": "クライアント",
+  "Client Review": "クライアントレビュー",
+  "Failed to submit client review.": "クライアントレビューの送信に失敗しました。",
   "Invite": "招待",
   "Company Search": "会社検索",
   "Email Invitation": "メール招待",

@@ -194,6 +194,8 @@ const zh = {
   "External Company Invited": "已邀请外部公司",
   "External Company Accepted": "外部公司已接受",
   "External Company Rejected": "外部公司已拒绝",
+  "Client Review Approved": "客户已批准",
+  "Client Review Rejected": "客户已拒绝",
 
   // Sub-cases
   "Sub-cases": "子案件",
@@ -204,6 +206,10 @@ const zh = {
 
   // Participant companies
   "Participant Companies": "参与公司",
+  "Collaborator": "协作方",
+  "Client": "客户",
+  "Client Review": "客户审核",
+  "Failed to submit client review.": "提交客户审核失败。",
   "Invite": "邀请",
   "Company Search": "公司搜索",
   "Email Invitation": "邮件邀请",

@@ -194,6 +194,8 @@ const en = {
   "External Company Invited": "External Company Invited",
   "External Company Accepted": "External Company Accepted",
   "External Company Rejected": "External Company Rejected",
+  "Client Review Approved": "Client Review Approved",
+  "Client Review Rejected": "Client Review Rejected",
 
   // Sub-cases
   "Sub-cases": "Sub-cases",
@@ -204,6 +206,10 @@ const en = {
 
   // Participant companies
   "Participant Companies": "Participant Companies",
+  "Collaborator": "Collaborator",
+  "Client": "Client",
+  "Client Review": "Client Review",
+  "Failed to submit client review.": "Failed to submit client review.",
   "Invite": "Invite",
   "Company Search": "Company Search",
   "Email Invitation": "Email Invitation",
