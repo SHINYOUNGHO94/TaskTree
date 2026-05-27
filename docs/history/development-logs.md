@@ -1295,6 +1295,41 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 - TypeScript 0 errors（実施報告）
 - Task B 修正後の追加確認 0 errors（実施報告）
 
+### Task C: Case 詳細画面 UI 再構成
+
+> Case 詳細画面を 2カラムレイアウトへ刷新。左カラムに案件情報＋タブ型コンテンツを、右カラムにステータス更新・仕様・参加者などのメタ情報を sticky で配置した。スクロール性を向上させ、日常操作の中心となる画面の視認性と操作性を大幅に改善した。
+
+**変更範囲:**
+
+- `packages/task-app/src/app/dashboard/cases/[id]/page.tsx` — 全面再設計
+- `packages/task-app/src/locales/{en,ja,ko,zh}.ts` — 新規翻訳キー追加
+
+**主な改善:**
+
+- 2カラムレイアウト（lg:grid-cols-3）: 左2/3が案件本文＋タブ、右1/3がメタ情報
+- 右カラム sticky sidebar（`lg:sticky lg:top-6 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto`）
+- タブナビゲーション: Tasks / Comments / History / Sub-cases（REQUEST 以外）
+- タスク進捗バー: 完了数 / 全タスク数をパーセント表示（右サイドバー上部）
+- ヘッダーにパンくずリスト: 親案件・PROJECT をクリッカブルリンクで表示
+- 詳細画面内 Edit ボタン: 作成者・オーナー本人に表示、既存 EditCaseModal を再利用
+- 案件 ID コピーボタン: Check アイコンフィードバック付き
+- 全グラデーションボタン削除、flat `indigo-600` へ統一
+- `rounded-2xl` → `rounded-lg` に統一
+- CaseHistorySection を右サイドバーから History タブへ移動
+- `handleEditSuccess` に `fetchCase()` を追加し、編集後に `updatedAt` が stale にならないよう修正
+- `{taskProgress}% complete` のハードコード英語を `t("complete")` へ変更、4言語キー追加
+- Clipboard 書き込み失敗時も `setCopiedId(true)` が呼ばれていた問題を修正（`.then()` 成功時のみ実行）
+
+**Deployment Impact:**
+
+- CDK deploy 不要
+- app build / hosting deploy のみ
+
+**検証:**
+
+- lint: 0 errors
+- build: 成功（Next.js 15）
+
 ---
 
 ## v2.1.0 - モバイル対応・案件フロー分化・多言語拡充

@@ -39,7 +39,7 @@ export class TaskInfraStack extends cdk.Stack {
 
     const grantTaskMutation = (fn: NodejsFunction, writeActions: string[]) => {
       fn.addToRolePolicy(new iam.PolicyStatement({
-        actions: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:Scan', ...writeActions],
+        actions: ['dynamodb:GetItem', 'dynamodb:Query', ...writeActions],
         resources: [tableArn, tableIndexesArn],
       }));
     };
@@ -59,14 +59,16 @@ export class TaskInfraStack extends cdk.Stack {
     };
 
     // APP_ORIGIN env var restricts S3 CORS to the deployed app domain (e.g. https://app.example.com).
-    // Falls back to '*' for local dev if not set — lock this down before prod.
     const appOrigin = process.env.APP_ORIGIN;
+    const s3CorsAllowedOrigins = appOrigin
+      ? appOrigin.split(',').map((origin) => origin.trim()).filter(Boolean)
+      : ['http://localhost:3000', 'http://127.0.0.1:3000'];
     const caseImagesBucket = new s3.Bucket(this, 'CaseImagesBucket', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       cors: [
         {
-          allowedOrigins: appOrigin ? [appOrigin] : ['*'],
-          allowedMethods: [s3.HttpMethods.POST, s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.HEAD],
+          allowedOrigins: s3CorsAllowedOrigins,
+          allowedMethods: [s3.HttpMethods.POST, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
           allowedHeaders: ['*'],
           exposedHeaders: ['ETag'],
           maxAge: 3000,

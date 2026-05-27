@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
+import type { NodeViewProps } from "@tiptap/react";
+import type { NodeViewRenderer } from "@tiptap/core";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Image as TiptapImageExtension } from "@tiptap/extension-image";
 import { CaseService } from "@task/core";
@@ -30,8 +32,7 @@ async function fetchReadUrl(objectKey: string): Promise<string> {
 }
 
 // ── Custom image node view ─────────────────────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ImageNodeView(props: any) {
+function ImageNodeView(props: NodeViewProps) {
   const attrs = props.node?.attrs ?? {};
   const objectKey = attrs.objectKey as string | null;
   const staticSrc = attrs.src as string | null;
@@ -80,10 +81,8 @@ const CustomImage = TiptapImageExtension.extend({
       },
     };
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  addNodeView(): any {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return ReactNodeViewRenderer(ImageNodeView as any);
+  addNodeView(): NodeViewRenderer {
+    return ReactNodeViewRenderer(ImageNodeView);
   },
 });
 

@@ -81,7 +81,7 @@ export const createHandler =
           caseId: invitation.caseId,
           companyId: invitation.ownerCompanyId,
           actorId: userId,
-          action: CaseHistoryAction.PARTICIPANT_COMPANY_INVITED,
+          action: CaseHistoryAction.PARTICIPANT_COMPANY_ACCEPTED,
           detail: `Company ${profile.companyId} joined via email invitation`,
           createdAt: now,
         });

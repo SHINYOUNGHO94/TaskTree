@@ -6,8 +6,12 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
+  Check,
+  ChevronRight,
   Clock,
+  Copy,
   FileText,
+  Pencil,
   Shield,
   Tag,
   User,
@@ -46,8 +50,10 @@ import { CaseHistorySection } from "../../../../components/case-detail/CaseHisto
 import { CaseCommentsSection } from "../../../../components/case-detail/CaseCommentsSection";
 import { CaseParticipantCompanySection } from "../../../../components/case-detail/CaseParticipantCompanySection";
 import { RichEditor } from "../../../../components/editor/RichEditor";
+import { EditCaseModal } from "../../../../components/dashboard/EditCaseModal";
 
 type ErrorType = "notFound" | "forbidden" | "error";
+type DetailTab = "tasks" | "comments" | "history" | "children";
 
 const UPDATABLE_STATUSES: CaseStatus[] = [
   CaseStatus.WAITING,
@@ -75,10 +81,10 @@ const CASE_TYPE_STYLES: Record<CaseType, string> = {
   [CaseType.PROJECT]:  "bg-violet-50 text-violet-700 ring-1 ring-violet-200/80",
 };
 
-const CASE_TYPE_GRADIENT: Record<CaseType, string> = {
-  [CaseType.REQUEST]:  "from-amber-400 to-orange-500",
-  [CaseType.STANDARD]: "from-blue-400 to-sky-500",
-  [CaseType.PROJECT]:  "from-violet-500 to-purple-600",
+const CASE_TYPE_ACCENT: Record<CaseType, string> = {
+  [CaseType.REQUEST]:  "bg-amber-500",
+  [CaseType.STANDARD]: "bg-blue-600",
+  [CaseType.PROJECT]:  "bg-violet-600",
 };
 
 const OWNER_TYPE_LABELS: Record<CaseOwnerType, string> = {
@@ -88,7 +94,6 @@ const OWNER_TYPE_LABELS: Record<CaseOwnerType, string> = {
   [CaseOwnerType.DIVISION]:   "Division",
   [CaseOwnerType.COMPANY]:    "Company",
 };
-
 
 const resolveErrorType = (error: unknown): ErrorType => {
   if (typeof error === "object" && error !== null) {
@@ -107,7 +112,7 @@ const resolveErrorType = (error: unknown): ErrorType => {
 };
 
 const ErrorAlert = ({ message }: { message: string }) => (
-  <div className="flex items-start gap-2 p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs font-semibold text-red-600 my-3">
+  <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs font-semibold text-red-600 my-2">
     <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-500" />
     <span>{message}</span>
   </div>
@@ -121,63 +126,66 @@ const CaseDetailPage = () => {
 
   const buildBackUrl = () => {
     const params = new URLSearchParams();
-    const caseView    = searchParams.get("caseView");
-    const caseType    = searchParams.get("caseType");
-    const status      = searchParams.get("status");
+    const caseView     = searchParams.get("caseView");
+    const caseType     = searchParams.get("caseType");
+    const status       = searchParams.get("status");
     const deliveryType = searchParams.get("deliveryType");
-    const ownership   = searchParams.get("ownership");
-    const sort        = searchParams.get("sort");
-    const q           = searchParams.get("q");
-    if (caseView)     params.set("caseView", caseView);
-    if (caseType)     params.set("caseType", caseType);
-    if (status)       params.set("status", status);
-    if (deliveryType) params.set("deliveryType", deliveryType);
-    if (ownership)    params.set("ownership", ownership);
-    if (sort)         params.set("sort", sort);
-    if (q)            params.set("q", q);
+    const ownership    = searchParams.get("ownership");
+    const sort         = searchParams.get("sort");
+    const q            = searchParams.get("q");
+    if (caseView)      params.set("caseView", caseView);
+    if (caseType)      params.set("caseType", caseType);
+    if (status)        params.set("status", status);
+    if (deliveryType)  params.set("deliveryType", deliveryType);
+    if (ownership)     params.set("ownership", ownership);
+    if (sort)          params.set("sort", sort);
+    if (q)             params.set("q", q);
     const qs = params.toString();
     return qs ? `/dashboard?${qs}` : "/dashboard";
   };
 
-  const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorType, setErrorType] = useState<ErrorType | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<CaseStatus | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
-  const [isDeletingCase, setIsDeletingCase] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [caseTasks, setCaseTasks] = useState<CaseTaskDetail[]>([]);
-  const [isTasksLoading, setIsTasksLoading] = useState(false);
-  const [tasksError, setTasksError] = useState<string | null>(null);
-  const [caseHistory, setCaseHistory] = useState<CaseHistoryEntry[]>([]);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-  const [caseComments, setCaseComments] = useState<CaseComment[]>([]);
-  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
-  const [commentsError, setCommentsError] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
-  const [claimRequests, setClaimRequests] = useState<CaseClaimRequest[]>([]);
-  const [isClaimsLoading, setIsClaimsLoading] = useState(false);
-  const [claimsError, setClaimsError] = useState<string | null>(null);
-  const [claimsAccessDenied, setClaimsAccessDenied] = useState(false);
-  const [claimMessage, setClaimMessage] = useState("");
-  const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
-  const [claimSubmitError, setClaimSubmitError] = useState<string | null>(null);
+  const [caseDetail, setCaseDetail]                   = useState<CaseDetail | null>(null);
+  const [isLoading, setIsLoading]                     = useState(true);
+  const [errorType, setErrorType]                     = useState<ErrorType | null>(null);
+  const [selectedStatus, setSelectedStatus]           = useState<CaseStatus | null>(null);
+  const [isUpdating, setIsUpdating]                   = useState(false);
+  const [updateError, setUpdateError]                 = useState<string | null>(null);
+  const [isDeletingCase, setIsDeletingCase]           = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm]     = useState(false);
+  const [deleteError, setDeleteError]                 = useState<string | null>(null);
+  const [caseTasks, setCaseTasks]                     = useState<CaseTaskDetail[]>([]);
+  const [isTasksLoading, setIsTasksLoading]           = useState(false);
+  const [tasksError, setTasksError]                   = useState<string | null>(null);
+  const [caseHistory, setCaseHistory]                 = useState<CaseHistoryEntry[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading]       = useState(false);
+  const [historyError, setHistoryError]               = useState<string | null>(null);
+  const [caseComments, setCaseComments]               = useState<CaseComment[]>([]);
+  const [isCommentsLoading, setIsCommentsLoading]     = useState(false);
+  const [commentsError, setCommentsError]             = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId]             = useState<string | null>(null);
+  const [currentProfile, setCurrentProfile]           = useState<UserProfile | null>(null);
+  const [claimRequests, setClaimRequests]             = useState<CaseClaimRequest[]>([]);
+  const [isClaimsLoading, setIsClaimsLoading]         = useState(false);
+  const [claimsError, setClaimsError]                 = useState<string | null>(null);
+  const [claimsAccessDenied, setClaimsAccessDenied]   = useState(false);
+  const [claimMessage, setClaimMessage]               = useState("");
+  const [isSubmittingClaim, setIsSubmittingClaim]     = useState(false);
+  const [claimSubmitError, setClaimSubmitError]       = useState<string | null>(null);
   const [isProcessingClaimAction, setIsProcessingClaimAction] = useState(false);
-  const [claimActionError, setClaimActionError] = useState<string | null>(null);
-  const [childCases, setChildCases] = useState<CaseDetail[]>([]);
+  const [claimActionError, setClaimActionError]       = useState<string | null>(null);
+  const [childCases, setChildCases]                   = useState<CaseDetail[]>([]);
   const [isChildCasesLoading, setIsChildCasesLoading] = useState(false);
-  const [childCasesError, setChildCasesError] = useState<string | null>(null);
+  const [childCasesError, setChildCasesError]         = useState<string | null>(null);
   const [requestChildrenByStandard, setRequestChildrenByStandard] = useState<Record<string, CaseDetail[]>>({});
-  const [isNestedLoading, setIsNestedLoading] = useState(false);
+  const [isNestedLoading, setIsNestedLoading]         = useState(false);
   const [nestedChildCasesError, setNestedChildCasesError] = useState<string | null>(null);
   const [participantCompanies, setParticipantCompanies] = useState<CaseParticipantCompany[]>([]);
   const [isParticipantsLoading, setIsParticipantsLoading] = useState(false);
-  const [participantsError, setParticipantsError] = useState<string | null>(null);
-  const [userMap, setUserMap] = useState<Map<string, { name: string; email: string }>>(new Map());
+  const [participantsError, setParticipantsError]     = useState<string | null>(null);
+  const [userMap, setUserMap]                         = useState<Map<string, { name: string; email: string }>>(new Map());
+  const [activeTab, setActiveTab]                     = useState<DetailTab>("tasks");
+  const [showEditModal, setShowEditModal]             = useState(false);
+  const [copiedId, setCopiedId]                       = useState(false);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -392,6 +400,18 @@ const CaseDetailPage = () => {
     }
   }, [id]);
 
+  const handleEditSuccess = (updatedFields: {
+    title: string;
+    description: string;
+    descriptionFormat?: "plain" | "tiptap_json";
+    descriptionText?: string;
+    dueDate: string | null;
+  }) => {
+    setCaseDetail((prev) => (prev ? { ...prev, ...updatedFields } : prev));
+    void fetchCase();
+    void fetchCaseHistory();
+  };
+
   useEffect(() => {
     fetchAuthSession()
       .then(({ tokens }) => {
@@ -429,43 +449,29 @@ const CaseDetailPage = () => {
   if (isLoading) {
     return (
       <div className="animate-pulse">
-        <div className="h-6 w-16 bg-slate-200 rounded-lg mb-8" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-md shadow-slate-100/60">
-              <div className="h-1.5 bg-slate-200" />
-              <div className="p-8 space-y-5">
+        <div className="h-6 w-16 bg-slate-200 rounded mb-6" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg overflow-hidden border border-slate-100 shadow-sm">
+              <div className="h-1 bg-slate-200" />
+              <div className="p-6 space-y-4">
                 <div className="flex gap-2">
                   <div className="h-6 w-20 bg-slate-100 rounded-full" />
                   <div className="h-6 w-20 bg-slate-100 rounded-full" />
                 </div>
-                <div className="h-8 bg-slate-200 rounded-xl w-3/4" />
+                <div className="h-7 bg-slate-200 rounded w-3/4" />
                 <div className="space-y-2 pt-4 border-t border-slate-100">
                   <div className="h-3 bg-slate-100 rounded w-full" />
                   <div className="h-3 bg-slate-100 rounded w-5/6" />
-                  <div className="h-3 bg-slate-100 rounded w-4/6" />
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-100 h-40 shadow-sm" />
           </div>
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
-              <div className="h-4 bg-slate-200 rounded-lg w-24" />
-              <div className="h-10 bg-slate-100 rounded-xl" />
-              <div className="h-10 bg-slate-200 rounded-xl" />
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm">
-              <div className="h-4 bg-slate-200 rounded-lg w-16 mb-2" />
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex gap-3">
-                  <div className="w-7 h-7 bg-slate-100 rounded-lg flex-shrink-0" />
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-2.5 bg-slate-100 rounded w-12" />
-                    <div className="h-3.5 bg-slate-200 rounded w-24" />
-                  </div>
-                </div>
-              ))}
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg border border-slate-100 p-4 space-y-3 shadow-sm">
+              <div className="h-3 bg-slate-200 rounded w-20" />
+              <div className="h-8 bg-slate-100 rounded" />
+              <div className="h-8 bg-slate-200 rounded" />
             </div>
           </div>
         </div>
@@ -475,9 +481,9 @@ const CaseDetailPage = () => {
 
   if (errorType) {
     const errorConfig = {
-      notFound: { title: t("Case not found"), message: t("This case does not exist or has been deleted.") },
-      forbidden: { title: t("Access denied"), message: t("You don't have permission to view this case.") },
-      error: { title: t("An error occurred"), message: t("Failed to load case. Please try again.") },
+      notFound:  { title: t("Case not found"),    message: t("This case does not exist or has been deleted.") },
+      forbidden: { title: t("Access denied"),      message: t("You don't have permission to view this case.") },
+      error:     { title: t("An error occurred"),  message: t("Failed to load case. Please try again.") },
     }[errorType];
 
     return (
@@ -489,8 +495,8 @@ const CaseDetailPage = () => {
           <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
           {t("Back")}
         </button>
-        <div className="text-center py-24 bg-white border border-slate-100 rounded-2xl shadow-lg shadow-slate-200/50">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+        <div className="text-center py-24 bg-white border border-slate-100 rounded-lg shadow-sm">
+          <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center mx-auto mb-4">
             <FileText size={28} className="text-slate-300" />
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">{errorConfig.title}</h2>
@@ -502,30 +508,73 @@ const CaseDetailPage = () => {
 
   if (!caseDetail) return null;
 
+  const canEdit =
+    currentUserId !== null &&
+    (caseDetail.creatorId === currentUserId ||
+      (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId));
+
+  const completedTasks = caseTasks.filter((task) => String(task.status) === "DONE").length;
+  const totalTasks     = caseTasks.length;
+  const taskProgress   = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const hasChildren = caseDetail.caseType !== CaseType.REQUEST;
+
+  const tabs: { id: DetailTab; label: string; count: number }[] = [
+    { id: "tasks",    label: t("Tasks"),     count: totalTasks },
+    { id: "comments", label: t("Comments"),  count: caseComments.length },
+    { id: "history",  label: t("History"),   count: caseHistory.length },
+    ...(hasChildren ? [{ id: "children" as DetailTab, label: t("Sub-cases"), count: childCases.length }] : []),
+  ];
+
   return (
     <div>
-      {/* Back button */}
-      <div className="flex items-center mb-4 md:mb-8">
-        <button
-          onClick={() => router.push(buildBackUrl())}
-          className="group flex items-center gap-2 text-slate-400 hover:text-slate-700 transition-all duration-200 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-slate-100"
-        >
-          <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
-          {t("Back")}
-        </button>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <button
+            onClick={() => router.push(buildBackUrl())}
+            className="group flex items-center gap-1.5 text-slate-400 hover:text-slate-700 transition-all duration-200 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex-shrink-0"
+          >
+            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
+            {t("Back")}
+          </button>
+          {caseDetail.parentCaseId && (
+            <>
+              <ChevronRight size={13} className="text-slate-300 flex-shrink-0" />
+              <button
+                onClick={() => router.push(`/dashboard/cases/${caseDetail.parentCaseId}`)}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium truncate max-w-[140px] hover:underline flex-shrink-0"
+                title={t("Go to parent case")}
+              >
+                {t("Parent Case")}
+              </button>
+            </>
+          )}
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 hover:border-slate-300 transition-colors flex-shrink-0"
+          >
+            <Pencil size={13} />
+            {t("Edit")}
+          </button>
+        )}
       </div>
 
       {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-        {/* Left: main content */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Left: unified card (info + tabs) */}
+        <div className="lg:col-span-2">
+          <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
 
-          {/* Main case info card */}
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-lg shadow-slate-200/50 overflow-hidden">
-            <div className={`h-1.5 w-full bg-gradient-to-r ${CASE_TYPE_GRADIENT[caseDetail.caseType]}`} />
-            <div className="p-4 md:p-8">
-              <div className="flex flex-wrap items-center gap-2.5 mb-5">
+            {/* Type accent bar */}
+            <div className={`h-1 w-full ${CASE_TYPE_ACCENT[caseDetail.caseType]}`} />
+
+            {/* Case info */}
+            <div className="p-4 md:p-6">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[caseDetail.status]}`}>
                   {t(CASE_STATUS_LABELS[caseDetail.status])}
                 </span>
@@ -537,12 +586,14 @@ const CaseDetailPage = () => {
                 </span>
               </div>
 
-              <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 mb-6 leading-tight">
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 mb-5 leading-tight">
                 {caseDetail.title}
               </h1>
 
-              <div className="border-t border-slate-100 pt-6">
-                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">{t("Description")}</h3>
+              <div className="border-t border-slate-100 pt-5">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                  {t("Description")}
+                </h3>
                 <RichEditor
                   description={caseDetail.description}
                   descriptionFormat={caseDetail.descriptionFormat}
@@ -550,204 +601,278 @@ const CaseDetailPage = () => {
                 />
               </div>
             </div>
+
+            {/* Tab navigation */}
+            <div className="border-t border-slate-200 overflow-x-auto">
+              <div className="flex min-w-max">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "border-indigo-600 text-indigo-600 bg-indigo-50/30"
+                        : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-200"
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.count > 0 && (
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          activeTab === tab.id
+                            ? "bg-indigo-100 text-indigo-600"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab content */}
+            <div className="p-4 md:p-6">
+              {activeTab === "tasks" && (
+                <CaseTasksSection
+                  caseId={id as string}
+                  caseDetail={caseDetail}
+                  caseTasks={caseTasks}
+                  isTasksLoading={isTasksLoading}
+                  tasksError={tasksError}
+                  currentUserId={currentUserId}
+                  currentProfile={currentProfile}
+                  userMap={userMap}
+                  onTaskChange={async () => {
+                    await Promise.all([fetchCaseTasks(), fetchCaseHistory()]);
+                  }}
+                />
+              )}
+              {activeTab === "comments" && (
+                <CaseCommentsSection
+                  caseId={id as string}
+                  comments={caseComments}
+                  isLoading={isCommentsLoading}
+                  error={commentsError}
+                  userMap={userMap}
+                  onRefresh={fetchCaseComments}
+                />
+              )}
+              {activeTab === "history" && (
+                <CaseHistorySection
+                  history={caseHistory}
+                  isLoading={isHistoryLoading}
+                  error={historyError}
+                  userMap={userMap}
+                />
+              )}
+              {activeTab === "children" && hasChildren && (
+                <CaseChildCasesSection
+                  caseDetail={caseDetail}
+                  currentUserId={currentUserId}
+                  currentProfile={currentProfile}
+                  childCases={childCases}
+                  isChildCasesLoading={isChildCasesLoading}
+                  childCasesError={childCasesError}
+                  requestChildrenByStandard={requestChildrenByStandard}
+                  nestedChildCasesError={nestedChildCasesError}
+                  isNestedLoading={isNestedLoading}
+                  onCreated={async () => {
+                    await Promise.all([fetchChildCases(), fetchCaseHistory()]);
+                  }}
+                  onNavigate={(caseId) => router.push(`/dashboard/cases/${caseId}`)}
+                />
+              )}
+            </div>
           </div>
-
-          {caseDetail.caseType !== CaseType.REQUEST && (
-            <CaseChildCasesSection
-              caseDetail={caseDetail}
-              currentUserId={currentUserId}
-              currentProfile={currentProfile}
-              childCases={childCases}
-              isChildCasesLoading={isChildCasesLoading}
-              childCasesError={childCasesError}
-              requestChildrenByStandard={requestChildrenByStandard}
-              nestedChildCasesError={nestedChildCasesError}
-              isNestedLoading={isNestedLoading}
-              onCreated={async () => { await Promise.all([fetchChildCases(), fetchCaseHistory()]); }}
-              onNavigate={(caseId) => router.push(`/dashboard/cases/${caseId}`)}
-            />
-          )}
-
-          <CaseTasksSection
-            caseId={id as string}
-            caseDetail={caseDetail}
-            caseTasks={caseTasks}
-            isTasksLoading={isTasksLoading}
-            tasksError={tasksError}
-            currentUserId={currentUserId}
-            currentProfile={currentProfile}
-            userMap={userMap}
-            onTaskChange={async () => { await Promise.all([fetchCaseTasks(), fetchCaseHistory()]); }}
-          />
-
-          <CaseCommentsSection
-            caseId={id as string}
-            comments={caseComments}
-            isLoading={isCommentsLoading}
-            error={commentsError}
-            userMap={userMap}
-            onRefresh={fetchCaseComments}
-          />
         </div>
 
-        {/* Right: sidebar panels */}
-        <div className="space-y-6">
+        {/* Right: sticky sidebar */}
+        <div className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto">
 
-          {/* Status update */}
-          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
-            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
-                <Clock size={12} className="text-indigo-500" />
+          {/* Task progress */}
+          {totalTasks > 0 && (
+            <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-600">{t("Progress")}</span>
+                <span className="text-xs font-semibold text-slate-500">
+                  {completedTasks}/{totalTasks}
+                </span>
               </div>
-              {t("Update Status")}
-            </h3>
-            <div className="space-y-3">
-              <select
-                value={selectedStatus ?? caseDetail.status}
-                onChange={(e) => setSelectedStatus(e.target.value as CaseStatus)}
-                disabled={isUpdating}
-                className="w-full text-sm font-medium border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 disabled:opacity-50 transition-all cursor-pointer hover:border-slate-300"
-              >
-                {UPDATABLE_STATUSES.map((s) => (
-                  <option key={s} value={s}>{t(CASE_STATUS_LABELS[s])}</option>
-                ))}
-              </select>
-              <button
-                onClick={handleStatusUpdate}
-                disabled={isUpdating || selectedStatus === caseDetail.status}
-                className="w-full text-sm font-bold px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 transition-all duration-200 shadow-md shadow-indigo-300/20"
-              >
-                {isUpdating ? t("Updating...") : t("Update Status")}
-              </button>
-              {updateError && <ErrorAlert message={t(updateError)} />}
-            </div>
-          </div>
-
-          {/* Delete case (creator only) */}
-          {currentUserId && caseDetail.creatorId === currentUserId && (
-            <div className="bg-white border border-red-100 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-sm font-bold text-red-700 mb-3">{t("Delete Case")}</h3>
-              <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                {t("Deletes this case and all sub-cases, tasks, and history permanently.")}
-              </p>
-              {deleteError && <ErrorAlert message={t(deleteError)} />}
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={isDeletingCase}
-                className="w-full text-sm font-bold px-4 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {t("Delete Case")}
-              </button>
+              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                  style={{ width: `${taskProgress}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1.5">{taskProgress}% {t("complete")}</p>
             </div>
           )}
 
-          {/* Details & specs */}
-          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
-            <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5">{t("Case Specs")}</h3>
-            <div className="space-y-4">
+          {/* Status update */}
+          {canEdit && (
+            <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+              <h3 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+                <Clock size={12} className="text-slate-400" />
+                {t("Update Status")}
+              </h3>
+              <div className="space-y-2">
+                <select
+                  value={selectedStatus ?? caseDetail.status}
+                  onChange={(e) => setSelectedStatus(e.target.value as CaseStatus)}
+                  disabled={isUpdating}
+                  className="w-full text-sm font-medium border border-slate-200 rounded-md px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-400 disabled:opacity-50 transition-all cursor-pointer hover:border-slate-300"
+                >
+                  {UPDATABLE_STATUSES.map((s) => (
+                    <option key={s} value={s}>{t(CASE_STATUS_LABELS[s])}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleStatusUpdate}
+                  disabled={isUpdating || selectedStatus === caseDetail.status}
+                  className="w-full text-sm font-bold px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isUpdating ? t("Updating...") : t("Update Status")}
+                </button>
+                {updateError && <ErrorAlert message={t(updateError)} />}
+              </div>
+            </div>
+          )}
 
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Calendar size={13} className="text-slate-400" />
+          {/* Case specs */}
+          <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-xs font-bold text-slate-700">{t("Case Specs")}</h3>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(caseDetail.caseId).then(() => {
+                    setCopiedId(true);
+                    setTimeout(() => setCopiedId(false), 2000);
+                  }).catch(() => { /* clipboard unavailable */ });
+                }}
+                className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 transition-colors"
+                title={t("Copy case ID")}
+              >
+                {copiedId
+                  ? <Check size={11} className="text-emerald-500" />
+                  : <Copy size={11} />
+                }
+                <span className="font-mono">{shortId(caseDetail.caseId)}</span>
+              </button>
+            </div>
+            <div className="space-y-3">
+
+              <div className="flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Calendar size={11} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Due Date")}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Due Date")}</span>
                   <span className="text-sm font-semibold text-slate-700">{caseDetail.dueDate ?? t("No due date")}</span>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Clock size={13} className="text-slate-400" />
+              <div className="flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock size={11} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Created At")}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Created At")}</span>
                   <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Clock size={13} className="text-slate-400" />
+              <div className="flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock size={11} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Last Updated")}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Last Updated")}</span>
                   <span className="text-sm font-semibold text-slate-700">{new Date(caseDetail.updatedAt).toLocaleDateString()}</span>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Tag size={13} className="text-slate-400" />
+              <div className="flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Tag size={11} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Scope")}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Scope")}</span>
                   <span className="text-sm font-semibold text-slate-700">{t(CASE_TARGET_SCOPE_LABELS[caseDetail.targetScope])}</span>
-                  <span className="text-xs text-slate-500 block mt-0.5 max-w-[180px] truncate" title={caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}>
+                  <span className="text-xs text-slate-500 block mt-0.5 max-w-[160px] truncate" title={caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}>
                     {caseDetail.targetScope === CaseTargetScope.USER ? resolveDisplayName(caseDetail.targetScopeId, userMap) : shortId(caseDetail.targetScopeId)}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Shield size={13} className="text-slate-400" />
+              <div className="flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Shield size={11} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Required Role")}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Required Role")}</span>
                   <span className="text-sm font-semibold text-slate-700">{t(USER_ROLE_LABELS[caseDetail.requiredRole])}</span>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User size={13} className="text-slate-400" />
+              <div className="flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <User size={11} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Owner")}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Owner")}</span>
                   <span className="text-sm font-semibold text-slate-700">{t(OWNER_TYPE_LABELS[caseDetail.ownerType])}</span>
-                  <span className="text-xs text-slate-500 block mt-0.5 max-w-[180px] truncate" title={caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}>
+                  <span className="text-xs text-slate-500 block mt-0.5 max-w-[160px] truncate" title={caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}>
                     {caseDetail.ownerType === CaseOwnerType.USER ? resolveDisplayName(caseDetail.ownerId, userMap) : shortId(caseDetail.ownerId)}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User size={13} className="text-slate-400" />
+              <div className="flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <User size={11} className="text-slate-400" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Creator")}</span>
-                  <span className="text-xs text-slate-500 block max-w-[180px] truncate mt-0.5" title={resolveDisplayName(caseDetail.creatorId, userMap)}>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Creator")}</span>
+                  <span className="text-xs text-slate-500 block max-w-[160px] truncate mt-0.5" title={resolveDisplayName(caseDetail.creatorId, userMap)}>
                     {resolveDisplayName(caseDetail.creatorId, userMap)}
                   </span>
                 </div>
               </div>
 
               {caseDetail.projectId && (
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <FileText size={13} className="text-slate-400" />
+                <div className="flex items-start gap-2.5">
+                  <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileText size={11} className="text-slate-400" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Project")}</span>
-                    <span className="text-xs text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.projectId}>
-                      {caseDetail.projectId}
-                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Project")}</span>
+                    <button
+                      onClick={() => router.push(`/dashboard/cases/${caseDetail.projectId}`)}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-mono bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 hover:underline block max-w-[160px] truncate mt-0.5"
+                      title={caseDetail.projectId}
+                    >
+                      {shortId(caseDetail.projectId ?? "")}
+                    </button>
                   </div>
                 </div>
               )}
 
               {caseDetail.parentCaseId && (
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <FileText size={13} className="text-slate-400" />
+                <div className="flex items-start gap-2.5">
+                  <div className="w-6 h-6 rounded bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileText size={11} className="text-slate-400" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">{t("Parent Case")}</span>
-                    <span className="text-xs text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 block max-w-[180px] truncate mt-0.5" title={caseDetail.parentCaseId}>
-                      {caseDetail.parentCaseId}
-                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t("Parent Case")}</span>
+                    <button
+                      onClick={() => router.push(`/dashboard/cases/${caseDetail.parentCaseId}`)}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-mono bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 hover:underline block max-w-[160px] truncate mt-0.5"
+                      title={caseDetail.parentCaseId}
+                    >
+                      {shortId(caseDetail.parentCaseId ?? "")}
+                    </button>
                   </div>
                 </div>
               )}
@@ -763,14 +888,16 @@ const CaseDetailPage = () => {
               isParticipantsLoading={isParticipantsLoading}
               participantsError={participantsError}
               currentUserId={currentUserId}
-              onRefresh={async () => { await Promise.all([fetchParticipantCompanies(), fetchCaseHistory()]); }}
+              onRefresh={async () => {
+                await Promise.all([fetchParticipantCompanies(), fetchCaseHistory()]);
+              }}
             />
           )}
 
-          {/* Claims */}
+          {/* Claim requests */}
           {caseDetail.deliveryType === CaseDeliveryType.OPEN && (
-            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-lg shadow-slate-200/50">
-              <h3 className="text-sm font-bold text-slate-700 border-b border-slate-100 pb-3 mb-4">{t("Claim Requests")}</h3>
+            <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+              <h3 className="text-xs font-bold text-slate-700 border-b border-slate-100 pb-3 mb-4">{t("Claim Requests")}</h3>
 
               {isClaimsLoading ? (
                 <div className="flex items-center justify-center py-4">
@@ -785,7 +912,7 @@ const CaseDetailPage = () => {
                   {claimRequests.length > 0 && (
                     <ul className="space-y-3">
                       {claimRequests.map((req) => (
-                        <li key={req.claimRequestId} className="border border-slate-100 rounded-xl p-3 bg-slate-50/40">
+                        <li key={req.claimRequestId} className="border border-slate-100 rounded-lg p-3 bg-slate-50/40">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-[10px] text-slate-600 font-semibold truncate max-w-[120px]" title={resolveDisplayName(req.requesterId, userMap)}>
                               {resolveDisplayName(req.requesterId, userMap)}
@@ -801,10 +928,10 @@ const CaseDetailPage = () => {
                             </span>
                           </div>
                           {req.message && (
-                            <p className="text-xs text-slate-700 bg-white p-2 rounded-lg border border-slate-100 mb-2 leading-relaxed">{req.message}</p>
+                            <p className="text-xs text-slate-700 bg-white p-2 rounded border border-slate-100 mb-2 leading-relaxed">{req.message}</p>
                           )}
                           {req.rejectReason && (
-                            <p className="text-[10px] text-rose-500 bg-rose-50 p-2 rounded-lg border border-rose-100 mb-2">{t("Reject reason: ")}{req.rejectReason}</p>
+                            <p className="text-[10px] text-rose-500 bg-rose-50 p-2 rounded border border-rose-100 mb-2">{t("Reject reason: ")}{req.rejectReason}</p>
                           )}
                           {req.status === CaseClaimRequestStatus.PENDING &&
                             currentUserId &&
@@ -814,7 +941,7 @@ const CaseDetailPage = () => {
                                 <button
                                   onClick={() => handleClaimAction(req.claimRequestId, "APPROVED")}
                                   disabled={isProcessingClaimAction}
-                                  className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                  className="text-[10px] font-bold px-2.5 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                   {t("Approve")}
                                 </button>
@@ -826,7 +953,7 @@ const CaseDetailPage = () => {
                                     }
                                   }}
                                   disabled={isProcessingClaimAction}
-                                  className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                  className="text-[10px] font-bold px-2.5 py-1 rounded bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                 >
                                   {t("Reject")}
                                 </button>
@@ -848,12 +975,12 @@ const CaseDetailPage = () => {
                           onChange={(e) => setClaimMessage(e.target.value)}
                           placeholder={t("Claim reason (optional)...")}
                           rows={2}
-                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 resize-none transition-all"
+                          className="w-full border border-slate-200 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-400 resize-none transition-all"
                         />
                         <button
                           onClick={handleSubmitClaim}
                           disabled={isSubmittingClaim}
-                          className="w-full text-xs font-bold py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0 transition-all duration-200 shadow-md shadow-indigo-300/20"
+                          className="w-full text-xs font-bold py-2.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {isSubmittingClaim ? t("Sending...") : t("Submit Claim")}
                         </button>
@@ -868,19 +995,40 @@ const CaseDetailPage = () => {
             </div>
           )}
 
-          <CaseHistorySection
-            history={caseHistory}
-            isLoading={isHistoryLoading}
-            error={historyError}
-            userMap={userMap}
-          />
+          {/* Delete case (creator only) */}
+          {currentUserId && caseDetail.creatorId === currentUserId && (
+            <div className="bg-white border border-red-100 rounded-lg p-4 shadow-sm">
+              <h3 className="text-xs font-bold text-red-700 mb-2">{t("Delete Case")}</h3>
+              <p className="text-xs text-slate-500 mb-3 leading-relaxed">
+                {t("Deletes this case and all sub-cases, tasks, and history permanently.")}
+              </p>
+              {deleteError && <ErrorAlert message={t(deleteError)} />}
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeletingCase}
+                className="w-full text-sm font-bold px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {t("Delete Case")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Edit modal */}
+      {showEditModal && (
+        <EditCaseModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          caseDetail={caseDetail}
+          onSuccess={handleEditSuccess}
+        />
+      )}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 overflow-hidden">
             <div className="p-6">
               <h3 className="text-sm font-bold text-gray-900 mb-2">{t("Delete Case")}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
@@ -892,14 +1040,14 @@ const CaseDetailPage = () => {
               <button
                 onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
                 disabled={isDeletingCase}
-                className="text-sm font-bold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                className="text-sm font-bold px-4 py-2 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
               >
                 {t("Cancel")}
               </button>
               <button
                 onClick={handleDeleteCase}
                 disabled={isDeletingCase}
-                className="text-sm font-bold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="text-sm font-bold px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {isDeletingCase ? t("Deleting...") : t("Delete (confirm)")}
               </button>

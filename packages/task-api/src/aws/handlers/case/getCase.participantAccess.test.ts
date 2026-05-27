@@ -85,6 +85,56 @@ describe("getCase participant company access", () => {
     expect(res.statusCode).toBe(200);
   });
 
+  it("ACTIVE participant company user でも DIRECT case は 403", async () => {
+    const handler = createHandler({
+      caseRepo: {
+        findById: vi.fn().mockResolvedValue({
+          ...ownerCase,
+          deliveryType: CaseDeliveryType.DIRECT,
+        }),
+      } as unknown as CaseRepository,
+      participantCompanyRepo: {
+        findByCaseAndCompany: vi.fn().mockResolvedValue(activeParticipantRecord),
+      } as unknown as CaseParticipantCompanyRepository,
+      userRepo: {
+        findByUserId: vi.fn().mockResolvedValue({
+          User: "ext-user",
+          companyId: "EXT-COMP",
+          divisionId: "DIV-1",
+          departmentId: "DEPT-1",
+          teamId: "TEAM-1",
+          role: UserRole.USER,
+        }),
+      } as unknown as UserRepository,
+    });
+    const res = await handler(makeEvent("ext-user", "CASE-1"));
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("別 case の participant record では 403", async () => {
+    const handler = createHandler({
+      caseRepo: { findById: vi.fn().mockResolvedValue(ownerCase) } as unknown as CaseRepository,
+      participantCompanyRepo: {
+        findByCaseAndCompany: vi.fn().mockResolvedValue({
+          ...activeParticipantRecord,
+          caseId: "CASE-OTHER",
+        }),
+      } as unknown as CaseParticipantCompanyRepository,
+      userRepo: {
+        findByUserId: vi.fn().mockResolvedValue({
+          User: "ext-user",
+          companyId: "EXT-COMP",
+          divisionId: "DIV-1",
+          departmentId: "DEPT-1",
+          teamId: "TEAM-1",
+          role: UserRole.USER,
+        }),
+      } as unknown as UserRepository,
+    });
+    const res = await handler(makeEvent("ext-user", "CASE-1"));
+    expect(res.statusCode).toBe(403);
+  });
+
   it("INVITED のみの participant company user は 403", async () => {
     const handler = createHandler({
       caseRepo: { findById: vi.fn().mockResolvedValue(ownerCase) } as unknown as CaseRepository,

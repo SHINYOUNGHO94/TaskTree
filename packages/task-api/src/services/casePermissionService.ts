@@ -1,5 +1,6 @@
 import {
   CaseDetail,
+  CaseDeliveryType,
   CaseOwnerType,
   CaseParticipantCompany,
   CaseParticipantCompanyStatus,
@@ -51,11 +52,14 @@ export const canReadCase = (
 };
 
 export const canReadCaseAsParticipant = (
-  _caseDetail: CaseDetail,
+  caseDetail: CaseDetail,
   participantRecord: CaseParticipantCompany | undefined,
   callerCompanyId: string,
 ): boolean => {
+  if (caseDetail.deliveryType !== CaseDeliveryType.OPEN) return false;
   if (!participantRecord) return false;
+  if (participantRecord.caseId !== caseDetail.caseId) return false;
+  if (participantRecord.ownerCompanyId !== caseDetail.companyId) return false;
   if (participantRecord.companyId !== callerCompanyId) return false;
   return participantRecord.status === CaseParticipantCompanyStatus.ACTIVE;
 };
