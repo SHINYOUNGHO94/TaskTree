@@ -1,8 +1,10 @@
 import {
   CaseDetail,
+  CaseDeliveryType,
   CaseOwnerType,
   CaseParticipantCompany,
   CaseParticipantCompanyStatus,
+  CaseParticipantType,
   CaseTargetScope,
   UserRole,
 } from "@task/core";
@@ -50,12 +52,76 @@ export const canReadCase = (
   return false;
 };
 
+export interface CaseEditCaller {
+  companyId: string;
+  divisionId: string;
+  departmentId: string;
+  teamId: string;
+  role: UserRole;
+}
+
+export const canEditCase = (
+  caseDetail: CaseDetail,
+  userId: string,
+  caller: CaseEditCaller,
+): boolean => {
+  if (caller.companyId !== caseDetail.companyId) return false;
+
+  if (caseDetail.creatorId === userId) return true;
+  if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
+
+  switch (caller.role) {
+    case UserRole.COMPANY_ADMIN:
+      return caller.companyId === caseDetail.companyId;
+    case UserRole.DIVISION_ADMIN:
+      return caller.divisionId === caseDetail.divisionId;
+    case UserRole.DEPT_ADMIN:
+      return caller.departmentId === caseDetail.departmentId;
+    case UserRole.TEAM_ADMIN:
+      return caller.teamId === caseDetail.teamId;
+    default:
+      return false;
+  }
+};
+
 export const canReadCaseAsParticipant = (
-  _caseDetail: CaseDetail,
+  caseDetail: CaseDetail,
+  participantRecord: CaseParticipantCompany | undefined,
+  callerCompanyId: string,
+): boolean => {
+  if (caseDetail.deliveryType !== CaseDeliveryType.OPEN) return false;
+  if (!participantRecord) return false;
+  if (participantRecord.caseId !== caseDetail.caseId) return false;
+  if (participantRecord.ownerCompanyId !== caseDetail.companyId) return false;
+  if (participantRecord.companyId !== callerCompanyId) return false;
+  return participantRecord.status === CaseParticipantCompanyStatus.ACTIVE;
+};
+
+export const canReadCaseAsClient = (
+  caseDetail: CaseDetail,
   participantRecord: CaseParticipantCompany | undefined,
   callerCompanyId: string,
 ): boolean => {
   if (!participantRecord) return false;
+  if (participantRecord.participantType !== CaseParticipantType.CLIENT) return false;
+  // Record must belong to this case directly, or to the parent PROJECT of this case
+  const isDirectRecord = participantRecord.caseId === caseDetail.caseId;
+  const isParentProjectRecord = !!caseDetail.projectId && participantRecord.caseId === caseDetail.projectId;
+  if (!isDirectRecord && !isParentProjectRecord) return false;
+  if (participantRecord.ownerCompanyId !== caseDetail.companyId) return false;
   if (participantRecord.companyId !== callerCompanyId) return false;
   return participantRecord.status === CaseParticipantCompanyStatus.ACTIVE;
+  // No deliveryType check — CLIENT can access PROJECT regardless of deliveryType
+};
+
+export const canReadCaseAsAnyParticipant = (
+  caseDetail: CaseDetail,
+  participantRecord: CaseParticipantCompany | undefined,
+  callerCompanyId: string,
+): boolean => {
+  if (!participantRecord) return false;
+  if (participantRecord.participantType === CaseParticipantType.CLIENT) {
+    return canReadCaseAsClient(caseDetail, participantRecord, callerCompanyId);
+  }
+  return canReadCaseAsParticipant(caseDetail, participantRecord, callerCompanyId);
 };

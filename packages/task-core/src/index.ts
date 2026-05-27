@@ -15,3 +15,7 @@ export * from "./case/CaseService";
 export * from "./types/user";
 export * from "./user/UserService";
 export * from './user/OrgService';
+
+// 通知関連のエクスポート
+export * from "./types/notification";
+export * from "./notification/NotificationService";

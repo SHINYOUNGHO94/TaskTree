@@ -1261,6 +1261,399 @@ v2.0.0 では三種の案件タイプ（REQUEST / STANDARD / PROJECT）が Dynam
 
 ---
 
+## v2.2.0 - Dashboard 操作性改善・状態集中表示
+
+> v2.2.0 の開始 Task として、Dashboard のタブ UI と状態確認フローを改善した。状態 pill による集中表示、カード表示の情報強化、権限付きの案件編集を追加し、日常運用で「見たい状態の案件だけをすばやく確認・更新する」導線を整えた。
+
+### Task A: Dashboard status pills and case edit
+
+**Dashboard UI:**
+
+- Dashboard の `MY` / `OPEN` / `ORG` / `PROJECT` タブボタンを拡大し、選択しやすくした
+- タブ下に状態 pill を追加した
+  - `All`
+  - `IN_PROGRESS`
+  - `REVIEW_REQUESTED`
+  - `COMPLETED`
+  - `WAITING`
+  - `ON_HOLD`
+  - `CANCELED`
+  - `REOPENED`
+- 各 pill に現在の検索・種別・配信・担当 filter を反映した件数 badge を表示した
+- 件数 0 の pill は dim 表示にし、誤クリックを防ぐため disabled にした
+- pill 列はモバイルで横スクロールできるようにした
+- `All` pill は状態 filter を解除し、現在の `board` / `list` view を維持する仕様にした
+- 特定状態 pill 選択時は、その状態の案件だけをカードグリッドで表示する仕様にした
+- pill 選択結果が 0 件の場合、空状態と `Show all` ボタンを表示して pill を解除できるようにした
+- 既存の status dropdown filter とは別に `activePill` state を持たせ、pill 操作と通常 filter 操作を分離した
+- タブ変更時は pill を `All` にリセットするようにした
+
+**CaseCard 改善:**
+
+- カードに sub-case badge を追加した
+- OPEN 案件 badge を追加した
+- owner type / owner id の補助情報を表示した
+- due date の状態を表示した
+  - overdue は強調表示
+  - 3 日以内の due date は soon 表示
+  - date-only 文字列比較に変更し、UTC 起因の「今日が期限なのに overdue」になる問題を避けた
+- 編集可能な案件にのみ edit button を表示するようにした
+- edit button の click / keydown event propagation を抑止し、カード詳細遷移と競合しないようにした
+
+**案件編集 UI / API:**
+
+- `EditCaseModal` を追加し、Dashboard から title / description / dueDate を編集できるようにした
+- 編集ボタン表示条件は creator または USER owner のみとした
+- `CaseService.updateCase` を追加し、`PUT /cases/{id}` へ title / description / dueDate を送信できるようにした
+- `updateCase` Lambda で status 以外に title / description / dueDate 更新を受け付けるようにした
+- 更新時は `CaseHistoryAction.CASE_UPDATED` を記録するようにした
+- `CaseHistorySection` に `CASE_UPDATED` 表示を追加した
+- dueDate は `YYYY-MM-DD` 形式、`Invalid Date`、round-trip 検証を行い、`2026-02-30` のような補正される日付も 400 にするようにした
+- `dueDate: null` による期限クリアを許可した
+
+**多言語対応:**
+
+- Dashboard status pill / edit modal / case card 追加文言を EN / JA / KO / ZH に追加した
+
+**変更ファイル:**
+
+- `packages/task-app/src/app/dashboard/page.tsx`
+- `packages/task-app/src/components/dashboard/CaseCard.tsx`
+- `packages/task-app/src/components/dashboard/CaseBoardView.tsx`
+- `packages/task-app/src/components/dashboard/EditCaseModal.tsx`
+- `packages/task-app/src/components/case-detail/CaseHistorySection.tsx`
+- `packages/task-app/src/locales/en.ts`
+- `packages/task-app/src/locales/ja.ts`
+- `packages/task-app/src/locales/ko.ts`
+- `packages/task-app/src/locales/zh.ts`
+- `packages/task-core/src/case/CaseService.ts`
+- `packages/task-core/src/types/case.ts`
+- `packages/task-api/src/aws/handlers/case/updateCase.ts`
+- `packages/task-api/src/aws/handlers/case/updateCase.test.ts`
+
+**API / デプロイ影響:**
+
+- `PUT /cases/{id}` の API contract を拡張した
+- `updateCase` Lambda コード変更あり → Lambda / API の再デプロイが必要
+- 新規 Lambda / API route / DynamoDB GSI: なし
+- IAM 変更なし
+- インフラ定義変更なし
+
+**検証:**
+
+- `tsc` — pass（実施報告）
+- `updateCase` 関連テスト 21/21 — pass（実施報告）
+
+### Task B: Case rich editor and private image upload
+
+**Rich editor:**
+
+- `CreateCaseModal`、`EditCaseModal`、Case 詳細画面の description 入力・表示を Tiptap ベースの `RichEditor` に置き換えた
+- bold / italic / H1 / H2 / bullet list / ordered list / image insert の基本 toolbar を追加した
+- legacy plain text description は paragraph として表示・編集できるようにし、既存データとの互換性を維持した
+- 新形式では description を Tiptap JSON として保存し、検索・カード preview 用に `descriptionText` を別フィールドで保持するようにした
+- Dashboard の検索と `CaseCard` preview は `descriptionText` を優先し、`tiptap_json` の JSON 文字列が画面に露出しないようにした
+- 画像表示用の presigned GET URL は client module-level cache で 50 分保持し、同一 objectKey の再取得を抑制した
+- 画像 file picker に加え、drag & drop と clipboard paste による画像挿入を追加した
+- caseId がない新規作成中は画像挿入を無効化し、作成後の編集画面で画像を追加する仕様にした
+
+**Image upload / read API:**
+
+- `POST /upload/presigned-url` を追加し、caseId / contentType / fileSize 検証後に S3 presigned POST を返すようにした
+- `GET /upload/read-url?key=...` を追加し、objectKey の case 所属と閲覧権限を検証して presigned GET URL を返すようにした
+- content type は `image/png`、`image/jpeg`、`image/webp` のみ許可した
+- file size は最大 5MB に制限した
+- S3 object key は server 側で `{companyId}/cases/{caseId}/images/{uuid}.{ext}` 形式で生成し、client のファイル名は信頼しない設計にした
+- upload 権限は case creator または USER owner に限定した
+- read 権限は Case 詳細閲覧権限と同じ範囲に合わせ、同一会社ユーザーと参加会社ユーザーの読み取りを制御した
+- upload / read Lambda の成功応答にも CORS header を付与し、browser から presigned URL 応答を読めるようにした
+
+**Data model / API contract:**
+
+- `CaseDetail` / `CreateRootCaseInput` / `UpdateCaseInput` に `descriptionFormat?: "plain" | "tiptap_json"` と `descriptionText?: string` を追加した
+- `CaseRecord` の fromDetail / toDetail mapping に `descriptionFormat` と `descriptionText` を追加し、DynamoDB に保存・復元できるようにした
+- `createCase` / `updateCase` Lambda は `descriptionFormat` の不正値を 400 として拒否するようにした
+
+**Infrastructure:**
+
+- private S3 bucket `CaseImagesBucket` を CDK に追加した
+- `GetUploadPresignedUrlFunction` と `GetReadPresignedUrlFunction` を追加した
+- API Gateway に `/upload/presigned-url` と `/upload/read-url` route を追加した
+- upload Lambda には `s3:PutObject`、read Lambda には `s3:GetObject` を付与した
+- S3 CORS は `APP_ORIGIN` 環境変数がある場合はその origin に限定し、未設定時は local dev 用に `*` fallback とした
+
+**変更ファイル:**
+
+- `packages/task-app/src/components/editor/RichEditor.tsx`
+- `packages/task-app/src/components/dashboard/CreateCaseModal.tsx`
+- `packages/task-app/src/components/dashboard/EditCaseModal.tsx`
+- `packages/task-app/src/components/dashboard/CaseCard.tsx`
+- `packages/task-app/src/app/dashboard/page.tsx`
+- `packages/task-app/src/app/dashboard/cases/[id]/page.tsx`
+- `packages/task-app/src/app/globals.css`
+- `packages/task-core/src/types/case.ts`
+- `packages/task-core/src/case/CaseService.ts`
+- `packages/task-api/src/aws/entities/items/caseRecord.ts`
+- `packages/task-api/src/aws/handlers/case/createCase.ts`
+- `packages/task-api/src/aws/handlers/case/updateCase.ts`
+- `packages/task-api/src/aws/handlers/upload/getUploadPresignedUrl.ts`
+- `packages/task-api/src/aws/handlers/upload/getReadPresignedUrl.ts`
+- `packages/task-infra/lib/task-infra-stack.ts`
+- `packages/task-api/package.json`
+- `packages/task-app/package.json`
+- `yarn.lock`
+
+**API / デプロイ影響:**
+
+- S3 bucket、2 つの Lambda、2 つの API route を追加したため CDK deploy が必要
+- `CASE_IMAGES_BUCKET` は CDK から各 upload Lambda の環境変数として注入される
+- production deploy では `APP_ORIGIN` を設定して S3 CORS を本番 app domain に制限する必要がある
+- DynamoDB migration は不要。既存 Case は `descriptionFormat` 未設定の plain text として扱う
+- 画像 resize handle は MVP から外し、表示は `max-w-full h-auto` とした。drag resize は後続 v2.3 の候補
+
+**検証:**
+
+- TypeScript 0 errors（実施報告）
+- Task B 修正後の追加確認 0 errors（実施報告）
+
+### Task C: Case 詳細画面 UI 再構成
+
+> Case 詳細画面を 2カラムレイアウトへ刷新。左カラムに案件情報＋タブ型コンテンツを、右カラムにステータス更新・仕様・参加者などのメタ情報を sticky で配置した。スクロール性を向上させ、日常操作の中心となる画面の視認性と操作性を大幅に改善した。
+
+**変更範囲:**
+
+- `packages/task-app/src/app/dashboard/cases/[id]/page.tsx` — 全面再設計
+- `packages/task-app/src/locales/{en,ja,ko,zh}.ts` — 新規翻訳キー追加
+
+**主な改善:**
+
+- 2カラムレイアウト（lg:grid-cols-3）: 左2/3が案件本文＋タブ、右1/3がメタ情報
+- 右カラム sticky sidebar（`lg:sticky lg:top-6 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto`）
+- タブナビゲーション: Tasks / Comments / History / Sub-cases（REQUEST 以外）
+- タスク進捗バー: 完了数 / 全タスク数をパーセント表示（右サイドバー上部）
+- ヘッダーにパンくずリスト: 親案件・PROJECT をクリッカブルリンクで表示
+- 詳細画面内 Edit ボタン: 作成者・オーナー本人に表示、既存 EditCaseModal を再利用
+- 案件 ID コピーボタン: Check アイコンフィードバック付き
+- 全グラデーションボタン削除、flat `indigo-600` へ統一
+- `rounded-2xl` → `rounded-lg` に統一
+- CaseHistorySection を右サイドバーから History タブへ移動
+- `handleEditSuccess` に `fetchCase()` を追加し、編集後に `updatedAt` が stale にならないよう修正
+- `{taskProgress}% complete` のハードコード英語を `t("complete")` へ変更、4言語キー追加
+- Clipboard 書き込み失敗時も `setCopiedId(true)` が呼ばれていた問題を修正（`.then()` 成功時のみ実行）
+
+**Deployment Impact:**
+
+- CDK deploy 不要
+- app build / hosting deploy のみ
+
+**検証:**
+
+- lint: 0 errors
+- build: 成功（Next.js 15）
+
+### Task D: 取引先タブ UX 再構成
+
+> 取引先タブを実際の運用画面として再設計。受信招待 / 送信済み招待 / 協業履歴の 3タブ構成に分離し、送信済み招待用の新規 API を追加。取引先会社グループカードビューの導入、会社名検索・参加状態フィルタを実装した。
+
+**変更ファイル:**
+
+- `packages/task-core/src/types/case.ts` — `CaseInvitationSummary` に `dueDate` 追加
+- `packages/task-core/src/case/CaseService.ts` — `getSentParticipantCompanyInvitations()` 追加
+- `packages/task-api/src/repositories/caseRepository.ts` — `findCaseIdsByUser(userId, companyId)` 追加（`byAssignee` GSI の `USER#userId` キーで検索）
+- `packages/task-api/src/aws/handlers/case/getParticipantCompanyInvitations.ts` — `REJECTED` / `REMOVED` ステータス追加、`dueDate` をレスポンスに含める
+- `packages/task-api/src/aws/handlers/case/getSentParticipantCompanyInvitations.ts` — 新規 Lambda
+- `packages/task-api/src/aws/handlers/case/getSentParticipantCompanyInvitations.test.ts` — 新規テスト（6ケース）
+- `packages/task-infra/lib/task-infra-stack.ts` — 新規 Lambda + `GET /cases/participant-company-sent-invitations` route 追加
+- `packages/task-app/src/app/dashboard/partners/page.tsx` — 全面再設計
+- `packages/task-app/src/locales/{en,ja,ko,zh}.ts` — 新規翻訳キー追加
+
+**新規 API:**
+
+- `GET /cases/participant-company-sent-invitations`
+- 認証: Cognito JWT
+- ロジック: `byAssignee` GSI で `USER#userId` 検索 → `byCase` GSI fan-out → participant company 取得
+- Tenant 分離: `participant.ownerCompanyId !== companyId` フィルタで他社データ遮断
+- GSI 追加なし
+
+**UIリデザイン:**
+
+- 受信タブ: 未対応の招待（メール招待・通常招待）
+- 送信タブ: 自分の担当案件に招待した外部会社をグループカード表示（折りたたみ、進行中件数・最新案件プレビュー）
+- 履歴タブ: 通常時はグループカード、検索・フィルタ時はフラットテーブル
+- case status を color pill で表示（ダッシュボードと統一）
+- dueDate カラム追加・最新順ソート
+- 会社名検索・参加状態フィルタ追加
+- 各セクション別 empty state
+
+**レビュー後修正（P1/P2）:**
+
+- `findCaseIdsByOwnerCompany(COMPANY#companyId)` → `findCaseIdsByUser(USER#userId, companyId)`: すべての case が `ownerType: USER` で作成されるため USER key で検索するよう修正
+- `getParticipantCompanyInvitations` に `REJECTED` / `REMOVED` ステータスを追加: 履歴タブで拒否・削除状態が表示されない問題を修正
+
+**Deployment Impact:**
+
+- CDK deploy 必要（新規 Lambda + API route）
+- Lambda code deploy 含む
+- DynamoDB 変更なし
+
+**検証:**
+
+- `yarn test:api`: 390 passed（35 files）
+- `yarn type-check:api`: 0 errors
+- `yarn type-check:core`: 0 errors
+- `yarn workspace @task/app build`: 成功
+
+---
+
+### Task E-2: CLIENT 参加者タイプと取引先承認フロー
+
+> PROJECT 案件の最終確認者として取引先を招待できるよう、参加会社に CLIENT タイプを追加した。CLIENT は作業者ではなく、PROJECT の進捗・履歴・コメントを確認し、`REVIEW_REQUESTED` 状態の PROJECT を承認または却下する役割とした。
+
+**主な実装:**
+
+- `CaseParticipantCompany` に `participantType: COLLABORATOR | CLIENT` を追加し、既存レコードは `COLLABORATOR` として扱う後方互換を維持
+- CLIENT 招待は PROJECT 案件のみに制限し、同一会社への CLIENT 招待を拒否
+- `PUT /cases/{id}/client-review` を追加し、CLIENT が `APPROVE` で PROJECT を `COMPLETED`、`REJECT` で `REOPENED` に戻せるようにした
+- CLIENT は PROJECT が `DIRECT` / `OPEN` のどちらでも閲覧でき、PROJECT 配下の child case も親 PROJECT の参加 record で閲覧できるようにした
+- CLIENT には編集・子案件作成・タスク追加を許可せず、コメントと承認/却下に限定
+- 案件詳細画面に CLIENT review panel を追加し、`REVIEW_REQUESTED` 状態で承認/却下ボタンを表示
+- 参加会社一覧 UI に `CLIENT` / `COLLABORATOR` badge を追加
+
+**レビュー後修正（P1/P2）:**
+
+- `getParticipantCompanies` も `canReadCaseAsAnyParticipant()` と PROJECT fallback を使うよう修正し、DIRECT PROJECT の CLIENT が participant list API で 403 になりレビュー UI が表示されない問題を修正
+- DIRECT PROJECT の招待 UI では `CLIENT` を既定選択にし、無効な `COLLABORATOR + DIRECT` 招待を選びにくくした
+- `getParticipantCompanies.test.ts` を追加し、CLIENT が DIRECT PROJECT と PROJECT 配下 child case の participant companies を取得できることを検証
+
+**Deployment Impact:**
+
+- CDK deploy 必要（新規 Lambda + `PUT /cases/{id}/client-review` route）
+- Lambda code deploy 含む
+- DynamoDB migration / GSI 追加なし
+
+**検証:**
+
+- `tsc`: task-api / task-app ともにエラーなし（実施報告）
+- `yarn test:api`: 410 passed（実施報告）
+
+---
+
+### Task F: File Sharing タブ
+
+> 案件詳細画面に Files タブを追加し、案件ごとのファイルアップロード / ダウンロード / 削除を実装した。Task B で追加した private S3 bucket と presigned URL パターンを再利用し、ファイル共有を案件詳細の業務フロー内に統合した。
+
+**主な実装:**
+
+- `CaseFile` 型、`CaseFileRecord`、`CaseFileRepository` を追加
+- `buildCaseFileKey()` / `parseCaseFileKey()` を `s3KeyService.ts` に分離し、S3 key の検証を共通化
+- S3 key は `{companyId}/cases/{caseId}/files/{fileId}` 形式に統一し、API response には `objectKey` を含めない設計にした
+- 2-step upload flow を採用
+  - `POST /cases/{id}/files/upload-url`: presigned POST を発行し、DynamoDB には保存しない
+  - client が S3 へ直接 POST
+  - `POST /cases/{id}/files`: S3 `HeadObject` で存在・size・contentType を確認してから `CaseFile` record を保存
+- ファイル一覧 / upload-url 発行 / upload 確定 / download-url 発行 / 削除の 5 API を追加
+- download-url 発行前に S3 `HeadObject` を実行し、DynamoDB record だけが残った orphan file を検出できるようにした
+- 削除は S3 `DeleteObject` 成功後に DynamoDB record を削除する方針とし、S3 削除失敗時は metadata を保持するようにした
+- `FILE_UPLOADED` / `FILE_DELETED` を `CaseHistoryAction` に追加
+- 案件詳細のタブに Files を追加し、ファイル一覧、画像 preview、download、delete、upload loading/error state、empty state を実装
+- EN / JA / KO / ZH の翻訳キーを追加
+
+**権限設計:**
+
+- list / download: 案件を読めるユーザー、外部 COLLABORATOR、CLIENT が利用可能
+- upload / delete: 同一会社の creator または USER owner のみに制限
+- CLIENT は list / download のみ可能
+- すべての file API は case 権限確認後に file record を取得する順序を維持し、file existence leak を防止
+
+**実装上の判断:**
+
+- Files tab count は lazy loading とし、Files タブ初回表示後に正確な件数へ更新する。案件詳細初期表示時の追加 API 呼び出しを避けるため、初期値は 0 とした。
+- 画像 preview は download-url API を再利用する。`Content-Disposition: attachment` が付与されるが、`img src` 表示には支障がないため Task F では preview 専用 endpoint は追加しない。
+
+**Deployment Impact:**
+
+- CDK deploy 必要（新規 Lambda 5個 + API route 5本 + S3 IAM）
+- 新規 S3 bucket なし（既存 `caseImagesBucket` を再利用）
+- DynamoDB GSI 追加なし（既存 `byCase` GSI を再利用）
+- DynamoDB migration なし（新規 record type のみ追加）
+
+**検証:**
+
+- `yarn.cmd type-check:api` — pass（実施報告）
+- `yarn.cmd workspace @task/app tsc --noEmit` — pass（実施報告）
+- `yarn.cmd test:api -- caseFile`: 441 passed（実施報告）
+
+---
+
+### Task G: Notification minimal
+
+> 重要な案件イベントをヘッダーの通知ベルで確認できるようにした。WebSocket / SSE は導入せず、DynamoDB notification record と client polling による最小構成で実装した。
+
+**主な実装:**
+
+- `Notification` 型、`NotificationService`、`NotificationRecord`、`NotificationRepository` を追加
+- `GET /notifications` を追加し、ログインユーザー宛の最新通知を取得できるようにした
+- `PATCH /notifications/{notificationId}/read` を追加し、通知クリック時に単件既読化できるようにした
+- Notification record は `pk = User#${recipientId}#Notification` / `sk = Notification#${notificationId}` とし、新規 GSI なしで main table Query できる access pattern にした
+- `notificationId` は `${epochMs}_${uuid}` 形式にし、URL path で安全に扱えるようにした
+- `createCaseComment` で `COMMENT_ADDED`、`updateCase` で status 変更時の `STATUS_CHANGED` 通知を best-effort で保存するようにした
+- 受信者は same company の `creatorId` と USER owner を対象にし、actor 自身は除外した
+- Dashboard header に `NotificationBell` を追加し、30秒 polling、未読 count badge、dropdown、case 詳細への遷移、empty / loading / error state を実装した
+- EN / JA / KO / ZH の通知文言を追加した
+
+**Task G-1 範囲外:**
+
+- WebSocket / Server-Sent Events
+- mobile push notification
+- email notification
+- read-all API
+- claim 承認/却下、participant 招待、CLIENT review、担当者変更の通知
+- 外部参加会社への個別ユーザー通知
+
+**Deployment Impact:**
+
+- CDK deploy 必要（新規 Lambda 2個 + API route 2本）
+- DynamoDB table / GSI 追加なし
+- `MarkNotificationReadFunction` には `dynamodb:UpdateItem` 権限を付与
+
+**検証:**
+
+- `tsc`: clean（実施報告）
+- `yarn test:api`: 441 passed（実施報告）
+
+---
+
+### Task H: Due date warning color and case templates
+
+> 案件の期限が近い・過ぎている状態を詳細画面で視覚的に把握できるようにし、案件作成時に REQUEST / STANDARD / PROJECT の入力テンプレートを選べるようにした。
+
+**Due date warning color:**
+
+- 案件詳細画面の due date 表示に `getDueDateColorClass()` を追加
+- 期限切れは red、3日以内は amber、通常は slate、期限なしは muted 表示にした
+- `YYYY-MM-DD` を `new Date()` で直接 parse せず、date-only UTC 計算に変更し、timezone によって「今日の期限」が前日扱いになる問題を避けた
+
+**Case templates:**
+
+- `CreateCaseModal` に REQUEST / STANDARD / PROJECT の quick template button を追加
+- template 適用時に case type、title prefix、Tiptap JSON description をまとめて反映するようにした
+- REQUEST template: Request Details / Expected Outcome / Deadline / Priority
+- STANDARD template: Background / Scope / Expected Outcome
+- PROJECT template: Overview / Goals / Schedule / Team
+- template 適用直後も `descriptionText` が空にならないようにし、submit validation で弾かれないよう修正した
+- EN / JA / KO / ZH の template 関連文言を追加した
+
+**Deployment Impact:**
+
+- CDK deploy 不要
+- app build / hosting deploy のみ
+
+**検証:**
+
+- `yarn.cmd workspace @task/app type-check` — pass
+
+---
+
 ## 開発メモ
 
 実務で経験した画面実装、API連携、データ管理、エラー対応をもとに、このポートフォリオを作成しました。

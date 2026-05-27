@@ -67,13 +67,35 @@ export interface CaseSummary {
   updatedAt: string;
 }
 
+export type DescriptionFormat = "plain" | "tiptap_json";
+
 export interface CaseDetail extends CaseSummary {
   description: string;
+  descriptionFormat?: DescriptionFormat;
+  descriptionText?: string;
+}
+
+export interface GetUploadPresignedUrlInput {
+  caseId: string;
+  contentType: string;
+  fileSize: number;
+}
+
+export interface GetUploadPresignedUrlOutput {
+  url: string;
+  fields: Record<string, string>;
+  objectKey: string;
+}
+
+export interface GetReadPresignedUrlOutput {
+  readUrl: string;
 }
 
 export interface CreateRootCaseInput {
   title: string;
   description: string;
+  descriptionFormat?: DescriptionFormat;
+  descriptionText?: string;
   caseType: CaseType;
   deliveryType: CaseDeliveryType;
 
@@ -90,6 +112,8 @@ export interface UpdateCaseInput {
   caseId: string;
   title?: string;
   description?: string;
+  descriptionFormat?: DescriptionFormat;
+  descriptionText?: string;
   status?: CaseStatus;
   dueDate?: string | null;
 }
@@ -141,6 +165,7 @@ export interface UpdateCaseTaskInput {
 export enum CaseHistoryAction {
   CASE_CREATED = "CASE_CREATED",
   STATUS_CHANGED = "STATUS_CHANGED",
+  CASE_UPDATED = "CASE_UPDATED",
   TASK_CREATED = "TASK_CREATED",
   TASK_UPDATED = "TASK_UPDATED",
   TASK_STATUS_CHANGED = "TASK_STATUS_CHANGED",
@@ -153,6 +178,15 @@ export enum CaseHistoryAction {
   PARTICIPANT_COMPANY_INVITED = "PARTICIPANT_COMPANY_INVITED",
   PARTICIPANT_COMPANY_ACCEPTED = "PARTICIPANT_COMPANY_ACCEPTED",
   PARTICIPANT_COMPANY_REJECTED = "PARTICIPANT_COMPANY_REJECTED",
+  CLIENT_REVIEW_APPROVED = "CLIENT_REVIEW_APPROVED",
+  CLIENT_REVIEW_REJECTED = "CLIENT_REVIEW_REJECTED",
+  FILE_UPLOADED = "FILE_UPLOADED",
+  FILE_DELETED = "FILE_DELETED",
+}
+
+export enum CaseParticipantType {
+  COLLABORATOR = "COLLABORATOR",
+  CLIENT = "CLIENT",
 }
 
 export enum CaseParticipantCompanyStatus {
@@ -169,6 +203,7 @@ export interface CaseParticipantCompany {
   companyId: string;
   companyName: string | null;
   status: CaseParticipantCompanyStatus;
+  participantType: CaseParticipantType;
   invitedBy: string;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -184,6 +219,7 @@ export interface CaseInvitationSummary {
   deliveryType: CaseDeliveryType;
   ownerCompanyId: string;
   createdAt: string;
+  dueDate?: string | null;
 }
 
 export interface ParticipantCompanyInvitation {
@@ -193,6 +229,12 @@ export interface ParticipantCompanyInvitation {
 
 export interface InviteParticipantCompanyInput {
   companyId: string;
+  participantType?: CaseParticipantType;
+}
+
+export interface ClientReviewCaseInput {
+  action: "APPROVE" | "REJECT";
+  reason?: string;
 }
 
 export interface UpdateParticipantCompanyStatusInput {
@@ -282,4 +324,35 @@ export interface CreateChildCaseInput {
   targetScopeId: string;
   requiredRole: UserRole;
   dueDate: string | null;
+}
+
+export interface CaseFile {
+  fileId: string;
+  caseId: string;
+  companyId: string;
+  uploaderCompanyId: string;
+  uploadedBy: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  createdAt: string;
+}
+
+export interface GetCaseFileUploadUrlInput {
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+}
+
+export interface GetCaseFileUploadUrlOutput {
+  url: string;
+  fields: Record<string, string>;
+  fileId: string;
+}
+
+export interface ConfirmCaseFileUploadInput {
+  fileId: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
 }

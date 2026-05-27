@@ -4,6 +4,7 @@ import {
   CaseDeliveryType,
   CaseOwnerType,
   CaseParticipantCompanyStatus,
+  CaseParticipantType,
   CaseStatus,
   CaseTargetScope,
   CaseType,
@@ -178,5 +179,92 @@ describe("inviteParticipantCompany", () => {
     const handler = makeDeps();
     const res = await handler(makeEvent("owner-user-1", "CASE-1", { companyId: "OWNER-COMP" }));
     expect(res.statusCode).toBe(400);
+  });
+});
+
+const projectCase = {
+  caseId: "PROJ-1",
+  companyId: "OWNER-COMP",
+  creatorId: "owner-user-1",
+  ownerType: CaseOwnerType.USER,
+  ownerId: "owner-user-1",
+  deliveryType: CaseDeliveryType.DIRECT,
+  caseType: CaseType.PROJECT,
+  status: CaseStatus.WAITING,
+  title: "Project",
+  description: "desc",
+  divisionId: "DIV-1",
+  departmentId: "DEPT-1",
+  teamId: "TEAM-1",
+  targetScope: CaseTargetScope.TEAM,
+  targetScopeId: "TEAM-1",
+  requiredRole: UserRole.USER,
+  projectId: null,
+  parentCaseId: null,
+  dueDate: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+};
+
+describe("inviteParticipantCompany CLIENT type", () => {
+  it("CLIENT + PROJECT case は 201", async () => {
+    const saveRepo = { findByCaseAndCompany: vi.fn().mockResolvedValue(undefined), save: vi.fn().mockResolvedValue(undefined) };
+    const handler = makeDeps({
+      caseRepo: { findById: vi.fn().mockResolvedValue(projectCase) } as unknown as CaseRepository,
+      participantCompanyRepo: saveRepo as unknown as CaseParticipantCompanyRepository,
+    });
+    const res = await handler(makeEvent("owner-user-1", "PROJ-1", { companyId: "EXT-COMP", participantType: CaseParticipantType.CLIENT }));
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("CLIENT + REQUEST case は 400", async () => {
+    const handler = makeDeps({
+      caseRepo: {
+        findById: vi.fn().mockResolvedValue({
+          ...projectCase,
+          caseType: CaseType.REQUEST,
+          deliveryType: CaseDeliveryType.OPEN,
+        }),
+      } as unknown as CaseRepository,
+    });
+    const res = await handler(makeEvent("owner-user-1", "PROJ-1", { companyId: "EXT-COMP", participantType: CaseParticipantType.CLIENT }));
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("CLIENT + STANDARD case は 400", async () => {
+    const handler = makeDeps({
+      caseRepo: {
+        findById: vi.fn().mockResolvedValue({
+          ...projectCase,
+          caseType: CaseType.STANDARD,
+          deliveryType: CaseDeliveryType.OPEN,
+        }),
+      } as unknown as CaseRepository,
+    });
+    const res = await handler(makeEvent("owner-user-1", "PROJ-1", { companyId: "EXT-COMP", participantType: CaseParticipantType.CLIENT }));
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("participantType 省略時は COLLABORATOR としてデフォルト処理され保存される", async () => {
+    const saveRepo = { findByCaseAndCompany: vi.fn().mockResolvedValue(undefined), save: vi.fn().mockResolvedValue(undefined) };
+    const handler = makeDeps({
+      participantCompanyRepo: saveRepo as unknown as CaseParticipantCompanyRepository,
+    });
+    const res = await handler(makeEvent("owner-user-1", "CASE-1", { companyId: "EXT-COMP" }));
+    expect(res.statusCode).toBe(201);
+    const savedEntity = saveRepo.save.mock.calls[0][0] as { participantType: CaseParticipantType };
+    expect(savedEntity.participantType).toBe(CaseParticipantType.COLLABORATOR);
+  });
+
+  it("CLIENT は DIRECT PROJECT にも招待可能 (deliveryType 無関係)", async () => {
+    const saveRepo = { findByCaseAndCompany: vi.fn().mockResolvedValue(undefined), save: vi.fn().mockResolvedValue(undefined) };
+    const handler = makeDeps({
+      caseRepo: {
+        findById: vi.fn().mockResolvedValue({ ...projectCase, deliveryType: CaseDeliveryType.DIRECT }),
+      } as unknown as CaseRepository,
+      participantCompanyRepo: saveRepo as unknown as CaseParticipantCompanyRepository,
+    });
+    const res = await handler(makeEvent("owner-user-1", "PROJ-1", { companyId: "EXT-COMP", participantType: CaseParticipantType.CLIENT }));
+    expect(res.statusCode).toBe(201);
   });
 });

@@ -96,6 +96,7 @@ const ko = {
   "No cases (PROJECT)": "프로젝트 안건이 없습니다.",
   "No results matching filters": "필터에 맞는 안건이 없습니다.",
   "Reset filters": "필터 초기화",
+  "Show all": "전체 보기",
   "My Cases description": "내가 생성하거나 담당하는 안건",
   "Open Cases description": "권한 범위 내에서 담당 신청 가능한 공개 안건",
   "Org Cases description": "조직·부서·팀 대상 안건",
@@ -117,6 +118,19 @@ const ko = {
   "Active (status)": "참여 중",
   "Rejected (status)": "거절",
   "Removed (status)": "삭제됨",
+  "Received Invitations": "받은 초대",
+  "Sent Invitations": "담당 안건 초대",
+  "Partner Companies": "거래처",
+  "No sent invitations.": "담당 안건의 초대가 아직 없습니다.",
+  "No collaboration history.": "협업 이력이 아직 없습니다.",
+  "Search by company name": "회사명으로 검색...",
+  "All statuses": "전체",
+  "Active cases": "진행 중인 안건",
+  "Latest case": "최신 안건",
+  "No results found.": "검색 결과가 없습니다.",
+  "Failed to load sent invitations.": "담당 안건의 초대를 불러오지 못했습니다.",
+  "Partner": "거래처",
+  "cases": "건",
 
   // Profile
   "Profile Settings": "프로필 설정",
@@ -180,6 +194,8 @@ const ko = {
   "External Company Invited": "외부 회사 초대",
   "External Company Accepted": "외부 회사 참여 승인",
   "External Company Rejected": "외부 회사 참여 거절",
+  "Client Review Approved": "클라이언트 승인",
+  "Client Review Rejected": "클라이언트 거절",
 
   // Sub-cases
   "Sub-cases": "하위 안건",
@@ -190,6 +206,10 @@ const ko = {
 
   // Participant companies
   "Participant Companies": "참여 회사",
+  "Collaborator": "협업사",
+  "Client": "클라이언트",
+  "Client Review": "클라이언트 리뷰",
+  "Failed to submit client review.": "클라이언트 리뷰 제출에 실패했습니다.",
   "Invite": "초대",
   "Company Search": "회사 검색",
   "Email Invitation": "이메일 초대",
@@ -248,6 +268,10 @@ const ko = {
   "Description": "상세 내용",
   "No description": "내용 없음",
   "Update Status": "상태 업데이트",
+  "Progress": "진행률",
+  "complete": "완료",
+  "Copy case ID": "안건 ID 복사",
+  "Go to parent case": "상위 안건으로 이동",
   "Case Specs": "안건 사양",
   "Due Date": "기한",
   "Created At": "생성 일시",
@@ -280,6 +304,17 @@ const ko = {
   "Delete Case" : "안건 삭제",
   "Deletes this case and all sub-cases, tasks, and history permanently." : "이 안건과 모든 하위 안건, 작업, 이력이 영구적으로 삭제됩니다.",
   "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone."  : "이 안건과 모든 하위 안건, 작업, 댓글, 이력이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+
+  // EditCaseModal
+  "Edit Case": "안건 편집",
+  "Edit case title *": "제목 *",
+  "Edit case description": "내용",
+  "Edit case dueDate": "마감일",
+  "Case Updated": "안건을 업데이트했습니다",
+  "Failed to update case. Please try again.": "안건 업데이트에 실패했습니다. 다시 시도해 주세요.",
+  "Overdue": "기한 초과",
+  "Due soon": "마감 임박",
+  "Sub-case": "하위 안건",
 
   // CreateCaseModal
   "Create Project": "프로젝트 생성",
@@ -444,6 +479,26 @@ const ko = {
   "Enter your first name.": "이름을 입력해 주세요.",
   "Enter confirm password.": "확인용 비밀번호를 입력해 주세요.",
   "Enter a 6-digit verification code.": "6자리 인증 코드를 입력해 주세요.",
+
+  // File sharing
+  "Files": "파일",
+  "Upload File": "파일 업로드",
+  "No files uploaded yet.": "아직 파일이 없습니다.",
+  "Download": "다운로드",
+  "Delete File": "파일 삭제",
+  "Are you sure you want to delete this file?": "이 파일을 삭제하시겠습니까?",
+  "Failed to upload file.": "파일 업로드에 실패했습니다.",
+  "Failed to load files.": "파일 목록을 불러오지 못했습니다.",
+  "Failed to download file.": "파일 다운로드에 실패했습니다.",
+  "Failed to delete file.": "파일 삭제에 실패했습니다.",
+  "File Uploaded": "파일 업로드",
+  "File Deleted": "파일 삭제",
+  "Notifications": "알림",
+  "No notifications.": "알림이 없습니다.",
+  "Quick templates:": "빠른 템플릿:",
+  "template title REQUEST": "【요청】",
+  "template title STANDARD": "【안건】",
+  "template title PROJECT": "【프로젝트】",
 } as const;
 
 export default ko;

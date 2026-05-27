@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Suffix, StagingEnvironment } from '@task/core';
@@ -38,7 +39,7 @@ export class TaskInfraStack extends cdk.Stack {
 
     const grantTaskMutation = (fn: NodejsFunction, writeActions: string[]) => {
       fn.addToRolePolicy(new iam.PolicyStatement({
-        actions: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:Scan', ...writeActions],
+        actions: ['dynamodb:GetItem', 'dynamodb:Query', ...writeActions],
         resources: [tableArn, tableIndexesArn],
       }));
     };
@@ -56,6 +57,24 @@ export class TaskInfraStack extends cdk.Stack {
         resources: [tableArn, tableIndexesArn],
       }));
     };
+
+    // APP_ORIGIN env var restricts S3 CORS to the deployed app domain (e.g. https://app.example.com).
+    const appOrigin = process.env.APP_ORIGIN;
+    const s3CorsAllowedOrigins = appOrigin
+      ? appOrigin.split(',').map((origin) => origin.trim()).filter(Boolean)
+      : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+    const caseImagesBucket = new s3.Bucket(this, 'CaseImagesBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      cors: [
+        {
+          allowedOrigins: s3CorsAllowedOrigins,
+          allowedMethods: [s3.HttpMethods.POST, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
+          allowedHeaders: ['*'],
+          exposedHeaders: ['ETag'],
+          maxAge: 3000,
+        },
+      ],
+    });
 
     const postConfirmationFn = new NodejsFunction(this, 'PostConfirmationFunction', {
       runtime: Runtime.NODEJS_20_X,
@@ -500,6 +519,30 @@ export class TaskInfraStack extends cdk.Stack {
     });
     grantCaseMutation(createCaseCommentFn, ['dynamodb:PutItem']);
 
+    const getUploadPresignedUrlFn = new NodejsFunction(this, 'GetUploadPresignedUrlFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/upload/getUploadPresignedUrl.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        CASE_IMAGES_BUCKET: caseImagesBucket.bucketName,
+      },
+    });
+    grantTableRead(getUploadPresignedUrlFn);
+    caseImagesBucket.grantPut(getUploadPresignedUrlFn);
+
+    const getReadPresignedUrlFn = new NodejsFunction(this, 'GetReadPresignedUrlFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/upload/getReadPresignedUrl.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        CASE_IMAGES_BUCKET: caseImagesBucket.bucketName,
+      },
+    });
+    grantTableRead(getReadPresignedUrlFn);
+    caseImagesBucket.grantRead(getReadPresignedUrlFn);
+
     const api = new apigateway.RestApi(this, 'TaskApi', {
       restApiName: 'Task Tree API',
       description: 'API for TaskTree management - v2',
@@ -706,6 +749,156 @@ export class TaskInfraStack extends cdk.Stack {
 
     const participantCompanyInvitationsResource = casesResource.addResource('participant-company-invitations');
     participantCompanyInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getParticipantCompanyInvitationsFn), { authorizer });
+
+    const getSentParticipantCompanyInvitationsFn = new NodejsFunction(this, 'GetSentParticipantCompanyInvitationsFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getSentParticipantCompanyInvitations.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getSentParticipantCompanyInvitationsFn);
+
+    const sentParticipantCompanyInvitationsResource = casesResource.addResource('participant-company-sent-invitations');
+    sentParticipantCompanyInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getSentParticipantCompanyInvitationsFn), { authorizer });
+
+    const clientReviewCaseFn = new NodejsFunction(this, 'ClientReviewCaseFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/clientReviewCase.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(clientReviewCaseFn, ['dynamodb:PutItem', 'dynamodb:TransactWriteItems']);
+
+    const caseClientReviewResource = caseIdResource.addResource('client-review');
+    caseClientReviewResource.addMethod('PUT', new apigateway.LambdaIntegration(clientReviewCaseFn), { authorizer });
+
+    const getCaseFilesFn = new NodejsFunction(this, 'GetCaseFilesFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getCaseFiles.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getCaseFilesFn);
+
+    const getCaseFileUploadUrlFn = new NodejsFunction(this, 'GetCaseFileUploadUrlFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getCaseFileUploadUrl.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        CASE_IMAGES_BUCKET: caseImagesBucket.bucketName,
+      },
+    });
+    grantTableRead(getCaseFileUploadUrlFn);
+    getCaseFileUploadUrlFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:PutObject'],
+      resources: [`${caseImagesBucket.bucketArn}/*`],
+    }));
+
+    const confirmCaseFileUploadFn = new NodejsFunction(this, 'ConfirmCaseFileUploadFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/confirmCaseFileUpload.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        CASE_IMAGES_BUCKET: caseImagesBucket.bucketName,
+      },
+    });
+    grantCaseMutation(confirmCaseFileUploadFn, ['dynamodb:PutItem']);
+    confirmCaseFileUploadFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [`${caseImagesBucket.bucketArn}/*`],
+    }));
+
+    const getCaseFileDownloadUrlFn = new NodejsFunction(this, 'GetCaseFileDownloadUrlFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/getCaseFileDownloadUrl.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        CASE_IMAGES_BUCKET: caseImagesBucket.bucketName,
+      },
+    });
+    grantTableRead(getCaseFileDownloadUrlFn);
+    getCaseFileDownloadUrlFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [`${caseImagesBucket.bucketArn}/*`],
+    }));
+
+    const deleteCaseFileFn = new NodejsFunction(this, 'DeleteCaseFileFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/deleteCaseFile.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+        CASE_IMAGES_BUCKET: caseImagesBucket.bucketName,
+      },
+    });
+    grantCaseMutation(deleteCaseFileFn, ['dynamodb:DeleteItem', 'dynamodb:PutItem']);
+    deleteCaseFileFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:DeleteObject'],
+      resources: [`${caseImagesBucket.bucketArn}/*`],
+    }));
+
+    const getNotificationsFn = new NodejsFunction(this, 'GetNotificationsFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/notification/getNotifications.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantTableRead(getNotificationsFn);
+
+    const markNotificationReadFn = new NodejsFunction(this, 'MarkNotificationReadFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/notification/markNotificationRead.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    markNotificationReadFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:UpdateItem'],
+      resources: [tableArn, tableIndexesArn],
+    }));
+
+    const notificationsResource = api.root.addResource('notifications');
+    notificationsResource.addMethod('GET', new apigateway.LambdaIntegration(getNotificationsFn), { authorizer });
+
+    const notificationIdResource = notificationsResource.addResource('{notificationId}');
+    const notificationReadResource = notificationIdResource.addResource('read');
+    notificationReadResource.addMethod('PATCH', new apigateway.LambdaIntegration(markNotificationReadFn), { authorizer });
+
+    const caseFilesResource = caseIdResource.addResource('files');
+    caseFilesResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseFilesFn), { authorizer });
+    caseFilesResource.addMethod('POST', new apigateway.LambdaIntegration(confirmCaseFileUploadFn), { authorizer });
+
+    const caseFilesUploadUrlResource = caseFilesResource.addResource('upload-url');
+    caseFilesUploadUrlResource.addMethod('POST', new apigateway.LambdaIntegration(getCaseFileUploadUrlFn), { authorizer });
+
+    const caseFileIdResource = caseFilesResource.addResource('{fileId}');
+    const caseFileDownloadUrlResource = caseFileIdResource.addResource('download-url');
+    caseFileDownloadUrlResource.addMethod('GET', new apigateway.LambdaIntegration(getCaseFileDownloadUrlFn), { authorizer });
+    caseFileIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteCaseFileFn), { authorizer });
+
+    const uploadResource = api.root.addResource('upload');
+    const uploadPresignedUrlResource = uploadResource.addResource('presigned-url');
+    uploadPresignedUrlResource.addMethod('POST', new apigateway.LambdaIntegration(getUploadPresignedUrlFn), { authorizer });
+
+    const uploadReadUrlResource = uploadResource.addResource('read-url');
+    uploadReadUrlResource.addMethod('GET', new apigateway.LambdaIntegration(getReadPresignedUrlFn), { authorizer });
+
+    new cdk.CfnOutput(this, 'CaseImagesBucketName', {
+      value: caseImagesBucket.bucketName,
+      description: 'S3 bucket for case images (set as NEXT_PUBLIC_CASE_IMAGES_BUCKET if needed)',
+    });
 
     new cdk.CfnOutput(this, 'CognitoUserPoolId', {
       value: userPool.userPoolId,

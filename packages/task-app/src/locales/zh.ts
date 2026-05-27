@@ -96,6 +96,7 @@ const zh = {
   "No cases (PROJECT)": "没有项目案件。",
   "No results matching filters": "没有符合当前筛选条件的案件。",
   "Reset filters": "重置筛选",
+  "Show all": "显示全部",
   "My Cases description": "您创建或拥有的案件",
   "Open Cases description": "在您权限范围内的公开案件",
   "Org Cases description": "针对组织、科室或团队的案件",
@@ -117,6 +118,19 @@ const zh = {
   "Active (status)": "活跃",
   "Rejected (status)": "已拒绝",
   "Removed (status)": "已移除",
+  "Received Invitations": "收到的邀请",
+  "Sent Invitations": "负责案件邀请",
+  "Partner Companies": "合作伙伴",
+  "No sent invitations.": "暂无你负责案件的邀请。",
+  "No collaboration history.": "暂无协作记录。",
+  "Search by company name": "按公司名搜索...",
+  "All statuses": "全部",
+  "Active cases": "进行中案件",
+  "Latest case": "最新案件",
+  "No results found.": "未找到匹配结果。",
+  "Failed to load sent invitations.": "加载你负责案件的邀请失败。",
+  "Partner": "合作伙伴",
+  "cases": "件",
 
   // Profile
   "Profile Settings": "个人资料设置",
@@ -180,6 +194,8 @@ const zh = {
   "External Company Invited": "已邀请外部公司",
   "External Company Accepted": "外部公司已接受",
   "External Company Rejected": "外部公司已拒绝",
+  "Client Review Approved": "客户已批准",
+  "Client Review Rejected": "客户已拒绝",
 
   // Sub-cases
   "Sub-cases": "子案件",
@@ -190,6 +206,10 @@ const zh = {
 
   // Participant companies
   "Participant Companies": "参与公司",
+  "Collaborator": "协作方",
+  "Client": "客户",
+  "Client Review": "客户审核",
+  "Failed to submit client review.": "提交客户审核失败。",
   "Invite": "邀请",
   "Company Search": "公司搜索",
   "Email Invitation": "邮件邀请",
@@ -248,6 +268,10 @@ const zh = {
   "Description": "描述",
   "No description": "无描述",
   "Update Status": "更新状态",
+  "Progress": "进度",
+  "complete": "已完成",
+  "Copy case ID": "复制案件ID",
+  "Go to parent case": "前往父案件",
   "Case Specs": "案件详情",
   "Due Date": "截止日期",
   "Created At": "创建时间",
@@ -280,6 +304,17 @@ const zh = {
   "Delete Case": "删除案件",
   "Deletes this case and all sub-cases, tasks, and history permanently.": "永久删除此案件及其所有子案件、任务和历史记录。",
   "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone.": "这将永久删除案件及其所有子案件、任务、评论和历史记录。此操作无法撤销。",
+
+  // EditCaseModal
+  "Edit Case": "编辑案件",
+  "Edit case title *": "标题 *",
+  "Edit case description": "描述",
+  "Edit case dueDate": "截止日期",
+  "Case Updated": "案件已更新",
+  "Failed to update case. Please try again.": "更新案件失败，请重试。",
+  "Overdue": "已逾期",
+  "Due soon": "即将到期",
+  "Sub-case": "子案件",
 
   // CreateCaseModal
   "Create Project": "创建项目",
@@ -444,6 +479,26 @@ const zh = {
   "Enter your first name.": "请输入您的名。",
   "Enter confirm password.": "请输入确认密码。",
   "Enter a 6-digit verification code.": "请输入6位验证码。",
+
+  // File sharing
+  "Files": "文件",
+  "Upload File": "上传文件",
+  "No files uploaded yet.": "暂无文件。",
+  "Download": "下载",
+  "Delete File": "删除文件",
+  "Are you sure you want to delete this file?": "确定要删除此文件吗？",
+  "Failed to upload file.": "文件上传失败。",
+  "Failed to load files.": "文件列表加载失败。",
+  "Failed to download file.": "文件下载失败。",
+  "Failed to delete file.": "文件删除失败。",
+  "File Uploaded": "文件上传",
+  "File Deleted": "文件删除",
+  "Notifications": "通知",
+  "No notifications.": "暂无通知。",
+  "Quick templates:": "快速模板:",
+  "template title REQUEST": "【申请】",
+  "template title STANDARD": "【案件】",
+  "template title PROJECT": "【项目】",
 } as const;
 
 export default zh;

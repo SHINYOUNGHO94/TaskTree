@@ -5,10 +5,13 @@ import { AlertCircle, Search, X, Building2, Plus, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   CaseDetail,
+  CaseDeliveryType,
   CaseOwnerType,
   CaseParticipantCompany,
   CaseParticipantCompanyStatus,
+  CaseParticipantType,
   CaseService,
+  CaseType,
   CompanySearchResult,
 } from "@task/core";
 
@@ -25,6 +28,16 @@ const PARTICIPANT_STATUS_KEY: Record<CaseParticipantCompanyStatus, string> = {
   [CaseParticipantCompanyStatus.REJECTED]: "Rejected (status)",
   [CaseParticipantCompanyStatus.REMOVED]: "Removed (status)",
 };
+
+const PARTICIPANT_TYPE_STYLES: Record<CaseParticipantType, string> = {
+  [CaseParticipantType.COLLABORATOR]: "bg-blue-50 text-blue-700 border border-blue-200",
+  [CaseParticipantType.CLIENT]:       "bg-violet-50 text-violet-700 border border-violet-200",
+};
+
+const getDefaultParticipantType = (caseDetail: CaseDetail): CaseParticipantType =>
+  caseDetail.caseType === CaseType.PROJECT && caseDetail.deliveryType !== CaseDeliveryType.OPEN
+    ? CaseParticipantType.CLIENT
+    : CaseParticipantType.COLLABORATOR;
 
 export interface CaseParticipantCompanySectionProps {
   caseId: string;
@@ -46,6 +59,8 @@ export const CaseParticipantCompanySection = ({
   onRefresh,
 }: CaseParticipantCompanySectionProps) => {
   const { t } = useTranslation("ui");
+  const isProjectCase = caseDetail.caseType === CaseType.PROJECT;
+  const canInviteCollaborator = !isProjectCase || caseDetail.deliveryType === CaseDeliveryType.OPEN;
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteTab, setInviteTab] = useState<"search" | "email">("search");
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,6 +68,9 @@ export const CaseParticipantCompanySection = ({
   const [isSearching, setIsSearching] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<CompanySearchResult | null>(null);
   const [emailInput, setEmailInput] = useState("");
+  const [selectedParticipantType, setSelectedParticipantType] = useState<CaseParticipantType>(
+    getDefaultParticipantType(caseDetail),
+  );
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,8 +88,9 @@ export const CaseParticipantCompanySection = ({
       setEmailInput("");
       setInviteError(null);
       setInviteTab("search");
+      setSelectedParticipantType(getDefaultParticipantType(caseDetail));
     }
-  }, [showInviteForm]);
+  }, [showInviteForm, caseDetail]);
 
   useEffect(() => {
     if (selectedCompany) return;
@@ -105,7 +124,10 @@ export const CaseParticipantCompanySection = ({
     setIsInviting(true);
     setInviteError(null);
     try {
-      await CaseService.inviteParticipantCompany(caseId, { companyId: selectedCompany.companyId });
+      await CaseService.inviteParticipantCompany(caseId, {
+        companyId: selectedCompany.companyId,
+        participantType: selectedParticipantType,
+      });
       setShowInviteForm(false);
       await onRefresh();
     } catch {
@@ -172,6 +194,25 @@ export const CaseParticipantCompanySection = ({
               <X size={14} />
             </button>
           </div>
+
+          {isProjectCase && (
+            <div className="flex gap-1.5">
+              {canInviteCollaborator && (
+                <button
+                  onClick={() => setSelectedParticipantType(CaseParticipantType.COLLABORATOR)}
+                  className={`flex-1 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors ${selectedParticipantType === CaseParticipantType.COLLABORATOR ? "bg-blue-50 border-blue-300 text-blue-700" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}
+                >
+                  {t("Collaborator")}
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedParticipantType(CaseParticipantType.CLIENT)}
+                className={`flex-1 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors ${selectedParticipantType === CaseParticipantType.CLIENT ? "bg-violet-50 border-violet-300 text-violet-700" : "border-slate-200 text-slate-500 hover:border-slate-300"}`}
+              >
+                {t("Client")}
+              </button>
+            </div>
+          )}
 
           {inviteError && (
             <div className="flex items-start gap-2 p-2.5 bg-red-50 border border-red-100 rounded-md text-xs text-red-600">
@@ -270,13 +311,18 @@ export const CaseParticipantCompanySection = ({
         <ul className="space-y-2">
           {participantCompanies.map((p) => (
             <li key={p.companyId} className="flex items-center justify-between border border-slate-100 rounded-md p-3 bg-slate-50/30">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <span className="text-xs font-semibold text-slate-800 block truncate">{p.companyName ?? p.companyId}</span>
                 <span className="text-[10px] text-slate-400 font-mono block truncate mt-0.5">{p.companyId}</span>
               </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap ml-3 ${PARTICIPANT_STATUS_STYLES[p.status]}`}>
-                {t(PARTICIPANT_STATUS_KEY[p.status])}
-              </span>
+              <div className="flex items-center gap-1.5 ml-3 flex-shrink-0">
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${PARTICIPANT_TYPE_STYLES[p.participantType]}`}>
+                  {t(p.participantType === CaseParticipantType.CLIENT ? "Client" : "Collaborator")}
+                </span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${PARTICIPANT_STATUS_STYLES[p.status]}`}>
+                  {t(PARTICIPANT_STATUS_KEY[p.status])}
+                </span>
+              </div>
             </li>
           ))}
         </ul>

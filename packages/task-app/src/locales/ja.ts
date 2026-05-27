@@ -96,6 +96,7 @@ const ja = {
   "No cases (PROJECT)": "プロジェクト案件はありません。",
   "No results matching filters": "フィルターに一致する案件はありません。",
   "Reset filters": "フィルターをリセット",
+  "Show all": "すべて表示",
   "My Cases description": "自分が作成・担当する案件（案件 = 業務依頼・協業単位）",
   "Open Cases description": "権限範囲内で担当希望できる公開案件",
   "Org Cases description": "組織・部署・チームへ向けた案件",
@@ -117,6 +118,19 @@ const ja = {
   "Active (status)": "参加中",
   "Rejected (status)": "拒否",
   "Removed (status)": "削除",
+  "Received Invitations": "受信",
+  "Sent Invitations": "担当案件",
+  "Partner Companies": "取引先",
+  "No sent invitations.": "担当案件の招待はまだありません。",
+  "No collaboration history.": "協業履歴はまだありません。",
+  "Search by company name": "会社名で検索...",
+  "All statuses": "すべて",
+  "Active cases": "進行中の案件",
+  "Latest case": "最新案件",
+  "No results found.": "該当する結果がありません。",
+  "Failed to load sent invitations.": "担当案件の招待の読み込みに失敗しました。",
+  "Partner": "取引先",
+  "cases": "件",
 
   // Profile
   "Profile Settings": "プロフィール設定",
@@ -180,6 +194,8 @@ const ja = {
   "External Company Invited": "外部会社招待",
   "External Company Accepted": "外部会社参加承認",
   "External Company Rejected": "外部会社参加拒否",
+  "Client Review Approved": "クライアント承認",
+  "Client Review Rejected": "クライアント却下",
 
   // Sub-cases
   "Sub-cases": "子案件",
@@ -190,6 +206,10 @@ const ja = {
 
   // Participant companies
   "Participant Companies": "参加会社",
+  "Collaborator": "コラボレーター",
+  "Client": "クライアント",
+  "Client Review": "クライアントレビュー",
+  "Failed to submit client review.": "クライアントレビューの送信に失敗しました。",
   "Invite": "招待",
   "Company Search": "会社検索",
   "Email Invitation": "メール招待",
@@ -248,6 +268,10 @@ const ja = {
   "Description": "詳細内容",
   "No description": "内容なし",
   "Update Status": "ステータス更新",
+  "Progress": "進捗",
+  "complete": "完了",
+  "Copy case ID": "案件IDをコピー",
+  "Go to parent case": "親案件へ移動",
   "Case Specs": "案件仕様",
   "Due Date": "期限",
   "Created At": "作成日時",
@@ -281,6 +305,17 @@ const ja = {
   "Deletes this case and all sub-cases, tasks, and history permanently." : "この案件とすべての子案件、タスク、履歴を完全に削除します。",
   "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone." : "これにより、この案件とすべての子案件、タスク、コメント、および履歴が完全に削除されます。この操作は元に戻せません。",
   
+  // EditCaseModal
+  "Edit Case": "案件を編集",
+  "Edit case title *": "タイトル *",
+  "Edit case description": "説明",
+  "Edit case dueDate": "期限",
+  "Case Updated": "案件を更新しました",
+  "Failed to update case. Please try again.": "案件の更新に失敗しました。再度お試しください。",
+  "Overdue": "期限超過",
+  "Due soon": "期限間近",
+  "Sub-case": "子案件",
+
   // CreateCaseModal
   "Create Project": "プロジェクト作成",
   "Create Standard Case": "通常案件作成",
@@ -444,6 +479,26 @@ const ja = {
   "Enter your first name.": "名を入力してください。",
   "Enter confirm password.": "確認用パスワードを入力してください。",
   "Enter a 6-digit verification code.": "6桁の認証コードを入力してください。",
+
+  // File sharing
+  "Files": "ファイル",
+  "Upload File": "ファイルをアップロード",
+  "No files uploaded yet.": "まだファイルがありません。",
+  "Download": "ダウンロード",
+  "Delete File": "ファイルを削除",
+  "Are you sure you want to delete this file?": "このファイルを削除してもよろしいですか？",
+  "Failed to upload file.": "ファイルのアップロードに失敗しました。",
+  "Failed to load files.": "ファイルの読み込みに失敗しました。",
+  "Failed to download file.": "ファイルのダウンロードに失敗しました。",
+  "Failed to delete file.": "ファイルの削除に失敗しました。",
+  "File Uploaded": "ファイルをアップロード",
+  "File Deleted": "ファイルを削除",
+  "Notifications": "通知",
+  "No notifications.": "通知はありません。",
+  "Quick templates:": "クイックテンプレート:",
+  "template title REQUEST": "【依頼】",
+  "template title STANDARD": "【案件】",
+  "template title PROJECT": "【プロジェクト】",
 } as const;
 
 export default ja;

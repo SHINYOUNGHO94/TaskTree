@@ -2,6 +2,7 @@ import React from 'react';
 import { LogOut, Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { changeUILanguage, SupportedLang, getStoredLang } from '../../locales';
+import { NotificationBell } from './NotificationBell';
 
 interface DashboardHeaderProps {
   userName?: string;
@@ -46,6 +47,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ userName = "Gu
       </div>
 
       <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        <NotificationBell />
         {/* Language switcher */}
         <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
           {LANG_OPTIONS.map(({ code, label }) => (

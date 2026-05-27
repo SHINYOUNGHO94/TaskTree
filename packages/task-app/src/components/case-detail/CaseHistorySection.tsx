@@ -8,6 +8,7 @@ import { resolveDisplayName } from "../dashboard/caseLabels";
 const HISTORY_ACTION_KEY: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.CASE_CREATED]: "Case Created",
   [CaseHistoryAction.STATUS_CHANGED]: "Status Changed",
+  [CaseHistoryAction.CASE_UPDATED]: "Case Updated",
   [CaseHistoryAction.TASK_CREATED]: "Task Added",
   [CaseHistoryAction.TASK_UPDATED]: "Task Updated",
   [CaseHistoryAction.TASK_STATUS_CHANGED]: "Task Status Changed",
@@ -20,6 +21,10 @@ const HISTORY_ACTION_KEY: Record<CaseHistoryAction, string> = {
   [CaseHistoryAction.PARTICIPANT_COMPANY_INVITED]: "External Company Invited",
   [CaseHistoryAction.PARTICIPANT_COMPANY_ACCEPTED]: "External Company Accepted",
   [CaseHistoryAction.PARTICIPANT_COMPANY_REJECTED]: "External Company Rejected",
+  [CaseHistoryAction.CLIENT_REVIEW_APPROVED]: "Client Review Approved",
+  [CaseHistoryAction.CLIENT_REVIEW_REJECTED]: "Client Review Rejected",
+  [CaseHistoryAction.FILE_UPLOADED]: "File Uploaded",
+  [CaseHistoryAction.FILE_DELETED]: "File Deleted",
 };
 
 const ErrorAlert = ({ message }: { message: string }) => (

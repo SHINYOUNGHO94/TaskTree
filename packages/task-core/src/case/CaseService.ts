@@ -3,6 +3,9 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import {
   CaseClaimRequest,
   CaseComment,
+  CaseFile,
+  ClientReviewCaseInput,
+  ConfirmCaseFileUploadInput,
   CompanySearchResult,
   EmailInvitation,
   InviteCompanyByEmailInput,
@@ -15,6 +18,11 @@ import {
   CreateCaseTaskInput,
   CreateChildCaseInput,
   CreateRootCaseInput,
+  GetCaseFileUploadUrlInput,
+  GetCaseFileUploadUrlOutput,
+  GetUploadPresignedUrlInput,
+  GetUploadPresignedUrlOutput,
+  GetReadPresignedUrlOutput,
   InviteParticipantCompanyInput,
   ParticipantCompanyInvitation,
   UpdateCaseClaimRequestInput,
@@ -395,12 +403,14 @@ export const CaseService = {
       const { tokens } = await fetchAuthSession();
       const idToken = tokens?.idToken?.toString();
 
+      const body: Record<string, string> = { companyId: input.companyId };
+      if (input.participantType) body.participantType = input.participantType;
       const restOperation = post({
         apiName: 'TaskApi',
         path: `cases/${caseId}/participant-companies`,
         options: {
           headers: { Authorization: idToken || '' },
-          body: { companyId: input.companyId },
+          body,
         },
       });
       const response = await restOperation.response;
@@ -427,6 +437,52 @@ export const CaseService = {
       return await body.json() as unknown as ParticipantCompanyInvitation[];
     } catch (error) {
       console.error('Error fetching participant company invitations:', error);
+      throw error;
+    }
+  },
+
+  getSentParticipantCompanyInvitations: async (): Promise<ParticipantCompanyInvitation[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: 'cases/participant-company-sent-invitations',
+        options: {
+          headers: { Authorization: idToken || '' },
+        },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as ParticipantCompanyInvitation[];
+    } catch (error) {
+      console.error('Error fetching sent participant company invitations:', error);
+      throw error;
+    }
+  },
+
+  clientReviewCase: async (
+    caseId: string,
+    input: ClientReviewCaseInput,
+  ): Promise<{ caseId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const body: Record<string, string> = { action: input.action };
+      if (input.reason) body.reason = input.reason;
+      const restOperation = put({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/client-review`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body,
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { caseId: string };
+    } catch (error) {
+      console.error('Error submitting client review:', error);
       throw error;
     }
   },
@@ -483,6 +539,43 @@ export const CaseService = {
       await restOperation.response;
     } catch (error) {
       console.error('Error updating case task:', error);
+      throw error;
+    }
+  },
+
+  updateCase: async (
+    caseId: string,
+    input: {
+      title?: string;
+      description?: string;
+      descriptionFormat?: "plain" | "tiptap_json";
+      descriptionText?: string;
+      dueDate?: string | null;
+    },
+  ): Promise<{ caseId: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+
+      const body: Record<string, string | null> = {};
+      if (input.title !== undefined) body.title = input.title;
+      if (input.description !== undefined) body.description = input.description;
+      if (input.descriptionFormat !== undefined) body.descriptionFormat = input.descriptionFormat;
+      if (input.descriptionText !== undefined) body.descriptionText = input.descriptionText;
+      if (input.dueDate !== undefined) body.dueDate = input.dueDate ?? null;
+
+      const restOperation = put({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body,
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as { caseId: string };
+    } catch (error) {
+      console.error('Error updating case:', error);
       throw error;
     }
   },
@@ -604,6 +697,137 @@ export const CaseService = {
       return await body.json() as unknown as CompanySearchResult[];
     } catch (error) {
       console.error('Error searching companies:', error);
+      throw error;
+    }
+  },
+
+  getUploadPresignedUrl: async (input: GetUploadPresignedUrlInput): Promise<GetUploadPresignedUrlOutput> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+    const restOperation = post({
+      apiName: 'TaskApi',
+      path: 'upload/presigned-url',
+      options: {
+        headers: { Authorization: idToken || '' },
+        body: { ...input },
+      },
+    });
+    const { body } = await restOperation.response;
+    return await body.json() as unknown as GetUploadPresignedUrlOutput;
+  },
+
+  getReadPresignedUrl: async (objectKey: string): Promise<GetReadPresignedUrlOutput> => {
+    const { tokens } = await fetchAuthSession();
+    const idToken = tokens?.idToken?.toString();
+    const restOperation = get({
+      apiName: 'TaskApi',
+      path: `upload/read-url?key=${encodeURIComponent(objectKey)}`,
+      options: { headers: { Authorization: idToken || '' } },
+    });
+    const { body } = await restOperation.response;
+    return await body.json() as unknown as GetReadPresignedUrlOutput;
+  },
+
+  getCaseFiles: async (caseId: string): Promise<CaseFile[]> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files`,
+        options: { headers: { Authorization: idToken || '' } },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as CaseFile[];
+    } catch (error) {
+      console.error('Error fetching case files:', error);
+      throw error;
+    }
+  },
+
+  getCaseFileUploadUrl: async (
+    caseId: string,
+    input: GetCaseFileUploadUrlInput,
+  ): Promise<GetCaseFileUploadUrlOutput> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files/upload-url`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body: { fileName: input.fileName, contentType: input.contentType, fileSize: input.fileSize },
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as GetCaseFileUploadUrlOutput;
+    } catch (error) {
+      console.error('Error getting file upload URL:', error);
+      throw error;
+    }
+  },
+
+  confirmCaseFileUpload: async (
+    caseId: string,
+    input: ConfirmCaseFileUploadInput,
+  ): Promise<CaseFile> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = post({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files`,
+        options: {
+          headers: { Authorization: idToken || '' },
+          body: {
+            fileId: input.fileId,
+            fileName: input.fileName,
+            contentType: input.contentType,
+            fileSize: input.fileSize,
+          },
+        },
+      });
+      const response = await restOperation.response;
+      return await response.body.json() as unknown as CaseFile;
+    } catch (error) {
+      console.error('Error confirming file upload:', error);
+      throw error;
+    }
+  },
+
+  getCaseFileDownloadUrl: async (
+    caseId: string,
+    fileId: string,
+  ): Promise<{ downloadUrl: string }> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = get({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files/${fileId}/download-url`,
+        options: { headers: { Authorization: idToken || '' } },
+      });
+      const { body } = await restOperation.response;
+      return await body.json() as unknown as { downloadUrl: string };
+    } catch (error) {
+      console.error('Error getting file download URL:', error);
+      throw error;
+    }
+  },
+
+  deleteCaseFile: async (caseId: string, fileId: string): Promise<void> => {
+    try {
+      const { tokens } = await fetchAuthSession();
+      const idToken = tokens?.idToken?.toString();
+      const restOperation = del({
+        apiName: 'TaskApi',
+        path: `cases/${caseId}/files/${fileId}`,
+        options: { headers: { Authorization: idToken || '' } },
+      });
+      await restOperation.response;
+    } catch (error) {
+      console.error('Error deleting case file:', error);
       throw error;
     }
   },

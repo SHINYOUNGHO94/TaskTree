@@ -20,6 +20,7 @@ import {
   UserService,
 } from '@task/core';
 import { CASE_DELIVERY_TYPE_LABELS, CASE_TYPE_LABELS, USER_ROLE_LABELS } from './caseLabels';
+import { RichEditor, type RichEditorOutput } from '../editor/RichEditor';
 
 interface CreateCaseModalProps {
   isOpen: boolean;
@@ -31,7 +32,6 @@ interface CreateCaseModalProps {
 
 interface FormValues {
   title: string;
-  description: string;
   dueDate: string;
   caseType: CaseType;
 }
@@ -68,6 +68,50 @@ const ALLOWED_TARGET_SCOPES_BY_ROLE: Record<UserRole, CaseTargetScope[]> = {
   [UserRole.TEAM_ADMIN]: [CaseTargetScope.TEAM, CaseTargetScope.USER],
   [UserRole.USER]: [CaseTargetScope.USER],
   [UserRole.GUEST]: [CaseTargetScope.USER],
+};
+
+const REQUEST_TEMPLATE_JSON = JSON.stringify({
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Request Details' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Expected Outcome' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Deadline / Priority' }] },
+    { type: 'paragraph' },
+  ],
+});
+
+const STANDARD_TEMPLATE_JSON = JSON.stringify({
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Background' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Scope' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Expected Outcome' }] },
+    { type: 'paragraph' },
+  ],
+});
+
+const PROJECT_TEMPLATE_JSON = JSON.stringify({
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Overview' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Goals' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Schedule' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Team' }] },
+    { type: 'paragraph' },
+  ],
+});
+
+const TEMPLATE_TEXT: Record<CaseType, string> = {
+  [CaseType.REQUEST]: 'Request Details\nExpected Outcome\nDeadline / Priority',
+  [CaseType.STANDARD]: 'Background\nScope\nExpected Outcome',
+  [CaseType.PROJECT]: 'Overview\nGoals\nSchedule\nTeam',
 };
 
 const SCOPE_LABELS: Record<CaseTargetScope, string> = {
@@ -110,11 +154,11 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
       title: '',
-      description: '',
       dueDate: '',
       caseType: CaseType.REQUEST,
     },
@@ -149,6 +193,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   // Modal result
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [succeeded, setSucceeded] = useState(false);
+  const [richDesc, setRichDesc] = useState<RichEditorOutput>({ description: '', descriptionFormat: 'tiptap_json', descriptionText: '' });
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
 
   // Org data fetch
   const fetchOrgData = useCallback(async () => {
@@ -414,9 +461,12 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleClose = () => {
-    reset({ title: '', description: '', dueDate: '', caseType: CaseType.REQUEST });
+    reset({ title: '', dueDate: '', caseType: CaseType.REQUEST });
     setSubmitError(null);
     setSucceeded(false);
+    setRichDesc({ description: '', descriptionFormat: 'tiptap_json', descriptionText: '' });
+    setDescriptionError(null);
+    setEditorKey((k) => k + 1);
     setDeliveryType(CaseDeliveryType.DIRECT);
     setTargetScope(getDefaultScope(userRole));
     setRequiredRole(UserRole.USER);
@@ -427,8 +477,33 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     onClose();
   };
 
+  const applyTemplate = useCallback((ct: CaseType) => {
+    const titleMap: Record<CaseType, string> = {
+      [CaseType.REQUEST]: t('template title REQUEST'),
+      [CaseType.STANDARD]: t('template title STANDARD'),
+      [CaseType.PROJECT]: t('template title PROJECT'),
+    };
+    const jsonMap: Record<CaseType, string> = {
+      [CaseType.REQUEST]: REQUEST_TEMPLATE_JSON,
+      [CaseType.STANDARD]: STANDARD_TEMPLATE_JSON,
+      [CaseType.PROJECT]: PROJECT_TEMPLATE_JSON,
+    };
+    setValue('caseType', ct);
+    setValue('title', titleMap[ct]);
+    const desc = jsonMap[ct];
+    setRichDesc({ description: desc, descriptionFormat: 'tiptap_json', descriptionText: TEMPLATE_TEXT[ct] });
+    setDescriptionError(null);
+    setEditorKey((k) => k + 1);
+  }, [t, setValue]);
+
   const onSubmit = async (data: FormValues) => {
     setSubmitError(null);
+    setDescriptionError(null);
+
+    if (!richDesc.descriptionText.trim()) {
+      setDescriptionError(t('Please enter a description.'));
+      return;
+    }
 
     const { scope: submitScope, scopeId: submitScopeId } = effectiveSubmitScope;
 
@@ -439,7 +514,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
 
     const input: CreateRootCaseInput = {
       title: data.title.trim(),
-      description: data.description.trim(),
+      description: richDesc.description,
+      descriptionFormat: richDesc.descriptionFormat,
+      descriptionText: richDesc.descriptionText,
       caseType: data.caseType,
       deliveryType,
       targetScope: submitScope,
@@ -561,6 +638,27 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                   </div>
                 </div>
 
+                {/* ── Quick templates ── */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Quick templates:')}</span>
+                  {([CaseType.REQUEST, CaseType.STANDARD, CaseType.PROJECT] as CaseType[]).map((ct) => (
+                    <button
+                      key={ct}
+                      type="button"
+                      onClick={() => applyTemplate(ct)}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                        ct === CaseType.PROJECT
+                          ? 'border-violet-200 text-violet-600 hover:bg-violet-50'
+                          : ct === CaseType.STANDARD
+                          ? 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                          : 'border-amber-200 text-amber-600 hover:bg-amber-50'
+                      }`}
+                    >
+                      {t(CASE_TYPE_LABELS[ct])}
+                    </button>
+                  ))}
+                </div>
+
                 {/* ── Title ── */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700">{t('Title')}</label>
@@ -580,16 +678,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 {/* ── Description ── */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700">{t('Content')}</label>
-                  <textarea
-                    {...register('description', {
-                      required: t('Please enter a description.'),
-                      validate: (v) => v.trim().length > 0 || t('Please enter a description.'),
-                    })}
-                    placeholder={t('Enter case details...')}
-                    className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors h-24 resize-none bg-white placeholder:text-slate-400"
+                  <RichEditor
+                    key={editorKey}
+                    description={richDesc.description}
+                    descriptionFormat={richDesc.descriptionFormat}
+                    onChange={(output) => { setRichDesc(output); setDescriptionError(null); }}
                   />
-                  {errors.description && (
-                    <p className="text-xs text-red-600">{errors.description.message}</p>
+                  {descriptionError && (
+                    <p className="text-xs text-red-600">{descriptionError}</p>
                   )}
                 </div>
 

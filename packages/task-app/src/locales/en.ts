@@ -96,6 +96,7 @@ const en = {
   "No cases (PROJECT)": "No project cases.",
   "No results matching filters": "No cases match the current filters.",
   "Reset filters": "Reset filters",
+  "Show all": "Show all",
   "My Cases description": "Cases you created or own",
   "Open Cases description": "Open cases within your permission scope",
   "Org Cases description": "Cases targeted to org, dept, or team",
@@ -117,6 +118,19 @@ const en = {
   "Active (status)": "Active",
   "Rejected (status)": "Rejected",
   "Removed (status)": "Removed",
+  "Received Invitations": "Received",
+  "Sent Invitations": "Managed",
+  "Partner Companies": "Partners",
+  "No sent invitations.": "No invitations on your managed cases yet.",
+  "No collaboration history.": "No collaboration history yet.",
+  "Search by company name": "Search by company name...",
+  "All statuses": "All",
+  "Active cases": "Active cases",
+  "Latest case": "Latest case",
+  "No results found.": "No results found.",
+  "Failed to load sent invitations.": "Failed to load invitations on your managed cases.",
+  "Partner": "Partner",
+  "cases": "cases",
 
   // Profile
   "Profile Settings": "Profile Settings",
@@ -180,6 +194,8 @@ const en = {
   "External Company Invited": "External Company Invited",
   "External Company Accepted": "External Company Accepted",
   "External Company Rejected": "External Company Rejected",
+  "Client Review Approved": "Client Review Approved",
+  "Client Review Rejected": "Client Review Rejected",
 
   // Sub-cases
   "Sub-cases": "Sub-cases",
@@ -190,6 +206,10 @@ const en = {
 
   // Participant companies
   "Participant Companies": "Participant Companies",
+  "Collaborator": "Collaborator",
+  "Client": "Client",
+  "Client Review": "Client Review",
+  "Failed to submit client review.": "Failed to submit client review.",
   "Invite": "Invite",
   "Company Search": "Company Search",
   "Email Invitation": "Email Invitation",
@@ -248,6 +268,10 @@ const en = {
   "Description": "Description",
   "No description": "No description",
   "Update Status": "Update Status",
+  "Progress": "Progress",
+  "complete": "complete",
+  "Copy case ID": "Copy case ID",
+  "Go to parent case": "Go to parent case",
   "Case Specs": "Case Details",
   "Due Date": "Due Date",
   "Created At": "Created At",
@@ -280,6 +304,17 @@ const en = {
   "Delete Case" : "Delete Case",
   "Deletes this case and all sub-cases, tasks, and history permanently." : "Deletes this case and all sub-cases, tasks, and history permanently.",
   "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone." : "This will permanently delete the case and all sub-cases, tasks, comments, and history. This action cannot be undone.",
+
+  // EditCaseModal
+  "Edit Case": "Edit Case",
+  "Edit case title *": "Title *",
+  "Edit case description": "Description",
+  "Edit case dueDate": "Due Date",
+  "Case Updated": "Case updated",
+  "Failed to update case. Please try again.": "Failed to update case. Please try again.",
+  "Overdue": "Overdue",
+  "Due soon": "Due soon",
+  "Sub-case": "Sub-case",
 
   // CreateCaseModal
   "Create Project": "Create Project",
@@ -444,6 +479,26 @@ const en = {
   "Enter your first name.": "Enter your first name.",
   "Enter confirm password.": "Enter confirm password.",
   "Enter a 6-digit verification code.": "Enter a 6-digit verification code.",
+
+  // File sharing
+  "Files": "Files",
+  "Upload File": "Upload File",
+  "No files uploaded yet.": "No files uploaded yet.",
+  "Download": "Download",
+  "Delete File": "Delete File",
+  "Are you sure you want to delete this file?": "Are you sure you want to delete this file?",
+  "Failed to upload file.": "Failed to upload file.",
+  "Failed to load files.": "Failed to load files.",
+  "Failed to download file.": "Failed to download file.",
+  "Failed to delete file.": "Failed to delete file.",
+  "File Uploaded": "File Uploaded",
+  "File Deleted": "File Deleted",
+  "Notifications": "Notifications",
+  "No notifications.": "No notifications.",
+  "Quick templates:": "Quick templates:",
+  "template title REQUEST": "[Request] ",
+  "template title STANDARD": "[Case] ",
+  "template title PROJECT": "[Project] ",
 } as const;
 
 export default en;
