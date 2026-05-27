@@ -1140,6 +1140,127 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 
 ---
 
+## v2.1.0 - モバイル対応・案件フロー分化・多言語拡充
+
+> モバイル画面への完全対応、REQUEST / STANDARD / PROJECT 三種の案件タイプの UI・権限・承認フロー分化、ログイン/会員登録/認証画面の多言語対応修正、中国語（簡体字）追加を一本化したバージョン。
+
+### モバイルレスポンシブ対応（全ダッシュボード画面）
+
+- サイドバーをスライドインドロワーに変更し、ハンバーガーボタン（モバイル専用）でトグル
+- モバイル用のバックドロップオーバーレイを追加し、タップで閉じられるようにした
+- ヘッダーをレスポンシブ化：ハンバーガーメニュー、小画面ではアイコン表示のみのログアウトボタン
+- タブバーのオーバーフローを `overflow-x-auto` スクロール対応に修正
+- リストビューのテーブルに `overflow-x-auto` と `min-width` を追加し、横スクロール対応
+- 取引先履歴テーブルのオーバーフロー修正
+- タスク行の構造を変更：ステータス・操作ボタンをモバイルでは 2 行目に折り返すよう改善
+- 全セクションのパディングを `p-6` → `p-4 md:p-6` に変換
+- 子案件作成フォームのグリッドを `grid-cols-1 sm:grid-cols-2` に変更（モバイルで 1 カラム）
+- 担当希望カードをモバイルで縦積みレイアウトに修正
+
+デスクトップレイアウトは変更なし。全変更は Tailwind `md:` ブレークポイント（768px）を使用。
+
+**API / デプロイ影響:** なし。フロントエンドのみ変更。
+
+---
+
+### 案件タイプ別フロー分化（REQUEST / STANDARD / PROJECT）
+
+v2.0.0 では三種の案件タイプ（REQUEST / STANDARD / PROJECT）が DynamoDB 上は別フィールドで区別されているものの、UI・権限・作成フロー・承認フローはすべて同一だった。本 Task では各タイプの目的・制約・承認フローを実装レベルで分化した。
+
+**各タイプの目的と制約:**
+
+| タイプ | 目的 | 子案件 | 送信先制限 |
+|---|---|---|---|
+| REQUEST（依頼） | チームリーダーが担当者に割り当てる小規模依頼 | なし | TEAM / USER のみ |
+| STANDARD（通常案件） | 部署レベルの中規模案件 | REQUEST 子案件を作成可 | 制限なし |
+| PROJECT（プロジェクト） | 大型クライアント案件 | STANDARD 子案件を作成可 | 制限なし |
+
+**案件作成 UI 分化（`CreateCaseModal`）:**
+
+- REQUEST 選択時は `targetScope` を TEAM / USER のみに制限し、COMPANY / DIVISION / DEPARTMENT スコープを選択不可に
+- REQUEST + TEAM の組み合わせでは `deliveryType` を OPEN に自動設定
+- タイプを切り替えた際に `targetScope` が許可外の場合は自動でリセット
+
+**案件詳細 UI 分化（`/dashboard/cases/[id]/page.tsx`）:**
+
+- REQUEST 詳細画面では「子案件」セクションを非表示（REQUEST は子案件を持てない）
+- REQUEST 詳細画面では「参加会社（取引先）」セクションを非表示
+- OPEN 案件の「担当申請」セクションは全タイプで維持
+
+**承認フロー実装（`CaseChildCasesSection` / `CaseTasksSection`）:**
+
+- 子案件または作業が `REVIEW_REQUESTED` 状態のとき、対象行に「承認」ボタンを表示
+- 承認ボタン表示条件：子案件の作成者、または組織階層の上位権限ユーザー
+  - `COMPANY_ADMIN`: 同社全案件を承認可
+  - `DIVISION_ADMIN`: 自事業部配下の案件を承認可
+  - `DEPT_ADMIN`: 自部署配下の案件を承認可
+  - `TEAM_ADMIN`: 自チーム配下の案件を承認可
+- 承認ボタン押下で `CaseService.updateCaseStatus(childCaseId, { status: COMPLETED })` を呼び出し
+- 作業（CaseTask）の承認ボタンも同様に `canApproveByOrgRole` を適用し、上位権限ユーザーも承認可能
+- `caseDetailPermissions.ts` に `canApproveByOrgRole` 関数を追加し、ChildCase / CaseTask 双方で共有
+
+**バックエンド自動伝播（`updateCase` Lambda）:**
+
+- 案件を `COMPLETED` に変更する前に、配下の全子案件が `COMPLETED` または `CANCELED` であることを検証（未完了の子案件が残る場合は 400 を返す）
+- 子案件が `COMPLETED` になったとき、兄弟案件が全て `COMPLETED` / `CANCELED` であれば親案件を自動で `REVIEW_REQUESTED` に変更
+- 自動伝播失敗はコンソールエラーのみで本処理は失敗させない（非同期継続）
+- 伝播時は `CaseHistory` に `"Status auto-changed to REVIEW_REQUESTED: all sub-cases completed"` を自動記録
+
+**デプロイ影響:**
+
+- `task-api` の `updateCase` Lambda コード変更あり → CDK deploy 必要
+- 新規 Lambda / API route / DynamoDB GSI: なし
+- IAM 変更なし
+
+**検証:**
+
+- `yarn.cmd type-check:core` — pass
+- `yarn.cmd type-check:api` — pass
+- `yarn.cmd workspace @task/app lint` — pass
+- `yarn.cmd workspace @task/app build` — pass
+
+---
+
+### 認証画面の多言語対応修正と中国語（簡体字）追加
+
+**問題:** ログイン・会員登録・認証コード入力画面に言語スイッチャー UI は存在したが、言語切替後もテキストが変わらなかった。原因はこれらの画面が `useTranslation("ui")` を使っておらず、すべての文字列がハードコードされていたため。
+
+**修正内容:**
+
+- `app/page.tsx`（ログイン）、`app/signup/page.tsx`（会員登録）、`app/verify/page.tsx`（認証コード）に `useTranslation("ui")` を追加
+- すべての JSX テキストを `t("English key")` パターンに変更
+- Zod バリデーションメッセージを英語キー文字列に変更し、描画時に `t(errors.field.message!)` で翻訳
+- エラー state も英語キーで保持し、描画時に `t(error)` で翻訳
+- `verify/page.tsx` の i18next interpolation に JSX 要素を渡していたバグを修正（`{ email: <span> }` → `{ email }` 文字列）
+- `locales/en.ts`、`locales/ja.ts`、`locales/ko.ts` に Auth 用キーを追加（Login / Signup / Verify / Zod バリデーション各セクション）
+
+**中国語（簡体字）追加:**
+
+- `locales/zh.ts` を新規作成（全キー簡体字翻訳）
+- `locales/index.ts` に `"zh"` を SUPPORTED に追加、bundle 登録
+- `app/page.tsx`、`app/signup/page.tsx`、`app/verify/page.tsx` の LANGS 配列に `{ code: "zh", label: "中" }` 追加
+- `DashboardHeader.tsx` の LANG_OPTIONS に `{ code: 'zh', label: '中' }` 追加
+
+**変更ファイル:**
+
+- `packages/task-app/src/locales/zh.ts` — 新規
+- `packages/task-app/src/locales/index.ts` — zh 追加
+- `packages/task-app/src/locales/en.ts` — Auth キー追加
+- `packages/task-app/src/locales/ja.ts` — Auth キー追加
+- `packages/task-app/src/locales/ko.ts` — Auth キー追加
+- `packages/task-app/src/app/page.tsx` — useTranslation 追加・zh スイッチャー追加
+- `packages/task-app/src/app/signup/page.tsx` — useTranslation 追加・zh スイッチャー追加
+- `packages/task-app/src/app/verify/page.tsx` — useTranslation 追加・interpolation バグ修正・zh スイッチャー追加
+- `packages/task-app/src/components/dashboard/DashboardHeader.tsx` — zh スイッチャー追加
+
+**API / デプロイ影響:** なし。フロントエンドのみ変更。
+
+**検証:**
+
+- `yarn.cmd workspace @task/app tsc --noEmit` — pass
+
+---
+
 ## v2.2.0 - Dashboard 操作性改善・状態集中表示
 
 > v2.2.0 の開始 Task として、Dashboard のタブ UI と状態確認フローを改善した。状態 pill による集中表示、カード表示の情報強化、権限付きの案件編集を追加し、日常運用で「見たい状態の案件だけをすばやく確認・更新する」導線を整えた。
@@ -1384,124 +1505,36 @@ OPEN 案件への外部会社参加フローを完成させる。既存の `invi
 
 ---
 
-## v2.1.0 - モバイル対応・案件フロー分化・多言語拡充
+### Task E-2: CLIENT 参加者タイプと取引先承認フロー
 
-> モバイル画面への完全対応、REQUEST / STANDARD / PROJECT 三種の案件タイプの UI・権限・承認フロー分化、ログイン/会員登録/認証画面の多言語対応修正、中国語（簡体字）追加を一本化したバージョン。
+> PROJECT 案件の最終確認者として取引先を招待できるよう、参加会社に CLIENT タイプを追加した。CLIENT は作業者ではなく、PROJECT の進捗・履歴・コメントを確認し、`REVIEW_REQUESTED` 状態の PROJECT を承認または却下する役割とした。
 
-### モバイルレスポンシブ対応（全ダッシュボード画面）
+**主な実装:**
 
-- サイドバーをスライドインドロワーに変更し、ハンバーガーボタン（モバイル専用）でトグル
-- モバイル用のバックドロップオーバーレイを追加し、タップで閉じられるようにした
-- ヘッダーをレスポンシブ化：ハンバーガーメニュー、小画面ではアイコン表示のみのログアウトボタン
-- タブバーのオーバーフローを `overflow-x-auto` スクロール対応に修正
-- リストビューのテーブルに `overflow-x-auto` と `min-width` を追加し、横スクロール対応
-- 取引先履歴テーブルのオーバーフロー修正
-- タスク行の構造を変更：ステータス・操作ボタンをモバイルでは 2 行目に折り返すよう改善
-- 全セクションのパディングを `p-6` → `p-4 md:p-6` に変換
-- 子案件作成フォームのグリッドを `grid-cols-1 sm:grid-cols-2` に変更（モバイルで 1 カラム）
-- 担当希望カードをモバイルで縦積みレイアウトに修正
+- `CaseParticipantCompany` に `participantType: COLLABORATOR | CLIENT` を追加し、既存レコードは `COLLABORATOR` として扱う後方互換を維持
+- CLIENT 招待は PROJECT 案件のみに制限し、同一会社への CLIENT 招待を拒否
+- `PUT /cases/{id}/client-review` を追加し、CLIENT が `APPROVE` で PROJECT を `COMPLETED`、`REJECT` で `REOPENED` に戻せるようにした
+- CLIENT は PROJECT が `DIRECT` / `OPEN` のどちらでも閲覧でき、PROJECT 配下の child case も親 PROJECT の参加 record で閲覧できるようにした
+- CLIENT には編集・子案件作成・タスク追加を許可せず、コメントと承認/却下に限定
+- 案件詳細画面に CLIENT review panel を追加し、`REVIEW_REQUESTED` 状態で承認/却下ボタンを表示
+- 参加会社一覧 UI に `CLIENT` / `COLLABORATOR` badge を追加
 
-デスクトップレイアウトは変更なし。全変更は Tailwind `md:` ブレークポイント（768px）を使用。
+**レビュー後修正（P1/P2）:**
 
-**API / デプロイ影響:** なし。フロントエンドのみ変更。
+- `getParticipantCompanies` も `canReadCaseAsAnyParticipant()` と PROJECT fallback を使うよう修正し、DIRECT PROJECT の CLIENT が participant list API で 403 になりレビュー UI が表示されない問題を修正
+- DIRECT PROJECT の招待 UI では `CLIENT` を既定選択にし、無効な `COLLABORATOR + DIRECT` 招待を選びにくくした
+- `getParticipantCompanies.test.ts` を追加し、CLIENT が DIRECT PROJECT と PROJECT 配下 child case の participant companies を取得できることを検証
 
----
+**Deployment Impact:**
 
-### 案件タイプ別フロー分化（REQUEST / STANDARD / PROJECT）
-
-v2.0.0 では三種の案件タイプ（REQUEST / STANDARD / PROJECT）が DynamoDB 上は別フィールドで区別されているものの、UI・権限・作成フロー・承認フローはすべて同一だった。本 Task では各タイプの目的・制約・承認フローを実装レベルで分化した。
-
-**各タイプの目的と制約:**
-
-| タイプ | 目的 | 子案件 | 送信先制限 |
-|---|---|---|---|
-| REQUEST（依頼） | チームリーダーが担当者に割り当てる小規模依頼 | なし | TEAM / USER のみ |
-| STANDARD（通常案件） | 部署レベルの中規模案件 | REQUEST 子案件を作成可 | 制限なし |
-| PROJECT（プロジェクト） | 大型クライアント案件 | STANDARD 子案件を作成可 | 制限なし |
-
-**案件作成 UI 分化（`CreateCaseModal`）:**
-
-- REQUEST 選択時は `targetScope` を TEAM / USER のみに制限し、COMPANY / DIVISION / DEPARTMENT スコープを選択不可に
-- REQUEST + TEAM の組み合わせでは `deliveryType` を OPEN に自動設定
-- タイプを切り替えた際に `targetScope` が許可外の場合は自動でリセット
-
-**案件詳細 UI 分化（`/dashboard/cases/[id]/page.tsx`）:**
-
-- REQUEST 詳細画面では「子案件」セクションを非表示（REQUEST は子案件を持てない）
-- REQUEST 詳細画面では「参加会社（取引先）」セクションを非表示
-- OPEN 案件の「担当申請」セクションは全タイプで維持
-
-**承認フロー実装（`CaseChildCasesSection` / `CaseTasksSection`）:**
-
-- 子案件または作業が `REVIEW_REQUESTED` 状態のとき、対象行に「承認」ボタンを表示
-- 承認ボタン表示条件：子案件の作成者、または組織階層の上位権限ユーザー
-  - `COMPANY_ADMIN`: 同社全案件を承認可
-  - `DIVISION_ADMIN`: 自事業部配下の案件を承認可
-  - `DEPT_ADMIN`: 自部署配下の案件を承認可
-  - `TEAM_ADMIN`: 自チーム配下の案件を承認可
-- 承認ボタン押下で `CaseService.updateCaseStatus(childCaseId, { status: COMPLETED })` を呼び出し
-- 作業（CaseTask）の承認ボタンも同様に `canApproveByOrgRole` を適用し、上位権限ユーザーも承認可能
-- `caseDetailPermissions.ts` に `canApproveByOrgRole` 関数を追加し、ChildCase / CaseTask 双方で共有
-
-**バックエンド自動伝播（`updateCase` Lambda）:**
-
-- 案件を `COMPLETED` に変更する前に、配下の全子案件が `COMPLETED` または `CANCELED` であることを検証（未完了の子案件が残る場合は 400 を返す）
-- 子案件が `COMPLETED` になったとき、兄弟案件が全て `COMPLETED` / `CANCELED` であれば親案件を自動で `REVIEW_REQUESTED` に変更
-- 自動伝播失敗はコンソールエラーのみで本処理は失敗させない（非同期継続）
-- 伝播時は `CaseHistory` に `"Status auto-changed to REVIEW_REQUESTED: all sub-cases completed"` を自動記録
-
-**デプロイ影響:**
-
-- `task-api` の `updateCase` Lambda コード変更あり → CDK deploy 必要
-- 新規 Lambda / API route / DynamoDB GSI: なし
-- IAM 変更なし
+- CDK deploy 必要（新規 Lambda + `PUT /cases/{id}/client-review` route）
+- Lambda code deploy 含む
+- DynamoDB migration / GSI 追加なし
 
 **検証:**
 
-- `yarn.cmd type-check:core` — pass
-- `yarn.cmd type-check:api` — pass
-- `yarn.cmd workspace @task/app lint` — pass
-- `yarn.cmd workspace @task/app build` — pass
-
----
-
-### 認証画面の多言語対応修正と中国語（簡体字）追加
-
-**問題:** ログイン・会員登録・認証コード入力画面に言語スイッチャー UI は存在したが、言語切替後もテキストが変わらなかった。原因はこれらの画面が `useTranslation("ui")` を使っておらず、すべての文字列がハードコードされていたため。
-
-**修正内容:**
-
-- `app/page.tsx`（ログイン）、`app/signup/page.tsx`（会員登録）、`app/verify/page.tsx`（認証コード）に `useTranslation("ui")` を追加
-- すべての JSX テキストを `t("English key")` パターンに変更
-- Zod バリデーションメッセージを英語キー文字列に変更し、描画時に `t(errors.field.message!)` で翻訳
-- エラー state も英語キーで保持し、描画時に `t(error)` で翻訳
-- `verify/page.tsx` の i18next interpolation に JSX 要素を渡していたバグを修正（`{ email: <span> }` → `{ email }` 文字列）
-- `locales/en.ts`、`locales/ja.ts`、`locales/ko.ts` に Auth 用キーを追加（Login / Signup / Verify / Zod バリデーション各セクション）
-
-**中国語（簡体字）追加:**
-
-- `locales/zh.ts` を新規作成（全キー簡体字翻訳）
-- `locales/index.ts` に `"zh"` を SUPPORTED に追加、bundle 登録
-- `app/page.tsx`、`app/signup/page.tsx`、`app/verify/page.tsx` の LANGS 配列に `{ code: "zh", label: "中" }` 追加
-- `DashboardHeader.tsx` の LANG_OPTIONS に `{ code: 'zh', label: '中' }` 追加
-
-**変更ファイル:**
-
-- `packages/task-app/src/locales/zh.ts` — 新規
-- `packages/task-app/src/locales/index.ts` — zh 追加
-- `packages/task-app/src/locales/en.ts` — Auth キー追加
-- `packages/task-app/src/locales/ja.ts` — Auth キー追加
-- `packages/task-app/src/locales/ko.ts` — Auth キー追加
-- `packages/task-app/src/app/page.tsx` — useTranslation 追加・zh スイッチャー追加
-- `packages/task-app/src/app/signup/page.tsx` — useTranslation 追加・zh スイッチャー追加
-- `packages/task-app/src/app/verify/page.tsx` — useTranslation 追加・interpolation バグ修正・zh スイッチャー追加
-- `packages/task-app/src/components/dashboard/DashboardHeader.tsx` — zh スイッチャー追加
-
-**API / デプロイ影響:** なし。フロントエンドのみ変更。
-
-**検証:**
-
-- `yarn.cmd workspace @task/app tsc --noEmit` — pass
+- `tsc`: task-api / task-app ともにエラーなし（実施報告）
+- `yarn test:api`: 410 passed（実施報告）
 
 ---
 

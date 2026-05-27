@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseParticipantCompanyStatus, CaseHistoryAction } from "@task/core";
+import { CaseParticipantCompanyStatus, CaseParticipantType, CaseHistoryAction } from "@task/core";
 import { CompanyEmailInvitationRepository } from "@/repositories/companyEmailInvitationRepository";
 import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
@@ -66,6 +66,7 @@ export const createHandler =
         companyId: profile.companyId,
         companyName: myCompany?.name ?? null,
         status: CaseParticipantCompanyStatus.ACTIVE,
+        participantType: CaseParticipantType.COLLABORATOR,
         invitedBy: "email-invitation",
         reviewedBy: userId,
         reviewedAt: now,

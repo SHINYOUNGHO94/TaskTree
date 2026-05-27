@@ -5,6 +5,8 @@ import {
   CaseHistoryAction,
   CaseOwnerType,
   CaseParticipantCompanyStatus,
+  CaseParticipantType,
+  CaseType,
 } from "@task/core";
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
@@ -49,15 +51,22 @@ export const createHandler =
 
       if (typeof body !== "object" || body === null) return invalidRequestBody();
 
-      const allowedFields = new Set(["companyId"]);
+      const allowedFields = new Set(["companyId", "participantType"]);
       if (Object.keys(body).some((key) => !allowedFields.has(key))) {
         return badRequest("Unexpected field in request body");
       }
 
-      const { companyId: targetCompanyId } = body;
+      const { companyId: targetCompanyId, participantType: rawParticipantType } = body;
       if (typeof targetCompanyId !== "string" || !targetCompanyId.trim()) {
         return badRequest("companyId is required");
       }
+
+      const validTypes = [CaseParticipantType.COLLABORATOR, CaseParticipantType.CLIENT] as string[];
+      if (rawParticipantType !== undefined && !validTypes.includes(rawParticipantType as string)) {
+        return badRequest("participantType must be COLLABORATOR or CLIENT");
+      }
+      const participantType: CaseParticipantType =
+        (rawParticipantType as CaseParticipantType | undefined) ?? CaseParticipantType.COLLABORATOR;
 
       const [profile, caseDetail] = await Promise.all([
         deps.userRepo.findByUserId(userId),
@@ -71,8 +80,15 @@ export const createHandler =
         return forbidden("You do not have access to this case");
       }
 
-      if (caseDetail.deliveryType !== CaseDeliveryType.OPEN) {
-        return badRequest("Only OPEN cases can have participant companies");
+      if (participantType === CaseParticipantType.COLLABORATOR) {
+        if (caseDetail.deliveryType !== CaseDeliveryType.OPEN) {
+          return badRequest("COLLABORATOR can only be invited to OPEN cases");
+        }
+      } else {
+        // CLIENT
+        if (caseDetail.caseType !== CaseType.PROJECT) {
+          return badRequest("CLIENT can only be invited to PROJECT cases");
+        }
       }
 
       const isCreator = caseDetail.creatorId === userId;
@@ -109,6 +125,7 @@ export const createHandler =
         companyId: targetCompanyId.trim(),
         companyName: targetCompany.name ?? null,
         status: CaseParticipantCompanyStatus.INVITED,
+        participantType,
         invitedBy: userId,
         reviewedBy: null,
         reviewedAt: null,

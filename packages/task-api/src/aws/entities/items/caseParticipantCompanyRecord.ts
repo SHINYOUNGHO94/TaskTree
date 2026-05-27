@@ -1,4 +1,4 @@
-import { CaseParticipantCompany, CaseParticipantCompanyStatus } from "@task/core";
+import { CaseParticipantCompany, CaseParticipantCompanyStatus, CaseParticipantType } from "@task/core";
 import { DynamoDBRecord } from "./DynamoDBRecord";
 
 export interface CaseParticipantCompanyRecordType extends DynamoDBRecord {
@@ -10,6 +10,7 @@ export interface CaseParticipantCompanyRecordType extends DynamoDBRecord {
   companyId: string;
   companyName?: string;
   status: CaseParticipantCompanyStatus;
+  participantType?: string;
   invitedBy: string;
   reviewedBy?: string;
   reviewedAt?: string;
@@ -38,6 +39,7 @@ const fromEntity = (entity: CaseParticipantCompany): CaseParticipantCompanyRecor
     ownerCompanyId: entity.ownerCompanyId,
     companyId: entity.companyId,
     status: entity.status,
+    participantType: entity.participantType,
     invitedBy: entity.invitedBy,
     at: entity.createdAt,
     update_at: entity.updatedAt,
@@ -57,6 +59,7 @@ const toEntity = (record: CaseParticipantCompanyRecordType): CaseParticipantComp
   companyId: record.companyId,
   companyName: record.companyName ?? null,
   status: record.status,
+  participantType: (record.participantType as CaseParticipantType | undefined) ?? CaseParticipantType.COLLABORATOR,
   invitedBy: record.invitedBy,
   reviewedBy: record.reviewedBy ?? null,
   reviewedAt: record.reviewedAt ?? null,

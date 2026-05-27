@@ -763,6 +763,19 @@ export class TaskInfraStack extends cdk.Stack {
     const sentParticipantCompanyInvitationsResource = casesResource.addResource('participant-company-sent-invitations');
     sentParticipantCompanyInvitationsResource.addMethod('GET', new apigateway.LambdaIntegration(getSentParticipantCompanyInvitationsFn), { authorizer });
 
+    const clientReviewCaseFn = new NodejsFunction(this, 'ClientReviewCaseFunction', {
+      runtime: Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../../task-api/src/aws/handlers/case/clientReviewCase.ts'),
+      handler: 'handler',
+      environment: {
+        TABLE_NAME: database.entities.tableName,
+      },
+    });
+    grantCaseMutation(clientReviewCaseFn, ['dynamodb:PutItem', 'dynamodb:TransactWriteItems']);
+
+    const caseClientReviewResource = caseIdResource.addResource('client-review');
+    caseClientReviewResource.addMethod('PUT', new apigateway.LambdaIntegration(clientReviewCaseFn), { authorizer });
+
     const uploadResource = api.root.addResource('upload');
     const uploadPresignedUrlResource = uploadResource.addResource('presigned-url');
     uploadPresignedUrlResource.addMethod('POST', new apigateway.LambdaIntegration(getUploadPresignedUrlFn), { authorizer });

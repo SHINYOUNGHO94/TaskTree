@@ -3,7 +3,7 @@ import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseCommentRepository } from "@/repositories/caseCommentRepository";
 import { CaseParticipantCompanyRepository } from "@/repositories/caseParticipantCompanyRepository";
 import { UserRepository } from "@/repositories/userRepository";
-import { canReadCase, canReadCaseAsParticipant } from "@/services/casePermissionService";
+import { canReadCase, canReadCaseAsAnyParticipant } from "@/services/casePermissionService";
 import {
   forbidden,
   internalServerError,
@@ -43,11 +43,17 @@ export const createHandler =
           return forbidden("You do not have access to this case");
         }
       } else {
-        const participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
+        let participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
           caseId,
           profile.companyId,
         );
-        if (!canReadCaseAsParticipant(existingCase, participantRecord, profile.companyId)) {
+        if (!participantRecord && existingCase.projectId) {
+          participantRecord = await deps.participantCompanyRepo.findByCaseAndCompany(
+            existingCase.projectId,
+            profile.companyId,
+          );
+        }
+        if (!canReadCaseAsAnyParticipant(existingCase, participantRecord, profile.companyId)) {
           return forbidden("You do not have access to this case");
         }
       }

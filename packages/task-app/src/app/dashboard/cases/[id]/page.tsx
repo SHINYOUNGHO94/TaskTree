@@ -27,6 +27,8 @@ import {
   CaseHistoryEntry,
   CaseOwnerType,
   CaseParticipantCompany,
+  CaseParticipantCompanyStatus,
+  CaseParticipantType,
   CaseService,
   CaseStatus,
   CaseTargetScope,
@@ -186,6 +188,8 @@ const CaseDetailPage = () => {
   const [activeTab, setActiveTab]                     = useState<DetailTab>("tasks");
   const [showEditModal, setShowEditModal]             = useState(false);
   const [copiedId, setCopiedId]                       = useState(false);
+  const [isClientReviewing, setIsClientReviewing]     = useState(false);
+  const [clientReviewError, setClientReviewError]     = useState<string | null>(null);
 
   const fetchCase = useCallback(async () => {
     setIsLoading(true);
@@ -513,6 +517,48 @@ const CaseDetailPage = () => {
     (caseDetail.creatorId === currentUserId ||
       (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === currentUserId));
 
+  const isOwnerCompany = currentProfile?.companyId === caseDetail.companyId;
+  const clientParticipantRecord = isOwnerCompany
+    ? null
+    : participantCompanies.find(
+        (p) =>
+          p.companyId === currentProfile?.companyId &&
+          p.participantType === CaseParticipantType.CLIENT &&
+          p.status === CaseParticipantCompanyStatus.ACTIVE,
+      ) ?? null;
+  const canClientReview =
+    !!clientParticipantRecord &&
+    caseDetail.caseType === CaseType.PROJECT &&
+    caseDetail.status === CaseStatus.REVIEW_REQUESTED;
+
+  const handleClientReview = async (action: "APPROVE" | "REJECT") => {
+    if (action === "REJECT") {
+      const reason = window.prompt(t("Enter rejection reason"));
+      if (!reason?.trim()) return;
+      setIsClientReviewing(true);
+      setClientReviewError(null);
+      try {
+        await CaseService.clientReviewCase(id as string, { action: "REJECT", reason: reason.trim() });
+        await Promise.all([fetchCase(), fetchCaseHistory()]);
+      } catch {
+        setClientReviewError(t("Failed to submit client review."));
+      } finally {
+        setIsClientReviewing(false);
+      }
+      return;
+    }
+    setIsClientReviewing(true);
+    setClientReviewError(null);
+    try {
+      await CaseService.clientReviewCase(id as string, { action: "APPROVE" });
+      await Promise.all([fetchCase(), fetchCaseHistory()]);
+    } catch {
+      setClientReviewError(t("Failed to submit client review."));
+    } finally {
+      setIsClientReviewing(false);
+    }
+  };
+
   const completedTasks = caseTasks.filter((task) => String(task.status) === "DONE").length;
   const totalTasks     = caseTasks.length;
   const taskProgress   = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -740,6 +786,33 @@ const CaseDetailPage = () => {
             </div>
           )}
 
+          {/* CLIENT review panel */}
+          {canClientReview && (
+            <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 shadow-sm">
+              <h3 className="text-xs font-bold text-violet-800 mb-3 flex items-center gap-1.5">
+                <Shield size={12} className="text-violet-600" />
+                {t("Client Review")}
+              </h3>
+              {clientReviewError && <ErrorAlert message={clientReviewError} />}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void handleClientReview("APPROVE")}
+                  disabled={isClientReviewing}
+                  className="flex-1 text-xs font-bold py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t("Approve")}
+                </button>
+                <button
+                  onClick={() => void handleClientReview("REJECT")}
+                  disabled={isClientReviewing}
+                  className="flex-1 text-xs font-bold py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t("Reject")}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Case specs */}
           <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
@@ -880,7 +953,8 @@ const CaseDetailPage = () => {
           </div>
 
           {/* Participant companies */}
-          {caseDetail.deliveryType === CaseDeliveryType.OPEN && caseDetail.caseType !== CaseType.REQUEST && (
+          {(caseDetail.caseType === CaseType.PROJECT ||
+            (caseDetail.deliveryType === CaseDeliveryType.OPEN && caseDetail.caseType !== CaseType.REQUEST)) && (
             <CaseParticipantCompanySection
               caseId={id as string}
               caseDetail={caseDetail}

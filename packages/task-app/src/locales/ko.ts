@@ -194,6 +194,8 @@ const ko = {
   "External Company Invited": "외부 회사 초대",
   "External Company Accepted": "외부 회사 참여 승인",
   "External Company Rejected": "외부 회사 참여 거절",
+  "Client Review Approved": "클라이언트 승인",
+  "Client Review Rejected": "클라이언트 거절",
 
   // Sub-cases
   "Sub-cases": "하위 안건",
@@ -204,6 +206,10 @@ const ko = {
 
   // Participant companies
   "Participant Companies": "참여 회사",
+  "Collaborator": "협업사",
+  "Client": "클라이언트",
+  "Client Review": "클라이언트 리뷰",
+  "Failed to submit client review.": "클라이언트 리뷰 제출에 실패했습니다.",
   "Invite": "초대",
   "Company Search": "회사 검색",
   "Email Invitation": "이메일 초대",
