@@ -52,6 +52,38 @@ export const canReadCase = (
   return false;
 };
 
+export interface CaseEditCaller {
+  companyId: string;
+  divisionId: string;
+  departmentId: string;
+  teamId: string;
+  role: UserRole;
+}
+
+export const canEditCase = (
+  caseDetail: CaseDetail,
+  userId: string,
+  caller: CaseEditCaller,
+): boolean => {
+  if (caller.companyId !== caseDetail.companyId) return false;
+
+  if (caseDetail.creatorId === userId) return true;
+  if (caseDetail.ownerType === CaseOwnerType.USER && caseDetail.ownerId === userId) return true;
+
+  switch (caller.role) {
+    case UserRole.COMPANY_ADMIN:
+      return caller.companyId === caseDetail.companyId;
+    case UserRole.DIVISION_ADMIN:
+      return caller.divisionId === caseDetail.divisionId;
+    case UserRole.DEPT_ADMIN:
+      return caller.departmentId === caseDetail.departmentId;
+    case UserRole.TEAM_ADMIN:
+      return caller.teamId === caseDetail.teamId;
+    default:
+      return false;
+  }
+};
+
 export const canReadCaseAsParticipant = (
   caseDetail: CaseDetail,
   participantRecord: CaseParticipantCompany | undefined,

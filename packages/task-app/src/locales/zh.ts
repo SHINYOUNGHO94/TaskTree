@@ -493,6 +493,12 @@ const zh = {
   "Failed to delete file.": "文件删除失败。",
   "File Uploaded": "文件上传",
   "File Deleted": "文件删除",
+  "Notifications": "通知",
+  "No notifications.": "暂无通知。",
+  "Quick templates:": "快速模板:",
+  "template title REQUEST": "【申请】",
+  "template title STANDARD": "【案件】",
+  "template title PROJECT": "【项目】",
 } as const;
 
 export default zh;

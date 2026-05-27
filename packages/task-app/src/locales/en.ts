@@ -493,6 +493,12 @@ const en = {
   "Failed to delete file.": "Failed to delete file.",
   "File Uploaded": "File Uploaded",
   "File Deleted": "File Deleted",
+  "Notifications": "Notifications",
+  "No notifications.": "No notifications.",
+  "Quick templates:": "Quick templates:",
+  "template title REQUEST": "[Request] ",
+  "template title STANDARD": "[Case] ",
+  "template title PROJECT": "[Project] ",
 } as const;
 
 export default en;

@@ -70,6 +70,50 @@ const ALLOWED_TARGET_SCOPES_BY_ROLE: Record<UserRole, CaseTargetScope[]> = {
   [UserRole.GUEST]: [CaseTargetScope.USER],
 };
 
+const REQUEST_TEMPLATE_JSON = JSON.stringify({
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Request Details' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Expected Outcome' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Deadline / Priority' }] },
+    { type: 'paragraph' },
+  ],
+});
+
+const STANDARD_TEMPLATE_JSON = JSON.stringify({
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Background' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Scope' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Expected Outcome' }] },
+    { type: 'paragraph' },
+  ],
+});
+
+const PROJECT_TEMPLATE_JSON = JSON.stringify({
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Overview' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Goals' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Schedule' }] },
+    { type: 'paragraph' },
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Team' }] },
+    { type: 'paragraph' },
+  ],
+});
+
+const TEMPLATE_TEXT: Record<CaseType, string> = {
+  [CaseType.REQUEST]: 'Request Details\nExpected Outcome\nDeadline / Priority',
+  [CaseType.STANDARD]: 'Background\nScope\nExpected Outcome',
+  [CaseType.PROJECT]: 'Overview\nGoals\nSchedule\nTeam',
+};
+
 const SCOPE_LABELS: Record<CaseTargetScope, string> = {
   [CaseTargetScope.COMPANY]: 'Company',
   [CaseTargetScope.DIVISION]: 'Division',
@@ -110,6 +154,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
@@ -432,6 +477,25 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
     onClose();
   };
 
+  const applyTemplate = useCallback((ct: CaseType) => {
+    const titleMap: Record<CaseType, string> = {
+      [CaseType.REQUEST]: t('template title REQUEST'),
+      [CaseType.STANDARD]: t('template title STANDARD'),
+      [CaseType.PROJECT]: t('template title PROJECT'),
+    };
+    const jsonMap: Record<CaseType, string> = {
+      [CaseType.REQUEST]: REQUEST_TEMPLATE_JSON,
+      [CaseType.STANDARD]: STANDARD_TEMPLATE_JSON,
+      [CaseType.PROJECT]: PROJECT_TEMPLATE_JSON,
+    };
+    setValue('caseType', ct);
+    setValue('title', titleMap[ct]);
+    const desc = jsonMap[ct];
+    setRichDesc({ description: desc, descriptionFormat: 'tiptap_json', descriptionText: TEMPLATE_TEXT[ct] });
+    setDescriptionError(null);
+    setEditorKey((k) => k + 1);
+  }, [t, setValue]);
+
   const onSubmit = async (data: FormValues) => {
     setSubmitError(null);
     setDescriptionError(null);
@@ -572,6 +636,27 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                       </label>
                     ))}
                   </div>
+                </div>
+
+                {/* ── Quick templates ── */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Quick templates:')}</span>
+                  {([CaseType.REQUEST, CaseType.STANDARD, CaseType.PROJECT] as CaseType[]).map((ct) => (
+                    <button
+                      key={ct}
+                      type="button"
+                      onClick={() => applyTemplate(ct)}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                        ct === CaseType.PROJECT
+                          ? 'border-violet-200 text-violet-600 hover:bg-violet-50'
+                          : ct === CaseType.STANDARD
+                          ? 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                          : 'border-amber-200 text-amber-600 hover:bg-amber-50'
+                      }`}
+                    >
+                      {t(CASE_TYPE_LABELS[ct])}
+                    </button>
+                  ))}
                 </div>
 
                 {/* ── Title ── */}

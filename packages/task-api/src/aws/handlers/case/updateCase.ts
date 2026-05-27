@@ -1,12 +1,15 @@
 import { randomUUID } from "crypto";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { CaseDetail, CaseHistoryAction, CaseOwnerType, CaseStatus } from "@task/core";
+import { CaseDetail, CaseHistoryAction, CaseStatus, NotificationAction } from "@task/core";
 
 import { CaseRepository } from "@/repositories/caseRepository";
 import { CaseHistoryRepository } from "@/repositories/caseHistoryRepository";
 import { CaseAssignmentRepository } from "@/repositories/caseAssignmentRepository";
 import { CaseVisibilityRepository } from "@/repositories/caseVisibilityRepository";
+import { NotificationRepository } from "@/repositories/notificationRepository";
 import { UserRepository } from "@/repositories/userRepository";
+import { canEditCase } from "@/services/casePermissionService";
+import { saveNotificationsForCase } from "@/services/notificationHelperService";
 import {
   badRequest,
   forbidden,
@@ -21,6 +24,7 @@ export interface UpdateCaseDeps {
   caseHistoryRepo: CaseHistoryRepository;
   assignmentRepo: CaseAssignmentRepository;
   visibilityRepo: CaseVisibilityRepository;
+  notifRepo: NotificationRepository;
   userRepo: UserRepository;
 }
 
@@ -123,15 +127,7 @@ export const createHandler =
       if (!profile) return internalServerError("User profile not found");
       if (!existingCase) return notFound("Case not found");
 
-      if (existingCase.companyId !== profile.companyId) {
-        return forbidden("You do not have access to this case");
-      }
-
-      const isCreator = existingCase.creatorId === userId;
-      const isUserOwner =
-        existingCase.ownerType === CaseOwnerType.USER && existingCase.ownerId === userId;
-
-      if (!isCreator && !isUserOwner) {
+      if (!canEditCase(existingCase, userId, profile)) {
         return forbidden("You do not have permission to update this case");
       }
 
@@ -162,7 +158,7 @@ export const createHandler =
       await saveCaseAndAccessRecords(deps, updatedCase);
 
       try {
-        if (status !== undefined) {
+        if (status !== undefined && newStatus !== existingCase.status) {
           await deps.caseHistoryRepo.save({
             historyId: randomUUID(),
             caseId,
@@ -190,6 +186,21 @@ export const createHandler =
         }
       } catch (historyError) {
         console.error("Failed to write case history", historyError);
+      }
+
+      if (status !== undefined && newStatus !== existingCase.status) {
+        try {
+          await saveNotificationsForCase(
+            deps.notifRepo,
+            updatedCase,
+            userId,
+            NotificationAction.STATUS_CHANGED,
+            `Status changed to ${newStatus}`,
+            now,
+          );
+        } catch (notifError) {
+          console.error("Failed to save notifications", notifError);
+        }
       }
 
       if (status !== undefined && newStatus === CaseStatus.COMPLETED && existingCase.parentCaseId) {
@@ -249,5 +260,6 @@ export const handler = createHandler({
   caseHistoryRepo: new CaseHistoryRepository(tableName),
   assignmentRepo: new CaseAssignmentRepository(tableName),
   visibilityRepo: new CaseVisibilityRepository(tableName),
+  notifRepo: new NotificationRepository(tableName),
   userRepo: new UserRepository(tableName),
 });
